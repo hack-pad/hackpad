@@ -1,0 +1,54 @@
+<html>
+
+<head>
+	<meta charset="utf-8" />
+	<script src="wasm_exec.js"></script>
+	<script>
+		if (!WebAssembly.instantiateStreaming) { // polyfill
+			WebAssembly.instantiateStreaming = async (resp, importObject) => {
+				const source = await (await resp).arrayBuffer();
+				return await WebAssembly.instantiate(source, importObject);
+			};
+		}
+
+		const load = (name, go) =>
+			WebAssembly.instantiateStreaming(fetch(`${name}.wasm`), go.importObject)
+				.catch(e => {
+					console.error(`Failed to load ${name}`, e)
+				})
+
+		window.goWasmInitialized = {}
+
+		function testReadWrite() {
+			fs.mkdirSync("/tmp", 0o700)
+			let myfile = fs.openSync("/tmp/myfile", fs.constants.O_CREAT|fs.constants.O_RDWR, 0o755)
+			const s = "hello world"
+			fs.writeSync(myfile, new TextEncoder("utf-8").encode(s))
+			fs.closeSync(myfile)
+
+			myfile = fs.openSync("/tmp/myfile", fs.constants.O_RDONLY, 0)
+			const helloBuf = new Uint8Array(100)
+			const n = fs.readSync(myfile, helloBuf, 0, helloBuf.length, null)
+			console.log(new TextDecoder("utf-8").decode(helloBuf).substr(0, n))
+		}
+
+		function runMain() {
+			const go = new Go();
+			return load('main', go).then(m => go.run(m.instance))
+			//return load('go').then(m => go.run(m.instance))
+		}
+
+		const go = new Go();
+		load('polyfill', go)
+			.then(cmd => {
+				go.run(cmd.instance)
+				console.log(`polyfill status: ${goWasmInitialized['polyfill'] ? 'ready' : 'not ready'}`)
+				
+				runMain()
+			})
+	</script>
+</head>
+
+<body></body>
+
+</html>
