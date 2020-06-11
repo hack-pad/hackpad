@@ -12,8 +12,8 @@ static: out/index.html commands
 out:
 	mkdir -p out
 
-out/index.html: out ./index.html
-	cp index.html ./out/
+out/index.html: out ./server/index.html ./server/reload.js
+	cp server/index.html ./server/reload.js ./out/
 
 .PHONY: clean
 clean:
