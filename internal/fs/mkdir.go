@@ -22,8 +22,7 @@ func mkdirSync(args []js.Value) (interface{}, error) {
 }
 
 func Mkdir(path string, mode os.FileMode) error {
-	// TODO find better mkdir implementation, memfs only supports all
-	return filesystem.MkdirAll(path, mode)
+	return filesystem.Mkdir(path, mode)
 }
 
 func MkdirAll(path string, mode os.FileMode) error {

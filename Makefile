@@ -15,13 +15,23 @@ lint:
 	GOOS=js GOARCH=wasm golangci-lint run
 
 .PHONY: static
-static: out/index.html commands
+static: out/index.html out/go.zip commands
 
 out:
 	mkdir -p out
 
 out/index.html: out ./server/index.html ./server/reload.js
 	cp server/index.html ./server/reload.js ./out/
+
+out/go.zip: out go
+	cd cache/go${GO_VERSION}; \
+		zip -ru -9 ../../out/go . -x \
+			'.git/*' \
+			'bin/*' \
+			'pkg/*' \
+			'src/cmd/*' \
+			'test/*' \
+			|| true
 
 .PHONY: clean
 clean:

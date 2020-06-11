@@ -27,15 +27,14 @@ func SetFunc(val js.Value, name string, fn interface{}) js.Func {
 
 	wrappedFn := func(_ js.Value, args []js.Value) (returnedVal interface{}) {
 		log.Debug("running op: ", name)
-		defer func() {
-			log.DebugJSValues(js.ValueOf("completed op: "+name), js.ValueOf(returnedVal))
-		}()
-
-		const unhelpfulStackLines = 7
-		defer handlePanic(unhelpfulStackLines)
 
 		switch fn := fn.(type) {
 		case Func:
+			defer func() {
+				log.DebugJSValues(js.ValueOf("completed sync op: "+name), js.ValueOf(returnedVal))
+				handlePanic(0)
+			}()
+
 			ret, err := fn(args)
 			if err != nil {
 				log.Error(errors.Wrap(err, name).Error())
@@ -47,10 +46,17 @@ func SetFunc(val js.Value, name string, fn interface{}) js.Func {
 			// error always goes first
 			callback := args[len(args)-1]
 			args = args[:len(args)-1]
-			ret, err := fn(args)
-			err = wrapAsJSError(err, name)
-			callbackArgs := append([]interface{}{err}, ret...)
-			go callback.Invoke(callbackArgs...)
+			go func() (returnedVal interface{}) {
+				defer func() {
+					log.DebugJSValues(js.ValueOf("completed op: "+name), js.ValueOf(returnedVal))
+					handlePanic(0)
+				}()
+				ret, err := fn(args)
+				err = wrapAsJSError(err, name)
+				callbackArgs := append([]interface{}{err}, ret...)
+				callback.Invoke(callbackArgs...)
+				return callbackArgs
+			}()
 			return nil
 		default:
 			panic("impossible case") // handled above
@@ -110,7 +116,14 @@ func mapToErrNo(err error) string {
 	case os.ErrPermission:
 		return "EPERM"
 	default:
-		log.Errorf("Unknown error type: (%T) %+v", err, err)
-		return "EPERM"
+		switch {
+		case os.IsNotExist(err):
+			return "ENOENT"
+		case os.IsExist(err):
+			return "EEXIST"
+		default:
+			log.Errorf("Unknown error type: (%T) %+v", err, err)
+			return "EPERM"
+		}
 	}
 }

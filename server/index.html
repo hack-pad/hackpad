@@ -41,6 +41,9 @@
 		function runGo(...args) {
 			const go = new Go();
 			return load('go', go).then(m => {
+				go.env = {
+					'GOROOT': '/go',
+				}
 				go.argv = ['go', ...args]
 				go.run(m.instance)
 			})
@@ -52,7 +55,9 @@
 				go.run(cmd.instance)
 				console.log(`polyfill status: ${goWasmInitialized['polyfill'] ? 'ready' : 'not ready'}`)
 				
-				runMain()
+				runMain().then(() => {
+					runGo('version')
+				})
 			})
 	</script>
 </head>

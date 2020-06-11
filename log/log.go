@@ -5,13 +5,16 @@ import (
 	"syscall/js"
 )
 
-var console = js.Global().Get("console")
+var (
+	console  = js.Global().Get("console")
+	logLevel = consoleLog
+)
 
 type consoleType int
 
 const (
-	consoleLog consoleType = iota
-	consoleDebug
+	consoleDebug consoleType = iota
+	consoleLog
 	consoleWarn
 	consoleError
 )
@@ -46,6 +49,9 @@ func Errorf(format string, args ...interface{}) int {
 }
 
 func logf(kind consoleType, format string, args ...interface{}) int {
+	if kind < logLevel {
+		return 0
+	}
 	s := fmt.Sprintf(format, args...)
 	console.Call(kind.String(), s)
 	return len(s)
@@ -68,6 +74,9 @@ func Error(args ...interface{}) int {
 }
 
 func log(kind consoleType, args ...interface{}) int {
+	if kind < logLevel {
+		return 0
+	}
 	s := fmt.Sprint(args...)
 	console.Call(kind.String(), s)
 	return len(s)
@@ -90,11 +99,11 @@ func ErrorJSValues(args ...js.Value) int {
 }
 
 func logJSValues(kind consoleType, args ...js.Value) int {
+	if kind < logLevel {
+		return 0
+	}
 	var intArgs []interface{}
 	for _, arg := range args {
-		//if arg.Type() == js.TypeObject && arg.InstanceOf(uint8Array) {
-		//	arg = js.ValueOf(arg.String())
-		//}
 		intArgs = append(intArgs, arg)
 	}
 	console.Call(kind.String(), intArgs...)

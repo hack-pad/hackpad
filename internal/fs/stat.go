@@ -18,16 +18,32 @@ func statSync(args []js.Value) (interface{}, error) {
 	}
 	path := args[0].String()
 	info, err := Stat(path)
-	if err != nil {
-		return nil, err
-	}
+	return jsStat(info), err
+}
 
+func Stat(path string) (os.FileInfo, error) {
+	return filesystem.Stat(path)
+}
+
+var (
+	funcTrue = js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+		return true
+	})
+	funcFalse = js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+		return false
+	})
+)
+
+func jsStat(info os.FileInfo) interface{} {
+	if info == nil {
+		return nil
+	}
 	const blockSize = 4096 // TODO find useful value for blksize
 	modTime := info.ModTime().UnixNano() / 1000
 	return map[string]interface{}{
 		"dev":     0,
 		"ino":     0,
-		"mode":    uint32(info.Mode()),
+		"mode":    jsMode(info.Mode()),
 		"nlink":   1,
 		"uid":     0, // TODO use real values for uid and gid
 		"gid":     0,
@@ -38,11 +54,32 @@ func statSync(args []js.Value) (interface{}, error) {
 		"atimeMs": modTime,
 		"mtimeMs": modTime,
 		"ctimeMs": modTime,
-	}, nil
+
+		"isBlockDevice":     funcFalse,
+		"isCharacterDevice": funcFalse,
+		"isDirectory":       jsBoolFunc(info.IsDir()),
+		"isFIFO":            funcFalse,
+		"isFile":            jsBoolFunc(info.Mode().IsRegular()),
+		"isSocket":          funcFalse,
+		"isSymbolicLink":    jsBoolFunc(info.Mode()&os.ModeSymlink == os.ModeSymlink),
+	}
 }
 
-func Stat(path string) (os.FileInfo, error) {
-	return filesystem.Stat(path)
+var modeBitTranslation = map[os.FileMode]uint32{
+	os.ModeDir:        1 << 14, // fs.constants.S_IFDIR
+	os.ModeCharDevice: 1 << 13, // fs.constants.S_IFCHR
+	os.ModeNamedPipe:  1 << 12, // fs.constants.S_IFIFO
+	os.ModeSymlink:    0xA000,  // fs.constants.S_IFLNK
+	os.ModeSocket:     0xC000,  // fs.constants.S_IFSOCK
+}
+
+func jsMode(mode os.FileMode) uint32 {
+	for goBit, jsBit := range modeBitTranslation {
+		if mode&goBit == goBit {
+			mode = mode & ^goBit | os.FileMode(jsBit)
+		}
+	}
+	return uint32(mode)
 }
 
 func blockCount(size, blockSize int64) int64 {
@@ -51,4 +88,11 @@ func blockCount(size, blockSize int64) int64 {
 		return blocks + 1
 	}
 	return blocks
+}
+
+func jsBoolFunc(b bool) js.Func {
+	if b {
+		return funcTrue
+	}
+	return funcFalse
 }
