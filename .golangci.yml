@@ -1,0 +1,20 @@
+linters:
+  enable:
+    # Default linters, plus these:
+    - goconst
+    - gocritic
+    - gocognit
+    - gofmt
+    - gosec
+    - misspell
+    - scopelint
+    - bodyclose
+
+run:
+  build-tags:
+    - js,wasm
+
+issues:
+  exclude:
+    # Disable scopelint errors on table driven tests
+    - Using the variable on range scope `tc` in function literal

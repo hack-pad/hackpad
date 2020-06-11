@@ -12,8 +12,6 @@ import (
 
 var jsErr = js.Global().Get("Error")
 
-type jsFunc = func(this js.Value, args []js.Value) interface{}
-
 type Func = func(args []js.Value) (interface{}, error)
 
 type CallbackFunc = func(args []js.Value) ([]interface{}, error)
@@ -52,14 +50,13 @@ func SetFunc(val js.Value, name string, fn interface{}) js.Func {
 			ret, err := fn(args)
 			if err != nil {
 				err = errors.Wrap(err, name)
-				err = js.Error{jsErr.New(err.Error())}
+				err = js.Error{Value: jsErr.New(err.Error())}
 			}
 			callbackArgs := append([]interface{}{err}, ret...)
 			go callback.Invoke(callbackArgs...)
 			return nil
 		default:
 			panic("impossible case") // handled above
-			return nil
 		}
 	}
 	jsWrappedFn := js.FuncOf(wrappedFn)

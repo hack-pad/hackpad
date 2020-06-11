@@ -1,10 +1,18 @@
 GO_VERSION = 1.14.4
 GO = ${PWD}/cache/go${GO_VERSION}/bin/go
 WASM_GO = GOOS=js GOARCH=wasm ${GO}
+LINT_VERSION=1.27.0
 
 .PHONY: serve
 serve:
 	go run ./server
+
+.PHONY: lint
+lint:
+	@if ! which golangci-lint >/dev/null || [[ "$$(golangci-lint version 2>&1)" != *${LINT_VERSION}* ]]; then \
+		curl -sfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $$(go env GOPATH)/bin v${LINT_VERSION}; \
+	fi
+	GOOS=js GOARCH=wasm golangci-lint run
 
 .PHONY: static
 static: out/index.html commands

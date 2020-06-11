@@ -1,7 +1,7 @@
 package main
 
 import (
-	"crypto/md5"
+	"crypto/md5" // nolint:gosec // md5 used to create an idempotent hash of files
 	"encoding/hex"
 	"encoding/json"
 	"log"
@@ -26,17 +26,20 @@ func main() {
 
 		sum := md5SumOfFiles(dir)
 		encoder := json.NewEncoder(resp)
-		encoder.Encode(map[string]interface{}{
+		err := encoder.Encode(map[string]interface{}{
 			"BuildHash": sum,
 		})
+		if err != nil {
+			panic(err)
+		}
 	})
 
 	log.Print("Serving " + dir + " on http://localhost:8080")
-	http.ListenAndServe(":8080", mux)
+	_ = http.ListenAndServe(":8080", mux)
 }
 
 func md5SumOfFiles(path string) string {
-	h := md5.New()
+	h := md5.New() // nolint:gosec // md5 used to create an idempotent hash of files
 	err := filepath.Walk(path, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err

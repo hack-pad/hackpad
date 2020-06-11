@@ -23,7 +23,7 @@ func closeSync(args []js.Value) (interface{}, error) {
 func Close(fd uint64) error {
 	fileDescriptor := fileDescriptorIDs[fd]
 	if fileDescriptor == nil {
-		return errors.Errorf("unknown fd: %d")
+		return errors.Errorf("unknown fd: %d", fd)
 	}
 	if fileDescriptor.openCount.Dec() == 0 {
 		fileDescriptorMu.Lock()

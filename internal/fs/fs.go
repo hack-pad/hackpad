@@ -33,8 +33,6 @@ unlink(path, callback) { callback(enosys()); },
 utimes(path, atime, mtime, callback) { callback(enosys()); },
 */
 
-var uint8Array = js.Global().Get("Uint8Array")
-
 var filesystem billy.Filesystem = memfs.New()
 
 const minFD = 3

@@ -41,7 +41,7 @@ func readSyncImpl(args []js.Value) (int, js.Value, error) {
 func Read(fd uint64, buffer []byte, offset, length int, position *int64) (n int, err error) {
 	fileDescriptor := fileDescriptorIDs[fd]
 	if fileDescriptor == nil {
-		return 0, errors.Errorf("unknown fd: %d")
+		return 0, errors.Errorf("unknown fd: %d", fd)
 	}
 	// 'offset' in Node.js's read is the offset in the buffer to start writing at,
 	// and 'position' is where to begin reading from in the file.
