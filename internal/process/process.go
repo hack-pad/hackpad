@@ -18,6 +18,11 @@ var currentUMask = 0755
 var currentWorkingDirectory = os.Getenv("PWD")
 
 func Init() {
+	err := fs.MkdirAll(currentWorkingDirectory, 0750)
+	if err != nil {
+		panic(err)
+	}
+
 	process := js.Global().Get("process")
 	interop.SetFunc(process, "getuid", geteuid)
 	interop.SetFunc(process, "geteuid", geteuid)

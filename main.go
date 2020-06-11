@@ -4,20 +4,15 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"runtime"
-	"time"
-
-	"github.com/johnstarich/go-wasm/log"
 )
 
 func main() {
-	go func() {
-		time.Sleep(2 * time.Second)
-		buf := make([]byte, 1000000)
-		n := runtime.Stack(buf, true)
-		log.Error("stack", string(buf[:n]))
-	}()
 	fmt.Println("go-wasm")
+	err := os.MkdirAll("/tmp", 0755)
+	if err != nil {
+		fmt.Println("err", err)
+		return
+	}
 	info, err := os.Stat(".")
 	fmt.Println("info", info)
 	if err != nil {

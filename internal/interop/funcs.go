@@ -2,6 +2,8 @@ package interop
 
 import (
 	"fmt"
+	"io"
+	"os"
 	"runtime/debug"
 	"strings"
 	"syscall/js"
@@ -9,8 +11,6 @@ import (
 	"github.com/johnstarich/go-wasm/log"
 	"github.com/pkg/errors"
 )
-
-var jsErr = js.Global().Get("Error")
 
 type Func = func(args []js.Value) (interface{}, error)
 
@@ -48,10 +48,7 @@ func SetFunc(val js.Value, name string, fn interface{}) js.Func {
 			callback := args[len(args)-1]
 			args = args[:len(args)-1]
 			ret, err := fn(args)
-			if err != nil {
-				err = errors.Wrap(err, name)
-				err = js.Error{Value: jsErr.New(err.Error())}
-			}
+			err = wrapAsJSError(err, name)
 			callbackArgs := append([]interface{}{err}, ret...)
 			go callback.Invoke(callbackArgs...)
 			return nil
@@ -89,4 +86,31 @@ func handlePanic(skipPanicLines int) {
 	}
 	// TODO keep the panic? need to find a way to just throw the error instead of crashing
 	//panic(r)
+}
+
+func wrapAsJSError(err error, message string) error {
+	if err == nil {
+		return nil
+	}
+
+	val := js.ValueOf(map[string]interface{}{
+		"message": js.ValueOf(errors.Wrap(err, message).Error()),
+		"code":    js.ValueOf(mapToErrNo(err)),
+	})
+	return js.Error{Value: val}
+}
+
+// errno names pulled from syscall/tables_js.go
+func mapToErrNo(err error) string {
+	switch err {
+	case io.EOF, os.ErrNotExist:
+		return "ENOENT"
+	case os.ErrExist:
+		return "EEXIST"
+	case os.ErrPermission:
+		return "EPERM"
+	default:
+		log.Errorf("Unknown error type: (%T) %+v", err, err)
+		return "EPERM"
+	}
 }

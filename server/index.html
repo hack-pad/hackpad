@@ -36,7 +36,14 @@
 		function runMain() {
 			const go = new Go();
 			return load('main', go).then(m => go.run(m.instance))
-			//return load('go').then(m => go.run(m.instance))
+		}
+
+		function runGo(...args) {
+			const go = new Go();
+			return load('go', go).then(m => {
+				go.argv = ['go', ...args]
+				go.run(m.instance)
+			})
 		}
 
 		const go = new Go();
