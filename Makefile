@@ -1,6 +1,10 @@
+SHELL := /usr/bin/env bash
 GO_VERSION = 1.14.4
-GO = ${PWD}/cache/go${GO_VERSION}/bin/go
-WASM_GO = GOOS=js GOARCH=wasm ${GO}
+GOBIN = ${PWD}/cache/go${GO_VERSION}/bin
+PATH := ${GOBIN}:${PATH}
+GOOS = js
+GOARCH = wasm
+export
 LINT_VERSION=1.27.0
 
 .PHONY: serve
@@ -12,7 +16,7 @@ lint:
 	@if ! which golangci-lint >/dev/null || [[ "$$(golangci-lint version 2>&1)" != *${LINT_VERSION}* ]]; then \
 		curl -sfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $$(go env GOPATH)/bin v${LINT_VERSION}; \
 	fi
-	GOOS=js GOARCH=wasm golangci-lint run
+	golangci-lint run
 
 .PHONY: static
 static: out/index.html out/go.zip commands
@@ -59,17 +63,17 @@ cache/go${GO_VERSION}: cache
 		pushd "$$TMP/src"; \
 		mkdir -p ../bin/js_wasm; \
 		./make.bash; \
-		GOOS=js GOARCH=wasm ../bin/go build -o ../bin/js_wasm/ std cmd/go; \
+		go build -o ../bin/js_wasm/ std cmd/go; \
 		popd; \
 		mv "$$TMP" cache/go${GO_VERSION}; \
 	fi
 	touch cache/go${GO_VERSION}
 
 out/%.wasm: out go
-	$(WASM_GO) build -o $@ ./cmd/$*
+	go build -o $@ ./cmd/$*
 
 out/main.wasm: out go
-	$(WASM_GO) build -o out/main.wasm .
+	go build -o out/main.wasm .
 
 out/go.wasm: out go
 	cp cache/go${GO_VERSION}/bin/js_wasm/go out/go.wasm
