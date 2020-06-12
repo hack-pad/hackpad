@@ -46,9 +46,9 @@
 				console.log(`go-wasm status: ${goWasm.ready ? 'ready' : 'not ready'}`)
 
 				fs.mkdirSync("/go", 0o755)
-				runMain().then(() => {
-					runGo('version')
-				})
+				runMain()
+					.then(() => runGo('version'))
+					.then(() => runGo("build", "-o", "./prog", "main.go"))
 			})
 	</script>
 </head>

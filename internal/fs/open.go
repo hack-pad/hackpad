@@ -5,6 +5,7 @@ import (
 	"syscall/js"
 
 	"github.com/pkg/errors"
+	"github.com/spf13/afero"
 	"go.uber.org/atomic"
 )
 
@@ -22,18 +23,18 @@ func openSync(args []js.Value) (interface{}, error) {
 	if len(args) >= 2 {
 		flags = args[1].Int()
 	}
-	mode := 0666
+	mode := os.FileMode(0666)
 	if len(args) >= 3 {
-		mode = args[2].Int()
+		mode = os.FileMode(args[2].Int())
 	}
 
 	fd, err := Open(path, flags, mode)
 	return fd, err
 }
 
-func Open(path string, flags, mode int) (fd uint64, err error) {
+func Open(path string, flags int, mode os.FileMode) (fd uint64, err error) {
 	path = resolvePath(path)
-	file, err := filesystem.OpenFile(path, flags, os.FileMode(mode))
+	file, err := getFile(path, flags, mode)
 	if err != nil {
 		return 0, err
 	}
@@ -53,4 +54,12 @@ func Open(path string, flags, mode int) (fd uint64, err error) {
 	descriptor := fileDescriptorNames[file.Name()]
 	descriptor.openCount.Inc()
 	return descriptor.id, nil
+}
+
+func getFile(absPath string, flags int, mode os.FileMode) (afero.File, error) {
+	switch absPath {
+	case "/dev/null":
+		return newNullFile(), nil
+	}
+	return filesystem.OpenFile(absPath, flags, mode)
 }
