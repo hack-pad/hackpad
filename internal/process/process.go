@@ -34,7 +34,6 @@ func Init() {
 	interop.SetFunc(process, "umask", umask)
 	interop.SetFunc(process, "cwd", cwd)
 	interop.SetFunc(process, "chdir", chdir)
-	interop.SetInitialized("process")
 }
 
 func geteuid(args []js.Value) (interface{}, error) {

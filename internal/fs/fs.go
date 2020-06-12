@@ -71,5 +71,4 @@ func Init() {
 	interop.SetFunc(fs, "statSync", statSync)
 	interop.SetFunc(fs, "write", write)
 	interop.SetFunc(fs, "writeSync", writeSync)
-	interop.SetInitialized("fs")
 }

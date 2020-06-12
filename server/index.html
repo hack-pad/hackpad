@@ -18,8 +18,6 @@
 					console.error(`Failed to load ${name}`, e)
 				})
 
-		window.goWasmInitialized = {}
-
 		function testReadWrite() {
 			fs.mkdirSync("/tmp", 0o700)
 			let myfile = fs.openSync("/tmp/myfile", fs.constants.O_CREAT|fs.constants.O_RDWR, 0o755)
@@ -53,8 +51,8 @@
 		load('polyfill', go)
 			.then(cmd => {
 				go.run(cmd.instance)
-				console.log(`polyfill status: ${goWasmInitialized['polyfill'] ? 'ready' : 'not ready'}`)
-				
+				console.log(`go-wasm status: ${goWasm.ready ? 'ready' : 'not ready'}`)
+
 				runMain().then(() => {
 					runGo('version')
 				})

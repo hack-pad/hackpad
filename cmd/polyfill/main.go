@@ -12,6 +12,6 @@ func main() {
 	fmt.Println("polyfill!")
 	process.Init()
 	fs.Init()
-	interop.SetInitialized("polyfill")
+	interop.SetInitialized()
 	select {}
 }
