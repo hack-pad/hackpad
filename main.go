@@ -15,10 +15,27 @@ import (
 
 func main() {
 	fmt.Println("go-wasm")
-	err := run()
+	err := run3()
 	if err != nil {
 		fmt.Println("Error", err)
 	}
+}
+
+func run3() error {
+	err := ioutil.WriteFile("main.go", []byte(`
+package main
+
+func main() {
+	println("hello world")
+}
+`), 0750)
+	if err != nil {
+		return err
+	}
+
+	return ioutil.WriteFile("go.mod", []byte(`
+module thing
+`), 0750)
 }
 
 func run2() error {
