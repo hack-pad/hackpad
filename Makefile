@@ -65,8 +65,11 @@ cache/go${GO_VERSION}: cache
 		cp internal/testdata/filelock_* "$$TMP"/src/cmd/go/internal/lockedfile/internal/filelock/; \
 		pushd "$$TMP/src"; \
 		./make.bash; \
+		export PATH="$$TMP/bin:$$PATH"; \
+		go version; \
 		mkdir -p ../bin/js_wasm; \
-		../bin/go build -o ../bin/js_wasm/ std cmd/go; \
+		go build -o ../bin/js_wasm/ std cmd/go; \
+		go tool dist test -rebuild -list; \
 		popd; \
 		mv "$$TMP" cache/go${GO_VERSION}; \
 	fi
