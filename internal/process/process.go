@@ -1,7 +1,6 @@
 package process
 
 import (
-	"os"
 	"syscall/js"
 
 	"github.com/johnstarich/go-wasm/internal/fs"
@@ -15,10 +14,9 @@ const currentPID = 1
 const currentParentPID = 0
 
 var currentUMask = 0755
-var currentWorkingDirectory = "/home/me"
 
 func Init() {
-	err := fs.MkdirAll(currentWorkingDirectory, 0750)
+	err := fs.MkdirAll(interop.WorkingDirectory(), 0750)
 	if err != nil {
 		panic(err)
 	}
@@ -58,7 +56,7 @@ func umask(args []js.Value) (interface{}, error) {
 }
 
 func cwd(args []js.Value) (interface{}, error) {
-	return currentWorkingDirectory, nil
+	return interop.WorkingDirectory(), nil
 }
 
 func chdir(args []js.Value) (interface{}, error) {
@@ -73,6 +71,6 @@ func chdir(args []js.Value) (interface{}, error) {
 	if !info.IsDir() {
 		return nil, errors.Errorf("%s is not a directory", info.Name())
 	}
-	currentWorkingDirectory = args[0].String()
+	interop.SetWorkingDirectory(args[0].String())
 	return nil, nil
 }

@@ -23,5 +23,5 @@ func lstatSync(args []js.Value) (interface{}, error) {
 
 func Lstat(path string) (os.FileInfo, error) {
 	// TODO add proper symlink support
-	return filesystem.Stat(path)
+	return filesystem.Stat(resolvePath(path))
 }

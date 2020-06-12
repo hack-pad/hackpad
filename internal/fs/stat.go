@@ -22,7 +22,7 @@ func statSync(args []js.Value) (interface{}, error) {
 }
 
 func Stat(path string) (os.FileInfo, error) {
-	return filesystem.Stat(path)
+	return filesystem.Stat(resolvePath(path))
 }
 
 var (

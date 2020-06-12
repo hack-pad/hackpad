@@ -23,6 +23,7 @@ func rmdirSync(args []js.Value) (interface{}, error) {
 }
 
 func RemoveDir(path string) error {
+	path = resolvePath(path)
 	info, err := Stat(path)
 	if err != nil {
 		return err

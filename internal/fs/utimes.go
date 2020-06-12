@@ -24,5 +24,5 @@ func utimesSync(args []js.Value) (interface{}, error) {
 }
 
 func Utimes(path string, atime, mtime time.Time) error {
-	return filesystem.Chtimes(path, atime, mtime)
+	return filesystem.Chtimes(resolvePath(path), atime, mtime)
 }

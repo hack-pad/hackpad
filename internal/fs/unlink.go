@@ -23,6 +23,7 @@ func unlinkSync(args []js.Value) (interface{}, error) {
 }
 
 func Unlink(path string) error {
+	path = resolvePath(path)
 	info, err := Stat(path)
 	if err != nil {
 		return err

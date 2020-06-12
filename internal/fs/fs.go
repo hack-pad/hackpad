@@ -2,6 +2,7 @@ package fs
 
 import (
 	"os"
+	"path/filepath"
 	"sync"
 	"syscall/js"
 
@@ -76,4 +77,11 @@ func Init() {
 	interop.SetFunc(fs, "utimesSync", utimesSync)
 	interop.SetFunc(fs, "write", write)
 	interop.SetFunc(fs, "writeSync", writeSync)
+}
+
+func resolvePath(path string) string {
+	if filepath.IsAbs(path) {
+		return filepath.Clean(path)
+	}
+	return filepath.Join(interop.WorkingDirectory(), path)
 }

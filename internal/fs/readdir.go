@@ -30,5 +30,5 @@ func readdirSync(args []js.Value) (interface{}, error) {
 }
 
 func ReadDir(path string) ([]os.FileInfo, error) {
-	return afero.ReadDir(filesystem, path)
+	return afero.ReadDir(filesystem, resolvePath(path))
 }

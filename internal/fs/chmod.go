@@ -23,5 +23,5 @@ func chmodSync(args []js.Value) (interface{}, error) {
 }
 
 func Chmod(path string, mode os.FileMode) error {
-	return filesystem.Chmod(path, mode)
+	return filesystem.Chmod(resolvePath(path), mode)
 }

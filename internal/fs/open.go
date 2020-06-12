@@ -27,6 +27,7 @@ func openSync(args []js.Value) (interface{}, error) {
 }
 
 func Open(path string, flags, mode int) (fd uint64, err error) {
+	path = resolvePath(path)
 	file, err := filesystem.OpenFile(path, flags, os.FileMode(mode))
 	if err != nil {
 		return 0, err

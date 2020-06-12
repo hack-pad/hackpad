@@ -22,9 +22,9 @@ func mkdirSync(args []js.Value) (interface{}, error) {
 }
 
 func Mkdir(path string, mode os.FileMode) error {
-	return filesystem.Mkdir(path, mode)
+	return filesystem.Mkdir(resolvePath(path), mode)
 }
 
 func MkdirAll(path string, mode os.FileMode) error {
-	return filesystem.MkdirAll(path, mode)
+	return filesystem.MkdirAll(resolvePath(path), mode)
 }
