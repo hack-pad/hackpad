@@ -26,7 +26,8 @@ func SetFunc(val js.Value, name string, fn interface{}) js.Func {
 	}
 
 	wrappedFn := func(_ js.Value, args []js.Value) (returnedVal interface{}) {
-		log.Debug("running op: ", name)
+		logArgs := append([]js.Value{js.ValueOf("running op: " + name)}, args...)
+		log.DebugJSValues(logArgs...)
 
 		switch fn := fn.(type) {
 		case Func:
