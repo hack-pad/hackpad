@@ -108,6 +108,10 @@ func wrapAsJSError(err error, message string) error {
 
 // errno names pulled from syscall/tables_js.go
 func mapToErrNo(err error) string {
+	switch err := err.(type) {
+	case Error:
+		return err.Code()
+	}
 	switch err {
 	case io.EOF, os.ErrNotExist:
 		return "ENOENT"
@@ -115,15 +119,14 @@ func mapToErrNo(err error) string {
 		return "EEXIST"
 	case os.ErrPermission:
 		return "EPERM"
+	}
+	switch {
+	case os.IsNotExist(err):
+		return "ENOENT"
+	case os.IsExist(err):
+		return "EEXIST"
 	default:
-		switch {
-		case os.IsNotExist(err):
-			return "ENOENT"
-		case os.IsExist(err):
-			return "EEXIST"
-		default:
-			log.Errorf("Unknown error type: (%T) %+v", err, err)
-			return "EPERM"
-		}
+		log.Errorf("Unknown error type: (%T) %+v", err, err)
+		return "EPERM"
 	}
 }

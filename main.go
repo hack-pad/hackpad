@@ -45,6 +45,7 @@ func run2() error {
 		return err
 	}
 	fmt.Println("is dir: ", info.IsDir())
+	fmt.Println("dir perms:", info.Mode())
 	return nil
 }
 
@@ -74,10 +75,20 @@ func run() error {
 	for _, f := range dir {
 		fmt.Println(f.Name())
 	}
+	info, err := os.Stat("/go")
+	if err != nil {
+		return err
+	}
+	fmt.Println("dir perm", info.Mode())
 	return nil
 }
 
 func unzip(r io.ReaderAt, size int, outPath string) error {
+	if err := os.Mkdir(outPath, 0750); err != nil {
+		return err
+	}
+
+	return nil
 	z, err := zip.NewReader(r, int64(size))
 	if err != nil {
 		return err
