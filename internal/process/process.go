@@ -15,7 +15,7 @@ const currentPID = 1
 const currentParentPID = 0
 
 var currentUMask = 0755
-var currentWorkingDirectory = os.Getenv("PWD")
+var currentWorkingDirectory = "/home/me"
 
 func Init() {
 	err := fs.MkdirAll(currentWorkingDirectory, 0750)
