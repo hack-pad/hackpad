@@ -23,7 +23,6 @@ readlink(path, callback) { callback(enosys()); },
 rename(from, to, callback) { callback(enosys()); },
 symlink(path, link, callback) { callback(enosys()); },
 truncate(path, length, callback) { callback(enosys()); },
-unlink(path, callback) { callback(enosys()); },
 utimes(path, atime, mtime, callback) { callback(enosys()); },
 */
 
@@ -70,6 +69,8 @@ func Init() {
 	interop.SetFunc(fs, "rmdirSync", rmdirSync)
 	interop.SetFunc(fs, "stat", stat)
 	interop.SetFunc(fs, "statSync", statSync)
+	interop.SetFunc(fs, "unlink", unlink)
+	interop.SetFunc(fs, "unlinkSync", unlinkSync)
 	interop.SetFunc(fs, "write", write)
 	interop.SetFunc(fs, "writeSync", writeSync)
 }
