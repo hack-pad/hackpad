@@ -11,7 +11,6 @@ import (
 )
 
 /*
-chmod(path, mode, callback) { callback(enosys()); },
 chown(path, uid, gid, callback) { callback(enosys()); },
 fchmod(fd, mode, callback) { callback(enosys()); },
 fchown(fd, uid, gid, callback) { callback(enosys()); },
@@ -51,6 +50,8 @@ func Init() {
 	constants.Set("O_TRUNC", os.O_TRUNC)
 	constants.Set("O_APPEND", os.O_APPEND)
 	constants.Set("O_EXCL", os.O_EXCL)
+	interop.SetFunc(fs, "chmod", chmod)
+	interop.SetFunc(fs, "chmodSync", chmodSync)
 	interop.SetFunc(fs, "close", closeFn)
 	interop.SetFunc(fs, "closeSync", closeSync)
 	interop.SetFunc(fs, "fstat", fstat)
