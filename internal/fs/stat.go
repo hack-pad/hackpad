@@ -2,6 +2,7 @@ package fs
 
 import (
 	"os"
+	"syscall"
 	"syscall/js"
 
 	"github.com/pkg/errors"
@@ -66,11 +67,11 @@ func jsStat(info os.FileInfo) interface{} {
 }
 
 var modeBitTranslation = map[os.FileMode]uint32{
-	os.ModeDir:        1 << 14, // fs.constants.S_IFDIR
-	os.ModeCharDevice: 1 << 13, // fs.constants.S_IFCHR
-	os.ModeNamedPipe:  1 << 12, // fs.constants.S_IFIFO
-	os.ModeSymlink:    0xA000,  // fs.constants.S_IFLNK
-	os.ModeSocket:     0xC000,  // fs.constants.S_IFSOCK
+	os.ModeDir:        syscall.S_IFDIR,
+	os.ModeCharDevice: syscall.S_IFCHR,
+	os.ModeNamedPipe:  syscall.S_IFIFO,
+	os.ModeSymlink:    syscall.S_IFLNK,
+	os.ModeSocket:     syscall.S_IFSOCK,
 }
 
 func jsMode(mode os.FileMode) uint32 {
