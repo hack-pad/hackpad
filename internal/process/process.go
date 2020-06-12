@@ -29,8 +29,8 @@ func Init() {
 	interop.SetFunc(process, "getgid", getegid)
 	interop.SetFunc(process, "getegid", getegid)
 	interop.SetFunc(process, "getgroups", getgroups)
-	interop.SetFunc(process, "pid", pid)
-	interop.SetFunc(process, "ppid", ppid)
+	process.Set("pid", currentPID)
+	process.Set("ppid", currentParentPID)
 	interop.SetFunc(process, "umask", umask)
 	interop.SetFunc(process, "cwd", cwd)
 	interop.SetFunc(process, "chdir", chdir)
@@ -46,14 +46,6 @@ func getegid(args []js.Value) (interface{}, error) {
 
 func getgroups(args []js.Value) (interface{}, error) {
 	return groupID, nil
-}
-
-func pid(args []js.Value) (interface{}, error) {
-	return currentPID, nil
-}
-
-func ppid(args []js.Value) (interface{}, error) {
-	return currentParentPID, nil
 }
 
 func umask(args []js.Value) (interface{}, error) {
