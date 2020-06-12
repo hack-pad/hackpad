@@ -55,6 +55,8 @@ func Init() {
 	interop.SetFunc(fs, "chownSync", chownSync)
 	interop.SetFunc(fs, "close", closeFn)
 	interop.SetFunc(fs, "closeSync", closeSync)
+	interop.SetFunc(fs, "flock", flock)
+	interop.SetFunc(fs, "flockSync", flockSync)
 	interop.SetFunc(fs, "fstat", fstat)
 	interop.SetFunc(fs, "fstatSync", fstatSync)
 	interop.SetFunc(fs, "lstat", lstat)

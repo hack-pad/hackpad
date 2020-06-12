@@ -9,61 +9,14 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
-
-	"github.com/pkg/errors"
 )
 
 func main() {
 	fmt.Println("go-wasm")
-	err := run3()
+	err := run()
 	if err != nil {
 		fmt.Println("Error", err)
 	}
-}
-
-func run3() error {
-	err := ioutil.WriteFile("main.go", []byte(`
-package main
-
-func main() {
-	println("hello world")
-}
-`), 0750)
-	if err != nil {
-		return err
-	}
-
-	return ioutil.WriteFile("go.mod", []byte(`
-module thing
-`), 0750)
-}
-
-func run2() error {
-	fmt.Println("run2")
-	if err := os.Mkdir("/go", 0750); err != nil {
-		return errors.Wrap(err, "Failed to make dir /go")
-	}
-
-	err := ioutil.WriteFile("/go/test.txt", []byte("hello world"), 0750)
-	if err != nil {
-		return errors.Wrap(err, "Failed to write /go/test.txt")
-	}
-
-	dir, err := ioutil.ReadDir("/go")
-	if err != nil {
-		return errors.Wrap(err, "Failed to read dir /go")
-	}
-	fmt.Println("contents:")
-	for _, f := range dir {
-		fmt.Println(f.Name())
-	}
-	info, err := os.Stat("/go")
-	if err != nil {
-		return err
-	}
-	fmt.Println("is dir: ", info.IsDir())
-	fmt.Println("dir perms:", info.Mode())
-	return nil
 }
 
 func run() error {
@@ -97,15 +50,31 @@ func run() error {
 		return err
 	}
 	fmt.Println("dir perm", info.Mode())
-	return nil
+	return makeTestModule()
 }
 
-func unzip(r io.ReaderAt, size int, outPath string) error {
-	if err := os.Mkdir(outPath, 0750); err != nil {
+func makeTestModule() error {
+	err := ioutil.WriteFile("main.go", []byte(`
+package main
+
+func main() {
+	println("hello world")
+}
+`), 0750)
+	if err != nil {
 		return err
 	}
 
-	return nil
+	return ioutil.WriteFile("go.mod", []byte(`
+module thing
+`), 0750)
+}
+
+func unzip(r io.ReaderAt, size int, outPath string) error {
+	if err := os.MkdirAll(outPath, 0750); err != nil {
+		return err
+	}
+
 	z, err := zip.NewReader(r, int64(size))
 	if err != nil {
 		return err

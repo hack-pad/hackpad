@@ -35,6 +35,10 @@
 			})
 		}
 
+		function ls(path) {
+			console.log(fs.readdirSync(path))
+		}
+
 		const go = new Go();
 		load('polyfill', go)
 			.then(cmd => {

@@ -34,8 +34,9 @@ out/go.zip: out go
 			'bin/*' \
 			'pkg/*' \
 			'src/cmd/*' \
-			'test/*' \
-			|| true
+			'test/*'; \
+		zip -ru -9 ../../out/go ./pkg/tool/js_wasm; \
+		true
 
 .PHONY: clean
 clean:
@@ -60,10 +61,12 @@ cache/go${GO_VERSION}: cache
 			--branch go${GO_VERSION} \
 			git@github.com:golang/go.git \
 			"$$TMP"; \
+		cp internal/testdata/syscall_* "$$TMP"/src/syscall/; \
+		cp internal/testdata/filelock_* "$$TMP"/src/cmd/go/internal/lockedfile/internal/filelock/; \
 		pushd "$$TMP/src"; \
-		mkdir -p ../bin/js_wasm; \
 		./make.bash; \
-		go build -o ../bin/js_wasm/ std cmd/go; \
+		mkdir -p ../bin/js_wasm; \
+		../bin/go build -o ../bin/js_wasm/ std cmd/go; \
 		popd; \
 		mv "$$TMP" cache/go${GO_VERSION}; \
 	fi

@@ -14,13 +14,18 @@ func open(args []js.Value) ([]interface{}, error) {
 }
 
 func openSync(args []js.Value) (interface{}, error) {
-	if len(args) < 3 {
-		return nil, errors.Errorf("not enough args %d", len(args))
+	if len(args) == 0 {
+		return nil, errors.Errorf("Expected path, received: %v", args)
 	}
-
 	path := args[0].String()
-	flags := args[1].Int()
-	mode := args[2].Int()
+	flags := os.O_RDONLY
+	if len(args) >= 2 {
+		flags = args[1].Int()
+	}
+	mode := 0666
+	if len(args) >= 3 {
+		mode = args[2].Int()
+	}
 
 	fd, err := Open(path, flags, mode)
 	return fd, err
