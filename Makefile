@@ -61,8 +61,7 @@ cache/go${GO_VERSION}: cache
 			--branch go${GO_VERSION} \
 			git@github.com:golang/go.git \
 			"$$TMP"; \
-		cp internal/testdata/syscall_* "$$TMP"/src/syscall/; \
-		cp internal/testdata/filelock_* "$$TMP"/src/cmd/go/internal/lockedfile/internal/filelock/; \
+		$(MAKE) -e TMP_GO="$$TMP" go-ext; \
 		pushd "$$TMP/src"; \
 		./make.bash; \
 		export PATH="$$TMP/bin:$$PATH"; \
@@ -85,3 +84,11 @@ out/go.wasm: out go
 	cp cache/go${GO_VERSION}/bin/js_wasm/go out/go.wasm
 	cp cache/go${GO_VERSION}/misc/wasm/wasm_exec.js out/wasm_exec.js
 
+.PHONY: go-ext
+go-ext:
+	[[ -d "${TMP_GO}" ]]
+	sed -i '' -e '/^func Pipe(/,/^}/d' "${TMP_GO}"/src/syscall/fs_js.go
+	sed -i '' -e '/^func StartProcess(/,/^}/d' "${TMP_GO}"/src/syscall/syscall_js.go
+	cp internal/testdata/fs_* "${TMP_GO}"/src/syscall/
+	cp internal/testdata/syscall_* "${TMP_GO}"/src/syscall/
+	cp internal/testdata/filelock_* "${TMP_GO}"/src/cmd/go/internal/lockedfile/internal/filelock/

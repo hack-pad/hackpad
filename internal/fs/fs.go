@@ -65,6 +65,8 @@ func Init() {
 	interop.SetFunc(fs, "mkdirSync", mkdirSync)
 	interop.SetFunc(fs, "open", open)
 	interop.SetFunc(fs, "openSync", openSync)
+	interop.SetFunc(fs, "pipe", pipe)
+	interop.SetFunc(fs, "pipeSync", pipeSync)
 	interop.SetFunc(fs, "read", read)
 	interop.SetFunc(fs, "readSync", readSync)
 	interop.SetFunc(fs, "readdir", readdir)

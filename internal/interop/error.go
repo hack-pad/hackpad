@@ -2,6 +2,10 @@ package interop
 
 import "errors"
 
+var (
+	ErrNotImplemented = NewError("operation not supported", "ENOSYS")
+)
+
 type Error interface {
 	error
 	Message() string

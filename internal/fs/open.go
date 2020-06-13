@@ -38,6 +38,10 @@ func Open(path string, flags int, mode os.FileMode) (fd uint64, err error) {
 	if err != nil {
 		return 0, err
 	}
+	return openWithFile(file)
+}
+
+func openWithFile(file afero.File) (uint64, error) {
 	if fileDescriptorNames[file.Name()] == nil {
 		fileDescriptorMu.Lock()
 		if fileDescriptorNames[file.Name()] == nil {
