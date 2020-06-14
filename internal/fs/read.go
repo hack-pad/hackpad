@@ -5,6 +5,7 @@ import (
 	"syscall/js"
 
 	"github.com/pkg/errors"
+	"github.com/spf13/afero"
 )
 
 func read(args []js.Value) ([]interface{}, error) {
@@ -54,4 +55,8 @@ func Read(fd uint64, buffer []byte, offset, length int, position *int64) (n int,
 		err = nil
 	}
 	return
+}
+
+func ReadFile(path string) ([]byte, error) {
+	return afero.ReadFile(filesystem, resolvePath(path))
 }

@@ -10,6 +10,7 @@ import (
 
 const userID = 0
 const groupID = 0
+const minPID = 1
 const currentPID = 1
 const currentParentPID = 0
 
@@ -20,8 +21,9 @@ func Init() {
 	if err != nil {
 		panic(err)
 	}
+	global := js.Global()
 
-	process := js.Global().Get("process")
+	process := global.Get("process")
 	interop.SetFunc(process, "getuid", geteuid)
 	interop.SetFunc(process, "geteuid", geteuid)
 	interop.SetFunc(process, "getgid", getegid)
@@ -32,6 +34,11 @@ func Init() {
 	interop.SetFunc(process, "umask", umask)
 	interop.SetFunc(process, "cwd", cwd)
 	interop.SetFunc(process, "chdir", chdir)
+
+	global.Set("child_process", map[string]interface{}{})
+	childProcess := global.Get("child_process")
+	interop.SetFunc(childProcess, "spawn", spawn)
+	interop.SetFunc(childProcess, "spawnSync", spawnSync)
 }
 
 func geteuid(args []js.Value) (interface{}, error) {
