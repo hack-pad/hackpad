@@ -5,7 +5,7 @@ import (
 	"syscall/js"
 
 	"github.com/johnstarich/go-wasm/internal/fs"
-	"github.com/johnstarich/go-wasm/internal/interop"
+	"github.com/johnstarich/go-wasm/internal/promise"
 	"github.com/johnstarich/go-wasm/log"
 	"github.com/pkg/errors"
 	"go.uber.org/atomic"
@@ -58,14 +58,14 @@ func runWasm(path string, args []string, wait bool) error {
 	jsBuf := uint8Array.New(len(buf))
 	js.CopyBytesToJS(jsBuf, buf)
 	// TODO add module caching
-	instantiatePromise := jsWasm.Call("instantiate", jsBuf, importObject)
+	instantiatePromise := promise.New(jsWasm.Call("instantiate", jsBuf, importObject))
 	fn := func() error {
-		module, err := interop.Await(instantiatePromise)
+		module, err := promise.Await(instantiatePromise)
 		if err != nil {
 			return err
 		}
-		runPromise := jsGo.Call("run", module)
-		_, err = interop.Await(runPromise)
+		runPromise := promise.New(jsGo.Call("run", module))
+		_, err = promise.Await(runPromise)
 		return err
 	}
 	if !wait {
