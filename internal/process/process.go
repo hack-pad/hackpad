@@ -74,7 +74,7 @@ func New(command string, args []string) *Process {
 }
 
 func (p *Process) Start() error {
-	return p.runWasm()
+	return p.startWasm()
 }
 
 func (p *Process) Wait() error {
@@ -82,40 +82,40 @@ func (p *Process) Wait() error {
 	return p.err
 }
 
-func (p *Process) runWasm() error {
+func (p *Process) startWasm() error {
 	pids[p.pid] = p
 	log.Printf("Spawning process [%d] %q: %s", p.pid, p.command, strings.Join(p.args, " "))
 	buf, err := fs.ReadFile(p.command)
 	if err != nil {
 		return err
 	}
+	go p.runWasmBytes(buf)
+	return nil
+}
+
+func (p *Process) runWasmBytes(wasm []byte) {
+	var err error
+	defer func() {
+		if err != nil {
+			log.Errorf("Failed to start process: %s", err.Error())
+			p.err = err
+			close(p.done)
+		}
+	}()
+
 	goInstance := jsGo.New()
 	goInstance.Set("argv", interop.SliceFromStrings(p.args))
 	importObject := goInstance.Get("importObject")
-	jsBuf := uint8Array.New(len(buf))
-	js.CopyBytesToJS(jsBuf, buf)
+	jsBuf := uint8Array.New(len(wasm))
+	js.CopyBytesToJS(jsBuf, wasm)
 	// TODO add module caching
 	instantiatePromise := promise.New(jsWasm.Call("instantiate", jsBuf, importObject))
-	fn := func() (err error) {
-		defer func() {
-			p.err = err
-			close(p.done)
-		}()
-		module, err := promise.Await(instantiatePromise)
-		if err != nil {
-			return err
-		}
-		runPromise := promise.New(goInstance.Call("run", module.Get("instance")))
-		_, err = promise.Await(runPromise)
-		return err
+	module, err := promise.Await(instantiatePromise)
+	if err != nil {
+		return
 	}
-	go func() {
-		err := fn()
-		if err != nil {
-			log.Errorf("Failed to start process: %s", err.Error())
-		}
-	}()
-	return nil
+	runPromise := promise.New(goInstance.Call("run", module.Get("instance")))
+	_, err = promise.Await(runPromise)
 }
 
 func (p *Process) JSValue() js.Value {
