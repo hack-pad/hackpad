@@ -109,8 +109,7 @@ func wrapAsJSError(err error, message string) error {
 
 // errno names pulled from syscall/tables_js.go
 func mapToErrNo(err error) string {
-	switch err := err.(type) {
-	case Error:
+	if err, ok := err.(Error); ok {
 		return err.Code()
 	}
 	switch err {

@@ -74,11 +74,7 @@ func New(command string, args []string) *Process {
 }
 
 func (p *Process) Start() error {
-	return p.runWasm(false)
-}
-
-func (p *Process) Run() error {
-	return p.runWasm(true)
+	return p.runWasm()
 }
 
 func (p *Process) Wait() error {
@@ -86,7 +82,7 @@ func (p *Process) Wait() error {
 	return p.err
 }
 
-func (p *Process) runWasm(wait bool) error {
+func (p *Process) runWasm() error {
 	pids[p.pid] = p
 	log.Printf("Spawning process [%d] %q: %s", p.pid, p.command, strings.Join(p.args, " "))
 	buf, err := fs.ReadFile(p.command)
@@ -113,11 +109,13 @@ func (p *Process) runWasm(wait bool) error {
 		_, err = promise.Await(runPromise)
 		return err
 	}
-	if !wait {
-		go fn()
-		return nil
-	}
-	return fn()
+	go func() {
+		err := fn()
+		if err != nil {
+			log.Errorf("Failed to start process: %s", err.Error())
+		}
+	}()
+	return nil
 }
 
 func (p *Process) JSValue() js.Value {

@@ -9,6 +9,9 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
+
+	"github.com/pkg/errors"
 )
 
 func main() {
@@ -60,14 +63,14 @@ package main
 func main() {
 	println("hello world")
 }
-`), 0750)
+`), 0600)
 	if err != nil {
 		return err
 	}
 
 	return ioutil.WriteFile("go.mod", []byte(`
 module thing
-`), 0750)
+`), 0600)
 }
 
 func unzip(r io.ReaderAt, size int, outPath string) error {
@@ -82,12 +85,27 @@ func unzip(r io.ReaderAt, size int, outPath string) error {
 	return unzipFiles(z.File, outPath)
 }
 
-func unzipFiles(files []*zip.File, path string) error {
+func unzipFiles(files []*zip.File, destDir string) error {
 	for _, f := range files {
-		fPath := filepath.Join(path, f.Name)
-		unzipFile(f, fPath)
+		filePath, err := validateZipPath(f.Name, destDir)
+		if err != nil {
+			return err
+		}
+		if err := unzipFile(f, filePath); err != nil {
+			return err
+		}
 	}
 	return nil
+}
+
+// validateZipPath prevents "zip slip vulnerability" https://snyk.io/research/zip-slip-vulnerability
+func validateZipPath(zipPath string, destDir string) (cleanedPath string, err error) {
+	destPrefix := filepath.Clean(destDir) + string(os.PathSeparator)
+	filePath := filepath.Join(destPrefix, zipPath)
+	if !strings.HasPrefix(filePath, destPrefix) {
+		return "", errors.Errorf("%s: illegal zip file path", filePath)
+	}
+	return filePath, nil
 }
 
 func unzipFile(file *zip.File, dest string) error {

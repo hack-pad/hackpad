@@ -76,15 +76,17 @@ func (p pipeChan) Name() string {
 	return "pipe"
 }
 
-func (p pipeChan) ReadAt(b []byte, off int64) (n int, err error)  { return 0, interop.ErrNotImplemented }
-func (p pipeChan) WriteAt(b []byte, off int64) (n int, err error) { return 0, interop.ErrNotImplemented }
-func (p pipeChan) Seek(offset int64, whence int) (int64, error)   { return 0, interop.ErrNotImplemented }
-func (p pipeChan) Readdir(count int) ([]os.FileInfo, error)       { return nil, interop.ErrNotImplemented }
-func (p pipeChan) Readdirnames(n int) ([]string, error)           { return nil, interop.ErrNotImplemented }
-func (p pipeChan) Stat() (os.FileInfo, error)                     { return nil, interop.ErrNotImplemented }
-func (p pipeChan) Sync() error                                    { return interop.ErrNotImplemented }
-func (p pipeChan) Truncate(size int64) error                      { return interop.ErrNotImplemented }
-func (p pipeChan) WriteString(s string) (ret int, err error)      { return 0, interop.ErrNotImplemented }
+func (p pipeChan) ReadAt(b []byte, off int64) (n int, err error) { return 0, interop.ErrNotImplemented }
+func (p pipeChan) WriteAt(b []byte, off int64) (n int, err error) {
+	return 0, interop.ErrNotImplemented
+}
+func (p pipeChan) Seek(offset int64, whence int) (int64, error) { return 0, interop.ErrNotImplemented }
+func (p pipeChan) Readdir(count int) ([]os.FileInfo, error)     { return nil, interop.ErrNotImplemented }
+func (p pipeChan) Readdirnames(n int) ([]string, error)         { return nil, interop.ErrNotImplemented }
+func (p pipeChan) Stat() (os.FileInfo, error)                   { return nil, interop.ErrNotImplemented }
+func (p pipeChan) Sync() error                                  { return interop.ErrNotImplemented }
+func (p pipeChan) Truncate(size int64) error                    { return interop.ErrNotImplemented }
+func (p pipeChan) WriteString(s string) (ret int, err error)    { return 0, interop.ErrNotImplemented }
 
 type readOnly struct {
 	afero.File

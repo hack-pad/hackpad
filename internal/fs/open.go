@@ -61,8 +61,7 @@ func openWithFile(file afero.File) (uint64, error) {
 }
 
 func getFile(absPath string, flags int, mode os.FileMode) (afero.File, error) {
-	switch absPath {
-	case "/dev/null":
+	if absPath == "/dev/null" {
 		return newNullFile(), nil
 	}
 	return filesystem.OpenFile(absPath, flags, mode)

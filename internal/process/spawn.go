@@ -13,14 +13,6 @@ var (
 )
 
 func spawn(args []js.Value) (interface{}, error) {
-	return spawnWait(args, false)
-}
-
-func spawnSync(args []js.Value) (interface{}, error) {
-	return spawnWait(args, true)
-}
-
-func spawnWait(args []js.Value, wait bool) (interface{}, error) {
 	if len(args) != 2 {
 		return nil, errors.Errorf("Invalid number of args, expected 2: %v", args)
 	}
@@ -30,16 +22,10 @@ func spawnWait(args []js.Value, wait bool) (interface{}, error) {
 	for i := 0; i < length; i++ {
 		argv = append(argv, args[1].Index(i).String())
 	}
-	return Spawn(command, argv, wait)
+	return Spawn(command, argv)
 }
 
-func Spawn(command string, args []string, wait bool) (*Process, error) {
+func Spawn(command string, args []string) (*Process, error) {
 	process := New(command, args)
-	var err error
-	if wait {
-		err = process.Run()
-	} else {
-		err = process.Start()
-	}
-	return process, err
+	return process, process.Start()
 }
