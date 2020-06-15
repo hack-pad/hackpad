@@ -1,9 +1,9 @@
 package fs
 
 import (
-	"os"
 	"path/filepath"
 	"sync"
+	"syscall"
 	"syscall/js"
 
 	"github.com/johnstarich/go-wasm/internal/interop"
@@ -42,13 +42,13 @@ type fileDescriptor struct {
 func Init() {
 	fs := js.Global().Get("fs")
 	constants := fs.Get("constants")
-	constants.Set("O_RDONLY", os.O_RDONLY)
-	constants.Set("O_WRONLY", os.O_WRONLY)
-	constants.Set("O_RDWR", os.O_RDWR)
-	constants.Set("O_CREAT", os.O_CREATE)
-	constants.Set("O_TRUNC", os.O_TRUNC)
-	constants.Set("O_APPEND", os.O_APPEND)
-	constants.Set("O_EXCL", os.O_EXCL)
+	constants.Set("O_RDONLY", syscall.O_RDONLY)
+	constants.Set("O_WRONLY", syscall.O_WRONLY)
+	constants.Set("O_RDWR", syscall.O_RDWR)
+	constants.Set("O_CREAT", syscall.O_CREATE)
+	constants.Set("O_TRUNC", syscall.O_TRUNC)
+	constants.Set("O_APPEND", syscall.O_APPEND)
+	constants.Set("O_EXCL", syscall.O_EXCL)
 	interop.SetFunc(fs, "chmod", chmod)
 	interop.SetFunc(fs, "chmodSync", chmodSync)
 	interop.SetFunc(fs, "chown", chown)
