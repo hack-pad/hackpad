@@ -1,20 +1,21 @@
 package process
 
 import (
+	"strings"
 	"syscall/js"
 
 	"github.com/johnstarich/go-wasm/internal/fs"
 	"github.com/johnstarich/go-wasm/internal/interop"
-	"github.com/pkg/errors"
+	"github.com/johnstarich/go-wasm/internal/promise"
+	"github.com/johnstarich/go-wasm/log"
+	"go.uber.org/atomic"
 )
 
-const userID = 0
-const groupID = 0
-const minPID = 1
-const currentPID = 1
-const currentParentPID = 0
-
-var currentUMask = 0755
+const (
+	minPID           = 1
+	currentPID       = 1
+	currentParentPID = 0
+)
 
 func Init() {
 	err := fs.MkdirAll(interop.WorkingDirectory(), 0750)
@@ -39,45 +40,82 @@ func Init() {
 	childProcess := global.Get("child_process")
 	interop.SetFunc(childProcess, "spawn", spawn)
 	interop.SetFunc(childProcess, "spawnSync", spawnSync)
+	interop.SetFunc(childProcess, "wait", wait)
+	interop.SetFunc(childProcess, "waitSync", waitSync)
 }
 
-func geteuid(args []js.Value) (interface{}, error) {
-	return userID, nil
+var (
+	pids    = make(map[PID]*Process)
+	lastPID = atomic.NewUint64(minPID)
+)
+
+type PID uint64
+
+func (p PID) JSValue() js.Value {
+	return js.ValueOf(uint64(p))
 }
 
-func getegid(args []js.Value) (interface{}, error) {
-	return groupID, nil
+type Process struct {
+	pid     PID
+	command string
+	args    []string
+
+	done chan struct{}
 }
 
-func getgroups(args []js.Value) (interface{}, error) {
-	return groupID, nil
-}
-
-func umask(args []js.Value) (interface{}, error) {
-	if len(args) == 0 {
-		return currentUMask, nil
+func New(command string, args []string) *Process {
+	return &Process{
+		pid:     PID(lastPID.Inc()),
+		command: command,
+		args:    args,
+		done:    make(chan struct{}),
 	}
-	oldUMask := currentUMask
-	currentUMask = args[0].Int()
-	return oldUMask, nil
 }
 
-func cwd(args []js.Value) (interface{}, error) {
-	return interop.WorkingDirectory(), nil
+func (p *Process) Start() error {
+	return p.runWasm(false)
 }
 
-func chdir(args []js.Value) (interface{}, error) {
-	if len(args) == 0 {
-		return nil, errors.New("a new directory argument is required")
-	}
-	newCWD := args[0].String()
-	info, err := fs.Stat(newCWD)
+func (p *Process) Run() error {
+	return p.runWasm(true)
+}
+
+func (p *Process) Wait() error {
+	<-p.done
+	return nil
+}
+
+func (p *Process) runWasm(wait bool) error {
+	pids[p.pid] = p
+	log.Printf("Spawning process [%d]: %s %s", p.pid, p.command, strings.Join(p.args, " "))
+	buf, err := fs.ReadFile(p.command)
 	if err != nil {
-		return nil, err
+		return err
 	}
-	if !info.IsDir() {
-		return nil, errors.Errorf("%s is not a directory", info.Name())
+	importObject := jsGo.Get("importObject")
+	jsBuf := uint8Array.New(len(buf))
+	js.CopyBytesToJS(jsBuf, buf)
+	// TODO add module caching
+	instantiatePromise := promise.New(jsWasm.Call("instantiate", jsBuf, importObject))
+	fn := func() error {
+		defer func() { close(p.done) }()
+		module, err := promise.Await(instantiatePromise)
+		if err != nil {
+			return err
+		}
+		runPromise := promise.New(jsGo.Call("run", module))
+		_, err = promise.Await(runPromise)
+		return err
 	}
-	interop.SetWorkingDirectory(args[0].String())
-	return nil, nil
+	if !wait {
+		go fn()
+		return nil
+	}
+	return fn()
+}
+
+func (p *Process) JSValue() js.Value {
+	return js.ValueOf(map[string]interface{}{
+		"pid": p.pid,
+	})
 }

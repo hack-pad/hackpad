@@ -1,7 +1,10 @@
 package promise
 
 import (
+	"runtime/debug"
 	"syscall/js"
+
+	"github.com/johnstarich/go-wasm/log"
 )
 
 type Promise struct {
@@ -29,7 +32,15 @@ func (p Promise) do(methodName string, fn func(value js.Value) interface{}) Prom
 }
 
 func (p Promise) Catch(fn func(rejectedReason js.Value) interface{}) Promise {
-	return p.do("catch", fn)
+	stack := string(debug.Stack())
+	return p.do("catch", func(rejectedReason js.Value) interface{} {
+		log.ErrorJSValues(
+			js.ValueOf("Promise rejected:"),
+			rejectedReason,
+			js.ValueOf(stack),
+		)
+		return fn(rejectedReason)
+	})
 }
 
 func (p Promise) JSValue() js.Value {

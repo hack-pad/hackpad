@@ -2,8 +2,6 @@ package promise
 
 import (
 	"syscall/js"
-
-	"github.com/johnstarich/go-wasm/log"
 )
 
 func Await(promise Promise) (js.Value, error) {
@@ -15,7 +13,6 @@ func Await(promise Promise) (js.Value, error) {
 		return nil
 	}).Catch(func(rejectedReason js.Value) interface{} {
 		err := js.Error{Value: rejectedReason}
-		log.Errorf("Promise rejected: %s", err.Error())
 		errs <- err
 		close(errs)
 		return nil
