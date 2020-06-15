@@ -60,6 +60,7 @@ type Process struct {
 	command string
 	args    []string
 
+	err  error
 	done chan struct{}
 }
 
@@ -82,28 +83,33 @@ func (p *Process) Run() error {
 
 func (p *Process) Wait() error {
 	<-p.done
-	return nil
+	return p.err
 }
 
 func (p *Process) runWasm(wait bool) error {
 	pids[p.pid] = p
-	log.Printf("Spawning process [%d]: %s %s", p.pid, p.command, strings.Join(p.args, " "))
+	log.Printf("Spawning process [%d] %q: %s", p.pid, p.command, strings.Join(p.args, " "))
 	buf, err := fs.ReadFile(p.command)
 	if err != nil {
 		return err
 	}
-	importObject := jsGo.Get("importObject")
+	goInstance := jsGo.New()
+	goInstance.Set("argv", interop.SliceFromStrings(p.args))
+	importObject := goInstance.Get("importObject")
 	jsBuf := uint8Array.New(len(buf))
 	js.CopyBytesToJS(jsBuf, buf)
 	// TODO add module caching
 	instantiatePromise := promise.New(jsWasm.Call("instantiate", jsBuf, importObject))
-	fn := func() error {
-		defer func() { close(p.done) }()
+	fn := func() (err error) {
+		defer func() {
+			p.err = err
+			close(p.done)
+		}()
 		module, err := promise.Await(instantiatePromise)
 		if err != nil {
 			return err
 		}
-		runPromise := promise.New(jsGo.Call("run", module))
+		runPromise := promise.New(goInstance.Call("run", module.Get("instance")))
 		_, err = promise.Await(runPromise)
 		return err
 	}
@@ -119,3 +125,19 @@ func (p *Process) JSValue() js.Value {
 		"pid": p.pid,
 	})
 }
+
+/*
+func environ() map[string]interface{} {
+	env := make(map[string]interface{})
+	for _, pair := range os.Environ() {
+		equalsIndex := strings.IndexRune(pair, '=')
+		if equalsIndex == -1 {
+			env[pair] = ""
+		} else {
+			key, val := pair[:equalsIndex], pair[equalsIndex+1:]
+			env[key] = val
+		}
+	}
+	return env
+}
+*/

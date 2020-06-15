@@ -8,7 +8,7 @@ import (
 
 var (
 	jsWasm     = js.Global().Get("WebAssembly")
-	jsGo       = js.Global().Get("Go").New()
+	jsGo       = js.Global().Get("Go")
 	uint8Array = js.Global().Get("Uint8Array")
 )
 
