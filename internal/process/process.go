@@ -1,6 +1,7 @@
 package process
 
 import (
+	"fmt"
 	"strings"
 	"syscall/js"
 
@@ -55,10 +56,15 @@ func (p PID) JSValue() js.Value {
 	return js.ValueOf(uint64(p))
 }
 
+func (p PID) String() string {
+	return fmt.Sprintf("%d", p)
+}
+
 type Process struct {
 	pid     PID
 	command string
 	args    []string
+	state   string
 
 	err  error
 	done chan struct{}
@@ -84,6 +90,7 @@ func (p *Process) Wait() error {
 
 func (p *Process) startWasm() error {
 	pids[p.pid] = p
+	p.state = "pending"
 	log.Printf("Spawning process [%d] %q: %s", p.pid, p.command, strings.Join(p.args, " "))
 	buf, err := fs.ReadFile(p.command)
 	if err != nil {
@@ -94,15 +101,17 @@ func (p *Process) startWasm() error {
 }
 
 func (p *Process) runWasmBytes(wasm []byte) {
-	var err error
-	defer func() {
+	handleErr := func(err error) {
+		p.state = "done"
 		if err != nil {
 			log.Errorf("Failed to start process: %s", err.Error())
 			p.err = err
-			close(p.done)
+			p.state = "error"
 		}
-	}()
+		close(p.done)
+	}
 
+	p.state = "compiling wasm"
 	goInstance := jsGo.New()
 	goInstance.Set("argv", interop.SliceFromStrings(p.args))
 	importObject := goInstance.Get("importObject")
@@ -112,16 +121,23 @@ func (p *Process) runWasmBytes(wasm []byte) {
 	instantiatePromise := promise.New(jsWasm.Call("instantiate", jsBuf, importObject))
 	module, err := promise.Await(instantiatePromise)
 	if err != nil {
+		handleErr(err)
 		return
 	}
+	p.state = "running"
 	runPromise := promise.New(goInstance.Call("run", module.Get("instance")))
 	_, err = promise.Await(runPromise)
+	handleErr(err)
 }
 
 func (p *Process) JSValue() js.Value {
 	return js.ValueOf(map[string]interface{}{
 		"pid": p.pid,
 	})
+}
+
+func (p *Process) String() string {
+	return fmt.Sprintf("PID=%s, State=%s, Err=%+v", p.pid, p.state, p.err)
 }
 
 /*
