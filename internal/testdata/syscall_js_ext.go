@@ -32,7 +32,7 @@ func StartProcess(argv0 string, argv []string, attr *ProcAttr) (pid int, handle 
 func Wait4(pid int, wstatus *WaitStatus, options int, rusage *Rusage) (wpid int, err error) {
 	if pid <= 0 {
 		// waiting on any child process is not currently supported
-		return 0, ENOSYS
+		return -1, ENOSYS
 	}
 	// TODO support wstatus, options, and rusage
 	ret, err := childProcessCall("wait", pid)
