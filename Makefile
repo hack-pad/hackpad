@@ -11,12 +11,19 @@ LINT_VERSION=1.27.0
 serve:
 	go run ./server
 
-.PHONY: lint
-lint:
+.PHONY: lint-deps
+lint-deps:
 	@if ! which golangci-lint >/dev/null || [[ "$$(golangci-lint version 2>&1)" != *${LINT_VERSION}* ]]; then \
 		curl -sfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $$(go env GOPATH)/bin v${LINT_VERSION}; \
 	fi
+
+.PHONY: lint
+lint: lint-deps
 	golangci-lint run
+
+.PHONY: lint-fix
+lint-fix: lint-deps
+	golangci-lint run --fix
 
 .PHONY: static
 static: out/index.html out/go.zip commands
