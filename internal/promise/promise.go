@@ -32,10 +32,15 @@ func (p Promise) Catch(fn func(rejectedReason js.Value) interface{}) Promise {
 	return p.do("catch", fn)
 }
 
+func (p Promise) JSValue() js.Value {
+	return p.value
+}
+
 func singleUseFunc(fn func(this js.Value, args []js.Value) interface{}) js.Func {
 	var wrapperFn js.Func
-	return js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+	wrapperFn = js.FuncOf(func(this js.Value, args []js.Value) interface{} {
 		wrapperFn.Release()
 		return fn(this, args)
 	})
+	return wrapperFn
 }
