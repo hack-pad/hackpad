@@ -155,3 +155,7 @@ func environ() map[string]interface{} {
 	return env
 }
 */
+
+func Dump() interface{} {
+	return fmt.Sprintf("%+v", pids)
+}
