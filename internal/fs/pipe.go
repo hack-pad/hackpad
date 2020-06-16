@@ -7,14 +7,14 @@ import (
 	"github.com/spf13/afero"
 )
 
-func (f *FileDescriptors) Pipe() ([]uint64, error) {
+func (f *FileDescriptors) Pipe() ([]FID, error) {
 	pipeC := newPipeChan()
 	r, err := f.openWithFile(readOnly{pipeC})
 	if err != nil {
 		return nil, err
 	}
 	w, err := f.openWithFile(writeOnly{pipeC})
-	return []uint64{r, w}, err
+	return []FID{r, w}, err
 }
 
 type pipeChan chan byte

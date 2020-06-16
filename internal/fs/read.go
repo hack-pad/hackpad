@@ -6,8 +6,8 @@ import (
 	"github.com/pkg/errors"
 )
 
-func (f *FileDescriptors) Read(fd uint64, buffer []byte, offset, length int, position *int64) (n int, err error) {
-	fileDescriptor := f.fileDescriptorIDs[fd]
+func (f *FileDescriptors) Read(fd FID, buffer []byte, offset, length int, position *int64) (n int, err error) {
+	fileDescriptor := f.fidMap[fd]
 	if fileDescriptor == nil {
 		return 0, errors.Errorf("unknown fd: %d", fd)
 	}

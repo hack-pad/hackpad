@@ -6,7 +6,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-func (f *FileDescriptors) Write(fd uint64, buffer []byte, offset, length int, position *int64) (n int, err error) {
+func (f *FileDescriptors) Write(fd FID, buffer []byte, offset, length int, position *int64) (n int, err error) {
 	if fd < minFD { // TODO allow pipes to override output file
 		var n int
 		switch fd {
@@ -17,7 +17,7 @@ func (f *FileDescriptors) Write(fd uint64, buffer []byte, offset, length int, po
 		}
 		return n, nil
 	}
-	fileDescriptor := f.fileDescriptorIDs[fd]
+	fileDescriptor := f.fidMap[fd]
 	if fileDescriptor == nil {
 		return 0, errors.Errorf("unknown fd %d", fd)
 	}

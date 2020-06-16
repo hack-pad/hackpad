@@ -3,6 +3,7 @@ package fs
 import (
 	"syscall/js"
 
+	"github.com/johnstarich/go-wasm/internal/fs"
 	"github.com/johnstarich/go-wasm/internal/process"
 	"github.com/pkg/errors"
 )
@@ -17,7 +18,7 @@ func closeSync(args []js.Value) (interface{}, error) {
 		return nil, errors.Errorf("not enough args %d", len(args))
 	}
 
-	fd := uint64(args[0].Int())
+	fd := fs.FID(args[0].Int())
 	p := process.Current()
 	err := p.Files().Close(fd)
 	return nil, err

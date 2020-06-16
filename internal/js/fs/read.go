@@ -3,6 +3,7 @@ package fs
 import (
 	"syscall/js"
 
+	"github.com/johnstarich/go-wasm/internal/fs"
 	"github.com/johnstarich/go-wasm/internal/process"
 	"github.com/pkg/errors"
 )
@@ -22,7 +23,7 @@ func readSyncImpl(args []js.Value) (int, js.Value, error) {
 	if len(args) != 5 {
 		return 0, js.Null(), errors.Errorf("missing required args, expected 5: %+v", args)
 	}
-	fd := uint64(args[0].Int())
+	fd := fs.FID(args[0].Int())
 	jsBuffer := args[1]
 	offset := args[2].Int()
 	length := args[3].Int()

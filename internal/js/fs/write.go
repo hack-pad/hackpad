@@ -3,6 +3,7 @@ package fs
 import (
 	"syscall/js"
 
+	"github.com/johnstarich/go-wasm/internal/fs"
 	"github.com/johnstarich/go-wasm/internal/process"
 	"github.com/pkg/errors"
 )
@@ -20,7 +21,7 @@ func write(args []js.Value) ([]interface{}, error) {
 	if len(args) < 2 {
 		return nil, errors.Errorf("missing required args, expected fd and buffer: %+v", args)
 	}
-	fd := uint64(args[0].Int())
+	fd := fs.FID(args[0].Int())
 	jsBuffer := args[1]
 	offset := 0
 	if len(args) >= 3 {
