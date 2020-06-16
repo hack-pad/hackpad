@@ -1,9 +1,9 @@
 package fs
 
 import (
-	"os"
 	"syscall/js"
 
+	"github.com/johnstarich/go-wasm/internal/fs"
 	"github.com/pkg/errors"
 )
 
@@ -19,17 +19,5 @@ func unlinkSync(args []js.Value) (interface{}, error) {
 		return nil, errors.Errorf("Invalid number of args, expected 1: %v", args)
 	}
 	path := args[0].String()
-	return nil, Unlink(path)
-}
-
-func Unlink(path string) error {
-	path = resolvePath(path)
-	info, err := Stat(path)
-	if err != nil {
-		return err
-	}
-	if info.IsDir() {
-		return os.ErrPermission
-	}
-	return filesystem.Remove(path)
+	return nil, fs.Unlink(path)
 }

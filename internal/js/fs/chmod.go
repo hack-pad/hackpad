@@ -4,6 +4,7 @@ import (
 	"os"
 	"syscall/js"
 
+	"github.com/johnstarich/go-wasm/internal/fs"
 	"github.com/pkg/errors"
 )
 
@@ -19,9 +20,5 @@ func chmodSync(args []js.Value) (interface{}, error) {
 
 	path := args[0].String()
 	mode := os.FileMode(args[1].Int())
-	return nil, Chmod(path, mode)
-}
-
-func Chmod(path string, mode os.FileMode) error {
-	return filesystem.Chmod(resolvePath(path), mode)
+	return nil, fs.Chmod(path, mode)
 }

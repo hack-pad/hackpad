@@ -1,11 +1,10 @@
 package fs
 
 import (
-	"io"
 	"syscall/js"
 
+	"github.com/johnstarich/go-wasm/internal/process"
 	"github.com/pkg/errors"
-	"github.com/spf13/afero"
 )
 
 func read(args []js.Value) ([]interface{}, error) {
@@ -34,29 +33,8 @@ func readSyncImpl(args []js.Value) (int, js.Value, error) {
 	}
 
 	buffer := make([]byte, length)
-	n, err := Read(fd, buffer, offset, length, position)
+	p := process.Current()
+	n, err := p.Files().Read(fd, buffer, offset, length, position)
 	js.CopyBytesToJS(jsBuffer, buffer)
 	return n, jsBuffer, err
-}
-
-func Read(fd uint64, buffer []byte, offset, length int, position *int64) (n int, err error) {
-	fileDescriptor := fileDescriptorIDs[fd]
-	if fileDescriptor == nil {
-		return 0, errors.Errorf("unknown fd: %d", fd)
-	}
-	// 'offset' in Node.js's read is the offset in the buffer to start writing at,
-	// and 'position' is where to begin reading from in the file.
-	if position == nil {
-		n, err = fileDescriptor.file.Read(buffer[offset : offset+length])
-	} else {
-		n, err = fileDescriptor.file.ReadAt(buffer[offset:offset+length], *position)
-	}
-	if err == io.EOF {
-		err = nil
-	}
-	return
-}
-
-func ReadFile(path string) ([]byte, error) {
-	return afero.ReadFile(filesystem, resolvePath(path))
 }

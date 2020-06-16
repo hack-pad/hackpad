@@ -1,6 +1,7 @@
 package process
 
 import (
+	"github.com/johnstarich/go-wasm/internal/fs"
 	"github.com/johnstarich/go-wasm/log"
 )
 
@@ -11,7 +12,10 @@ var (
 )
 
 func Init(switchedContext func(PID, PID)) {
-	pids[minPID] = &process{pid: minPID}
+	pids[minPID] = &process{
+		pid:             minPID,
+		fileDescriptors: fs.NewFileDescriptors(),
+	}
 	switchedContextListener = switchedContext
 	switchContext(minPID)
 }

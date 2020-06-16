@@ -4,6 +4,7 @@ import (
 	"os"
 	"syscall/js"
 
+	"github.com/johnstarich/go-wasm/internal/fs"
 	"github.com/pkg/errors"
 )
 
@@ -18,13 +19,5 @@ func mkdirSync(args []js.Value) (interface{}, error) {
 	}
 	path := args[0].String()
 	mode := os.FileMode(args[1].Int())
-	return nil, Mkdir(path, mode)
-}
-
-func Mkdir(path string, mode os.FileMode) error {
-	return filesystem.Mkdir(resolvePath(path), mode)
-}
-
-func MkdirAll(path string, mode os.FileMode) error {
-	return filesystem.MkdirAll(resolvePath(path), mode)
+	return nil, fs.Mkdir(path, mode)
 }

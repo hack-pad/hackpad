@@ -3,6 +3,7 @@ package fs
 import (
 	"syscall/js"
 
+	"github.com/johnstarich/go-wasm/internal/process"
 	"github.com/pkg/errors"
 )
 
@@ -17,22 +18,7 @@ func closeSync(args []js.Value) (interface{}, error) {
 	}
 
 	fd := uint64(args[0].Int())
-	return nil, Close(fd)
-}
-
-func Close(fd uint64) error {
-	fileDescriptor := fileDescriptorIDs[fd]
-	if fileDescriptor == nil {
-		return errors.Errorf("unknown fd: %d", fd)
-	}
-	if fileDescriptor.openCount.Dec() == 0 {
-		fileDescriptorMu.Lock()
-		if fileDescriptor.openCount.Load() == 0 {
-			delete(fileDescriptorIDs, fd)
-			delete(fileDescriptorNames, fileDescriptor.file.Name())
-		}
-		fileDescriptorMu.Unlock()
-		return fileDescriptor.file.Close()
-	}
-	return nil
+	p := process.Current()
+	err := p.Files().Close(fd)
+	return nil, err
 }

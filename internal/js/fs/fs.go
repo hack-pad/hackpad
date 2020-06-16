@@ -1,16 +1,11 @@
 package fs
 
 import (
-	"fmt"
-	"os"
-	"path/filepath"
-	"sync"
 	"syscall"
 	"syscall/js"
 
+	"github.com/johnstarich/go-wasm/internal/fs"
 	"github.com/johnstarich/go-wasm/internal/interop"
-	"github.com/spf13/afero"
-	"go.uber.org/atomic"
 )
 
 /*
@@ -25,21 +20,6 @@ rename(from, to, callback) { callback(enosys()); },
 symlink(path, link, callback) { callback(enosys()); },
 truncate(path, length, callback) { callback(enosys()); },
 */
-
-var filesystem = afero.NewMemMapFs()
-
-const minFD = 3
-
-var lastFileDescriptorID = atomic.NewUint64(minFD)
-var fileDescriptorNames = make(map[string]*fileDescriptor)
-var fileDescriptorIDs = make(map[uint64]*fileDescriptor)
-var fileDescriptorMu sync.Mutex
-
-type fileDescriptor struct {
-	id        uint64
-	file      afero.File
-	openCount *atomic.Uint64
-}
 
 func Init() {
 	fs := js.Global().Get("fs")
@@ -85,24 +65,6 @@ func Init() {
 	interop.SetFunc(fs, "writeSync", writeSync)
 }
 
-func resolvePath(path string) string {
-	if filepath.IsAbs(path) {
-		return filepath.Clean(path)
-	}
-	return filepath.Join(interop.WorkingDirectory(), path)
-}
-
 func Dump() interface{} {
-	var total int64
-	err := afero.Walk(filesystem, "/", func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			return err
-		}
-		total += info.Size()
-		return nil
-	})
-	if err != nil {
-		return err
-	}
-	return fmt.Sprintf("%d bytes", total)
+	return fs.Dump()
 }

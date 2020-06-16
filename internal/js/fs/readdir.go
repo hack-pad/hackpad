@@ -1,11 +1,10 @@
 package fs
 
 import (
-	"os"
 	"syscall/js"
 
+	"github.com/johnstarich/go-wasm/internal/fs"
 	"github.com/pkg/errors"
-	"github.com/spf13/afero"
 )
 
 func readdir(args []js.Value) ([]interface{}, error) {
@@ -18,7 +17,7 @@ func readdirSync(args []js.Value) (interface{}, error) {
 		return nil, errors.Errorf("Invalid number of args, expected 1: %v", args)
 	}
 	path := args[0].String()
-	dir, err := ReadDir(path)
+	dir, err := fs.ReadDir(path)
 	if err != nil {
 		return nil, err
 	}
@@ -27,8 +26,4 @@ func readdirSync(args []js.Value) (interface{}, error) {
 		names = append(names, f.Name())
 	}
 	return names, err
-}
-
-func ReadDir(path string) ([]os.FileInfo, error) {
-	return afero.ReadDir(filesystem, resolvePath(path))
 }

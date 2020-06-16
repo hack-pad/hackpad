@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"syscall/js"
 
+	"github.com/johnstarich/go-wasm/internal/fs"
 	"go.uber.org/atomic"
 )
 
@@ -28,6 +29,7 @@ type Process interface {
 
 	Start() error
 	Wait() error
+	Files() *fs.FileDescriptors
 }
 
 type process struct {
@@ -38,6 +40,8 @@ type process struct {
 
 	err  error
 	done chan struct{}
+
+	fileDescriptors *fs.FileDescriptors
 }
 
 func New(command string, args []string) Process {
@@ -48,6 +52,8 @@ func New(command string, args []string) Process {
 		state:   "pending",
 
 		done: make(chan struct{}),
+
+		fileDescriptors: fs.NewFileDescriptors(),
 	}
 }
 
@@ -57,6 +63,10 @@ func (p *process) PID() PID {
 
 func (p *process) ParentPID() PID {
 	return p.parentPID
+}
+
+func (p *process) Files() *fs.FileDescriptors {
+	return p.fileDescriptors
 }
 
 func (p *process) Start() error {

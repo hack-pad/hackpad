@@ -1,9 +1,9 @@
 package fs
 
 import (
-	"os"
 	"syscall/js"
 
+	"github.com/johnstarich/go-wasm/internal/fs"
 	"github.com/pkg/errors"
 )
 
@@ -17,11 +17,6 @@ func lstatSync(args []js.Value) (interface{}, error) {
 		return nil, errors.Errorf("Invalid number of args, expected 1: %v", args)
 	}
 	path := args[0].String()
-	info, err := Lstat(path)
+	info, err := fs.Lstat(path)
 	return jsStat(info), err
-}
-
-func Lstat(path string) (os.FileInfo, error) {
-	// TODO add proper symlink support
-	return filesystem.Stat(resolvePath(path))
 }

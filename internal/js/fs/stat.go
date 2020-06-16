@@ -5,6 +5,7 @@ import (
 	"syscall"
 	"syscall/js"
 
+	"github.com/johnstarich/go-wasm/internal/fs"
 	"github.com/pkg/errors"
 )
 
@@ -18,12 +19,8 @@ func statSync(args []js.Value) (interface{}, error) {
 		return nil, errors.Errorf("Invalid number of args, expected 1: %v", args)
 	}
 	path := args[0].String()
-	info, err := Stat(path)
+	info, err := fs.Stat(path)
 	return jsStat(info), err
-}
-
-func Stat(path string) (os.FileInfo, error) {
-	return filesystem.Stat(resolvePath(path))
 }
 
 var (

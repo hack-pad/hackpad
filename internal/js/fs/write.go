@@ -1,9 +1,9 @@
 package fs
 
 import (
-	"io"
 	"syscall/js"
 
+	"github.com/johnstarich/go-wasm/internal/process"
 	"github.com/pkg/errors"
 )
 
@@ -38,37 +38,8 @@ func write(args []js.Value) ([]interface{}, error) {
 
 	buffer := make([]byte, length)
 	js.CopyBytesToGo(buffer, jsBuffer)
-	if fd < minFD {
-		var n int
-		switch fd {
-		case 2:
-			n = stderr.Print(string(buffer))
-		default:
-			n = stdout.Print(string(buffer))
-		}
-		return []interface{}{n}, nil
-	}
-	n, err := Write(fd, buffer, offset, length, position)
+	p := process.Current()
+	n, err := p.Files().Write(fd, buffer, offset, length, position)
 	js.CopyBytesToJS(jsBuffer, buffer)
 	return []interface{}{n, jsBuffer}, err
-}
-
-func Write(fd uint64, buffer []byte, offset, length int, position *int64) (n int, err error) {
-	fileDescriptor := fileDescriptorIDs[fd]
-	if fileDescriptor == nil {
-		return 0, errors.Errorf("unknown fd %d", fd)
-	}
-	// 'offset' in Node.js's read is the offset in the buffer to start writing at,
-	// and 'position' is where to begin reading from in the file.
-	if position != nil {
-		_, err := fileDescriptor.file.Seek(*position, io.SeekStart)
-		if err != nil {
-			return 0, err
-		}
-	}
-	n, err = fileDescriptor.file.Write(buffer[offset : offset+length])
-	if err == io.EOF {
-		err = nil
-	}
-	return
 }

@@ -4,6 +4,7 @@ import (
 	"syscall/js"
 	"time"
 
+	"github.com/johnstarich/go-wasm/internal/fs"
 	"github.com/pkg/errors"
 )
 
@@ -20,9 +21,5 @@ func utimesSync(args []js.Value) (interface{}, error) {
 	path := args[0].String()
 	atime := time.Unix(int64(args[1].Int()), 0)
 	mtime := time.Unix(int64(args[2].Int()), 0)
-	return nil, Utimes(path, atime, mtime)
-}
-
-func Utimes(path string, atime, mtime time.Time) error {
-	return filesystem.Chtimes(resolvePath(path), atime, mtime)
+	return nil, fs.Utimes(path, atime, mtime)
 }

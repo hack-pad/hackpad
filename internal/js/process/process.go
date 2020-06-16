@@ -3,8 +3,8 @@ package process
 import (
 	"syscall/js"
 
+	"github.com/johnstarich/go-wasm/internal/fs"
 	"github.com/johnstarich/go-wasm/internal/interop"
-	"github.com/johnstarich/go-wasm/internal/js/fs"
 	"github.com/johnstarich/go-wasm/internal/process"
 )
 
