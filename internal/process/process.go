@@ -32,7 +32,7 @@ type Process interface {
 	Wait() error
 	Files() *fs.FileDescriptors
 	WorkingDirectory() string
-	SetWorkingDirectory(wd string)
+	SetWorkingDirectory(wd string) error
 }
 
 type process struct {
@@ -41,13 +41,11 @@ type process struct {
 	args             []string
 	state            string
 	attr             *os.ProcAttr
+	done             chan struct{}
+	err              error
+	fileDescriptors  *fs.FileDescriptors
+	setFilesWD       func(wd string) error
 	workingDirectory string
-	setFilesWD       func(wd string)
-
-	err  error
-	done chan struct{}
-
-	fileDescriptors *fs.FileDescriptors
 }
 
 func New(command string, args []string, attr *os.ProcAttr) Process {
@@ -95,9 +93,8 @@ func (p *process) WorkingDirectory() string {
 	return p.workingDirectory
 }
 
-func (p *process) SetWorkingDirectory(wd string) {
-	p.workingDirectory = wd
-	p.setFilesWD(wd)
+func (p *process) SetWorkingDirectory(wd string) error {
+	return p.setFilesWD(wd)
 }
 
 func (p *process) JSValue() js.Value {

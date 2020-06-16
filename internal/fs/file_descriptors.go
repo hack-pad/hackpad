@@ -35,7 +35,7 @@ type fileDescriptor struct {
 	openCount *atomic.Uint64
 }
 
-func NewFileDescriptors(workingDirectory string) (*FileDescriptors, func(wd string)) {
+func NewFileDescriptors(workingDirectory string) (*FileDescriptors, func(wd string) error) {
 	f := &FileDescriptors{
 		previousFID:      minFD,
 		nameMap:          make(map[string]*fileDescriptor),
@@ -45,10 +45,18 @@ func NewFileDescriptors(workingDirectory string) (*FileDescriptors, func(wd stri
 	return f, f.setWorkingDirectory
 }
 
-func (f *FileDescriptors) setWorkingDirectory(wd string) {
+func (f *FileDescriptors) setWorkingDirectory(wd string) error {
+	info, err := f.Stat(wd)
+	if err != nil {
+		return err
+	}
+	if !info.IsDir() {
+		return ErrNotDir
+	}
 	f.mu.Lock()
 	f.workingDirectory = wd
 	f.mu.Unlock()
+	return nil
 }
 
 func (f *FileDescriptors) resolvePath(path string) string {

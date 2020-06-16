@@ -24,6 +24,5 @@ func chdir(args []js.Value) (interface{}, error) {
 	if !info.IsDir() {
 		return nil, errors.Errorf("%s is not a directory", info.Name())
 	}
-	p.SetWorkingDirectory(args[0].String())
-	return nil, nil
+	return nil, p.SetWorkingDirectory(args[0].String())
 }
