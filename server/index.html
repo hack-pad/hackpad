@@ -39,6 +39,14 @@
 			console.log(fs.readdirSync(path))
 		}
 
+		function cat(path) {
+			const fd = fs.openSync(path)
+			const buf = new Uint8Array(4096)
+			const n = fs.readSync(fd, buf, 0, buf.length, 0)
+			console.log(new TextDecoder("utf-8").decode(buf).substr(0, n))
+			fs.closeSync(fd)
+		}
+
 		const go = new Go();
 		load('polyfill', go)
 			.then(cmd => {
