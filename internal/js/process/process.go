@@ -3,7 +3,6 @@ package process
 import (
 	"syscall/js"
 
-	"github.com/johnstarich/go-wasm/internal/fs"
 	"github.com/johnstarich/go-wasm/internal/interop"
 	"github.com/johnstarich/go-wasm/internal/process"
 )
@@ -13,7 +12,8 @@ var jsProcess = js.Global().Get("process")
 func Init() {
 	process.Init(switchedContext)
 
-	err := fs.MkdirAll(interop.WorkingDirectory(), 0750)
+	currentProcess := process.Current()
+	err := currentProcess.Files().MkdirAll(currentProcess.WorkingDirectory(), 0750)
 	if err != nil {
 		panic(err)
 	}
@@ -24,7 +24,6 @@ func Init() {
 	interop.SetFunc(jsProcess, "getgid", getegid)
 	interop.SetFunc(jsProcess, "getegid", getegid)
 	interop.SetFunc(jsProcess, "getgroups", getgroups)
-	currentProcess := process.Current()
 	jsProcess.Set("pid", currentProcess.PID())
 	jsProcess.Set("ppid", currentProcess.ParentPID())
 	interop.SetFunc(jsProcess, "umask", umask)

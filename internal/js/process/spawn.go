@@ -21,6 +21,7 @@ func spawn(args []js.Value) (interface{}, error) {
 }
 
 func Spawn(command string, args []string) (process.Process, error) {
-	p := process.New(command, args)
+	// TODO fill in and use os.ProcAttr
+	p := process.New(command, args, nil)
 	return p, p.Start()
 }

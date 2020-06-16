@@ -2,6 +2,7 @@ package process
 
 import (
 	"fmt"
+	"os"
 	"syscall/js"
 
 	"github.com/johnstarich/go-wasm/internal/fs"
@@ -30,13 +31,18 @@ type Process interface {
 	Start() error
 	Wait() error
 	Files() *fs.FileDescriptors
+	WorkingDirectory() string
+	SetWorkingDirectory(wd string)
 }
 
 type process struct {
-	pid, parentPID PID
-	command        string
-	args           []string
-	state          string
+	pid, parentPID   PID
+	command          string
+	args             []string
+	state            string
+	attr             *os.ProcAttr
+	workingDirectory string
+	setFilesWD       func(wd string)
 
 	err  error
 	done chan struct{}
@@ -44,16 +50,23 @@ type process struct {
 	fileDescriptors *fs.FileDescriptors
 }
 
-func New(command string, args []string) Process {
+func New(command string, args []string, attr *os.ProcAttr) Process {
+	return newWithCurrent(Current(), PID(lastPID.Inc()), command, args, attr)
+}
+
+func newWithCurrent(current Process, newPID PID, command string, args []string, attr *os.ProcAttr) *process {
+	wd := current.WorkingDirectory()
+	files, setFilesWD := fs.NewFileDescriptors(wd)
 	return &process{
-		pid:     PID(lastPID.Inc()),
-		command: command,
-		args:    args,
-		state:   "pending",
-
-		done: make(chan struct{}),
-
-		fileDescriptors: fs.NewFileDescriptors(),
+		pid:              newPID,
+		command:          command,
+		args:             args,
+		state:            "pending",
+		attr:             attr,
+		done:             make(chan struct{}),
+		fileDescriptors:  files,
+		setFilesWD:       setFilesWD,
+		workingDirectory: wd,
 	}
 }
 
@@ -78,6 +91,15 @@ func (p *process) Wait() error {
 	return p.err
 }
 
+func (p *process) WorkingDirectory() string {
+	return p.workingDirectory
+}
+
+func (p *process) SetWorkingDirectory(wd string) {
+	p.workingDirectory = wd
+	p.setFilesWD(wd)
+}
+
 func (p *process) JSValue() js.Value {
 	return js.ValueOf(map[string]interface{}{
 		"pid":  p.pid,
@@ -86,7 +108,7 @@ func (p *process) JSValue() js.Value {
 }
 
 func (p *process) String() string {
-	return fmt.Sprintf("PID=%s, State=%s, Err=%+v", p.pid, p.state, p.err)
+	return fmt.Sprintf("PID=%s, State=%s, WD=%s, Err=%+v", p.pid, p.state, p.workingDirectory, p.err)
 }
 
 func Dump() interface{} {

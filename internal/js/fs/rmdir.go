@@ -3,7 +3,7 @@ package fs
 import (
 	"syscall/js"
 
-	"github.com/johnstarich/go-wasm/internal/fs"
+	"github.com/johnstarich/go-wasm/internal/process"
 	"github.com/pkg/errors"
 )
 
@@ -17,5 +17,6 @@ func rmdirSync(args []js.Value) (interface{}, error) {
 		return nil, errors.Errorf("Invalid number of args, expected 1: %v", args)
 	}
 	path := args[0].String()
-	return nil, fs.RemoveDir(path)
+	p := process.Current()
+	return nil, p.Files().RemoveDir(path)
 }

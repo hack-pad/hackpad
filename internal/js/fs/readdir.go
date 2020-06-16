@@ -3,7 +3,7 @@ package fs
 import (
 	"syscall/js"
 
-	"github.com/johnstarich/go-wasm/internal/fs"
+	"github.com/johnstarich/go-wasm/internal/process"
 	"github.com/pkg/errors"
 )
 
@@ -17,7 +17,8 @@ func readdirSync(args []js.Value) (interface{}, error) {
 		return nil, errors.Errorf("Invalid number of args, expected 1: %v", args)
 	}
 	path := args[0].String()
-	dir, err := fs.ReadDir(path)
+	p := process.Current()
+	dir, err := p.Files().ReadDir(path)
 	if err != nil {
 		return nil, err
 	}

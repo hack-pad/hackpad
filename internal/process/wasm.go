@@ -4,7 +4,6 @@ import (
 	"strings"
 	"syscall/js"
 
-	"github.com/johnstarich/go-wasm/internal/fs"
 	"github.com/johnstarich/go-wasm/internal/interop"
 	"github.com/johnstarich/go-wasm/internal/promise"
 	"github.com/johnstarich/go-wasm/log"
@@ -13,7 +12,7 @@ import (
 func (p *process) startWasm() error {
 	pids[p.pid] = p
 	log.Printf("Spawning process [%d] %q: %s", p.pid, p.command, strings.Join(p.args, " "))
-	buf, err := fs.ReadFile(p.command)
+	buf, err := p.Files().ReadFile(p.command)
 	if err != nil {
 		return err
 	}
