@@ -21,7 +21,7 @@ func switchContext(pid PID) (prev PID) {
 	log.Debug("Switching context from PID ", prev, " to ", pid)
 	newProcess := pids[pid]
 	currentPID = pid
-	switchedContextListener(pid, newProcess.ppid)
+	switchedContextListener(pid, newProcess.parentPID)
 	return
 }
 
