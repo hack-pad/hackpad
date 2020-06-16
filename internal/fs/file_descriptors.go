@@ -146,9 +146,9 @@ func getFile(absPath string, flags int, mode os.FileMode) (afero.File, error) {
 	case "/dev/stdin":
 		return newNullFile("/dev/stdin"), nil // TODO can this be mocked?
 	case "/dev/stdout":
-		return os.Stdout, nil
+		return stdout, nil
 	case "/dev/stderr":
-		return os.Stderr, nil
+		return stderr, nil
 	}
 	return filesystem.OpenFile(absPath, flags, mode)
 }

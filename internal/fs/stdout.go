@@ -7,14 +7,18 @@ import (
 	"time"
 
 	"github.com/johnstarich/go-wasm/log"
+	"github.com/spf13/afero"
 )
 
 var (
-	stdout = bufferedLogger{printFn: log.Print}
-	stderr = bufferedLogger{printFn: log.Error}
+	stdout afero.File = &bufferedLogger{name: "/dev/stdout", printFn: log.Print}
+	stderr afero.File = &bufferedLogger{name: "/dev/stderr", printFn: log.Error}
 )
 
 type bufferedLogger struct {
+	unimplementedFile
+
+	name      string
 	printFn   func(...interface{}) int
 	mu        sync.Mutex
 	buf       bytes.Buffer
@@ -53,13 +57,22 @@ func (b *bufferedLogger) jsFlush(this js.Value, args []js.Value) interface{} {
 }
 
 func (b *bufferedLogger) Print(s string) int {
+	n, _ := b.Write([]byte(s))
+	return n
+}
+
+func (b *bufferedLogger) Write(p []byte) (n int, err error) {
 	b.timerOnce.Do(func() {
 		const waitTime = time.Second / 2
 		b.timerID = js.Global().Call("setInterval", js.FuncOf(b.jsFlush), waitTime.Milliseconds())
 	})
 
 	b.mu.Lock()
-	_, _ = b.buf.WriteString(s) // at time of writing, bytes.Buffer.WriteString cannot return an error
+	_, _ = b.buf.Write(p) // at time of writing, bytes.Buffer.Write cannot return an error
 	b.mu.Unlock()
-	return len(s)
+	return len(p), nil
+}
+
+func (b *bufferedLogger) Name() string {
+	return b.name
 }
