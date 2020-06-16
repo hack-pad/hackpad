@@ -40,10 +40,15 @@ func StartProcess(argv0 string, argv []string, attr *ProcAttr) (pid int, handle 
 		env = splitEnvPairs(Environ())
 	}
 
+	var fds []interface{}
+	for _, f := range attr.Files {
+		fds = append(fds, f)
+	}
+
 	ret := jsChildProcess.Call("spawn", argv0, jsArgv, map[string]interface{}{
 		"cwd":   attr.Dir,
 		"env":   env,
-		"stdio": []interface{}{0, 1, 2},
+		"stdio": fds,
 	})
 	pid = ret.Get("pid").Int()
 	return pid, 0, nil
