@@ -3,6 +3,7 @@
 package syscall
 
 import (
+	"strings"
 	"syscall/js"
 )
 
@@ -24,7 +25,26 @@ func StartProcess(argv0 string, argv []string, attr *ProcAttr) (pid int, handle 
 	for _, arg := range argv {
 		jsArgv = append(jsArgv, arg)
 	}
-	ret := jsChildProcess.Call("spawn", argv0, jsArgv)
+
+	cwd := attr.Dir
+	if cwd == "" {
+		cwd, err = Getwd()
+		if err != nil {
+			return 0, 0, err
+		}
+	}
+	var env map[string]interface{}
+	if attr.Env != nil {
+		env = splitEnvPairs(attr.Env)
+	} else {
+		env = splitEnvPairs(Environ())
+	}
+
+	ret := jsChildProcess.Call("spawn", argv0, jsArgv, map[string]interface{}{
+		"cwd":   attr.Dir,
+		"env":   env,
+		"stdio": []interface{}{0, 1, 2},
+	})
 	pid = ret.Get("pid").Int()
 	return pid, 0, nil
 }
@@ -63,4 +83,18 @@ func childProcessCall(name string, args ...interface{}) (js.Value, error) {
 	}))...)
 	res := <-c
 	return res.val, res.err
+}
+
+func splitEnvPairs(pairs []string) map[string]interface{} {
+	env := make(map[string]interface{})
+	for _, pair := range pairs {
+		equalIndex := strings.IndexRune(pair, '=')
+		if equalIndex == -1 {
+			env[pair] = ""
+		} else {
+			key, value := pair[:equalIndex], pair[equalIndex+1:]
+			env[key] = value
+		}
+	}
+	return env
 }

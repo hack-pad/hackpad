@@ -2,7 +2,6 @@ package process
 
 import (
 	"fmt"
-	"os"
 	"syscall/js"
 
 	"github.com/johnstarich/go-wasm/internal/fs"
@@ -40,7 +39,7 @@ type process struct {
 	command          string
 	args             []string
 	state            string
-	attr             *os.ProcAttr
+	attr             *ProcAttr
 	done             chan struct{}
 	err              error
 	fileDescriptors  *fs.FileDescriptors
@@ -48,12 +47,15 @@ type process struct {
 	workingDirectory string
 }
 
-func New(command string, args []string, attr *os.ProcAttr) Process {
+func New(command string, args []string, attr *ProcAttr) Process {
 	return newWithCurrent(Current(), PID(lastPID.Inc()), command, args, attr)
 }
 
-func newWithCurrent(current Process, newPID PID, command string, args []string, attr *os.ProcAttr) *process {
+func newWithCurrent(current Process, newPID PID, command string, args []string, attr *ProcAttr) *process {
 	wd := current.WorkingDirectory()
+	if attr.Dir != "" {
+		wd = attr.Dir
+	}
 	files, setFilesWD := fs.NewFileDescriptors(wd)
 	return &process{
 		pid:              newPID,
@@ -105,7 +107,7 @@ func (p *process) JSValue() js.Value {
 }
 
 func (p *process) String() string {
-	return fmt.Sprintf("PID=%s, State=%s, WD=%s, Err=%+v", p.pid, p.state, p.workingDirectory, p.err)
+	return fmt.Sprintf("PID=%s, State=%s, WD=%s, Attr=%+v, Err=%+v", p.pid, p.state, p.workingDirectory, p.attr, p.err)
 }
 
 func Dump() interface{} {

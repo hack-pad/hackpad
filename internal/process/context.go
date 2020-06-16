@@ -15,7 +15,7 @@ var (
 func Init(switchedContext func(PID, PID)) {
 	pids[minPID] = newWithCurrent(&process{
 		workingDirectory: initialDirectory,
-	}, minPID, "", nil, nil)
+	}, minPID, "", nil, &ProcAttr{})
 	switchedContextListener = switchedContext
 	switchContext(minPID)
 }
