@@ -6,6 +6,7 @@ import (
 	"syscall/js"
 
 	"github.com/johnstarich/go-wasm/internal/fs"
+	"github.com/johnstarich/go-wasm/internal/global"
 	"github.com/johnstarich/go-wasm/internal/interop"
 	"github.com/johnstarich/go-wasm/internal/promise"
 	"github.com/johnstarich/go-wasm/log"
@@ -23,9 +24,11 @@ func Init() {
 	if err != nil {
 		panic(err)
 	}
-	global := js.Global()
+	global.Set("context", &Process{})
 
-	process := global.Get("process")
+	globals := js.Global()
+
+	process := globals.Get("process")
 	interop.SetFunc(process, "getuid", geteuid)
 	interop.SetFunc(process, "geteuid", geteuid)
 	interop.SetFunc(process, "getgid", getegid)
@@ -37,8 +40,8 @@ func Init() {
 	interop.SetFunc(process, "cwd", cwd)
 	interop.SetFunc(process, "chdir", chdir)
 
-	global.Set("child_process", map[string]interface{}{})
-	childProcess := global.Get("child_process")
+	globals.Set("child_process", map[string]interface{}{})
+	childProcess := globals.Get("child_process")
 	interop.SetFunc(childProcess, "spawn", spawn)
 	//interop.SetFunc(childProcess, "spawnSync", spawnSync) // TODO is there any way to run spawnSync so we don't hit deadlock?
 	interop.SetFunc(childProcess, "wait", wait)
@@ -124,13 +127,48 @@ func (p *Process) runWasmBytes(wasm []byte) {
 		handleErr(err)
 		return
 	}
+
+	instance := module.Get("instance")
+	exports := instance.Get("exports")
+
+	runFn := exports.Get("run")
+	resumeFn := exports.Get("resume")
+	wrapperExports := map[string]interface{}{
+		"run": js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+			prev := switchContext(p.pid)
+			ret := runFn.Invoke(interop.SliceFromJSValues(args)...)
+			switchContext(prev)
+			return ret
+		}),
+		"resume": js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+			prev := switchContext(p.pid)
+			ret := resumeFn.Invoke(interop.SliceFromJSValues(args)...)
+			switchContext(prev)
+			return ret
+		}),
+	}
+	for export, value := range interop.Entries(exports) {
+		_, overridden := wrapperExports[export]
+		if !overridden {
+			wrapperExports[export] = value
+		}
+	}
+	instance = js.ValueOf(map[string]interface{}{ // Instance.exports is read-only, so create a shim
+		"exports": wrapperExports,
+	})
+
 	p.state = "running"
-	runPromise := promise.New(goInstance.Call("run", module.Get("instance")))
+	runPromise := promise.New(goInstance.Call("run", instance))
 	_, err = promise.Await(runPromise)
 	handleErr(err)
 }
 
 func (p *Process) JSValue() js.Value {
+	if p == nil {
+		return js.ValueOf(map[string]interface{}{
+			"pid": currentPID,
+		})
+	}
 	return js.ValueOf(map[string]interface{}{
 		"pid": p.pid,
 	})
@@ -138,6 +176,13 @@ func (p *Process) JSValue() js.Value {
 
 func (p *Process) String() string {
 	return fmt.Sprintf("PID=%s, State=%s, Err=%+v", p.pid, p.state, p.err)
+}
+
+func switchContext(pid PID) (prev PID) {
+	prev = PID(global.Get("context").Get("pid").Int())
+	log.Debug("Switching context from PID ", prev, " to ", pid)
+	global.Set("context", pids[pid])
+	return
 }
 
 /*

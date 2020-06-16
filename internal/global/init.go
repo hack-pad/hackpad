@@ -24,3 +24,7 @@ func SetDefault(key string, value interface{}) {
 func Set(key string, value interface{}) {
 	globals.Set(key, value)
 }
+
+func Get(key string) js.Value {
+	return globals.Get(key)
+}
