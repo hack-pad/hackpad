@@ -10,16 +10,25 @@ import (
 )
 
 func spawn(args []js.Value) (interface{}, error) {
-	if len(args) != 3 {
-		return nil, errors.Errorf("Invalid number of args, expected 3: %v", args)
+	if len(args) == 0 {
+		return nil, errors.Errorf("Invalid number of args, expected command name: %v", args)
 	}
+
 	command := args[0].String()
 	var argv []string
-	length := args[1].Length()
-	for i := 0; i < length; i++ {
-		argv = append(argv, args[1].Index(i).String())
+	if len(args) >= 2 {
+		length := args[1].Length()
+		for i := 0; i < length; i++ {
+			argv = append(argv, args[1].Index(i).String())
+		}
+	} else {
+		argv = append(argv, command)
 	}
-	procAttr := parseProcAttr(args[2])
+
+	procAttr := &process.ProcAttr{}
+	if len(args) >= 3 {
+		procAttr = parseProcAttr(args[2])
+	}
 	return Spawn(command, argv, procAttr)
 }
 
