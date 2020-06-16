@@ -3,10 +3,10 @@ package main
 import (
 	"syscall/js"
 
-	"github.com/johnstarich/go-wasm/internal/fs"
 	"github.com/johnstarich/go-wasm/internal/global"
 	"github.com/johnstarich/go-wasm/internal/interop"
-	"github.com/johnstarich/go-wasm/internal/process"
+	"github.com/johnstarich/go-wasm/internal/js/fs"
+	"github.com/johnstarich/go-wasm/internal/js/process"
 	"github.com/johnstarich/go-wasm/log"
 )
 

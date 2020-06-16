@@ -3,13 +3,8 @@ package process
 import (
 	"syscall/js"
 
+	"github.com/johnstarich/go-wasm/internal/process"
 	"github.com/pkg/errors"
-)
-
-var (
-	jsWasm     = js.Global().Get("WebAssembly")
-	jsGo       = js.Global().Get("Go")
-	uint8Array = js.Global().Get("Uint8Array")
 )
 
 func spawn(args []js.Value) (interface{}, error) {
@@ -25,7 +20,7 @@ func spawn(args []js.Value) (interface{}, error) {
 	return Spawn(command, argv)
 }
 
-func Spawn(command string, args []string) (*Process, error) {
-	process := New(command, args)
-	return process, process.Start()
+func Spawn(command string, args []string) (process.Process, error) {
+	p := process.New(command, args)
+	return p, p.Start()
 }
