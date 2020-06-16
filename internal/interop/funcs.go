@@ -25,47 +25,51 @@ func SetFunc(val js.Value, name string, fn interface{}) js.Func {
 		panic(fmt.Sprintf("Invalid SetFunc type: %T", fn))
 	}
 
-	wrappedFn := func(_ js.Value, args []js.Value) (returnedVal interface{}) {
-		logArgs := append([]js.Value{js.ValueOf("running op: " + name)}, args...)
-		log.DebugJSValues(logArgs...)
-
-		switch fn := fn.(type) {
-		case Func:
-			defer func() {
-				log.DebugJSValues(js.ValueOf("completed sync op: "+name), js.ValueOf(returnedVal))
-				handlePanic(0)
-			}()
-
-			ret, err := fn(args)
-			if err != nil {
-				log.Error(errors.Wrap(err, name).Error())
-				return nil
-			}
-			return ret
-		case CallbackFunc:
-			// callback style detected, so pop callback arg and call it with the return values
-			// error always goes first
-			callback := args[len(args)-1]
-			args = args[:len(args)-1]
-			go func() (returnedVal interface{}) {
-				defer func() {
-					log.DebugJSValues(js.ValueOf("completed op: "+name), js.ValueOf(returnedVal))
-					handlePanic(0)
-				}()
-				ret, err := fn(args)
-				err = wrapAsJSError(err, name)
-				callbackArgs := append([]interface{}{err}, ret...)
-				callback.Invoke(callbackArgs...)
-				return callbackArgs
-			}()
-			return nil
-		default:
-			panic("impossible case") // handled above
-		}
+	wrappedFn := func(_ js.Value, args []js.Value) interface{} {
+		return setFuncHandler(name, fn, args)
 	}
 	jsWrappedFn := js.FuncOf(wrappedFn)
 	val.Set(name, jsWrappedFn)
 	return jsWrappedFn
+}
+
+func setFuncHandler(name string, fn interface{}, args []js.Value) (returnedVal interface{}) {
+	logArgs := append([]js.Value{js.ValueOf("running op: " + name)}, args...)
+	log.DebugJSValues(logArgs...)
+
+	switch fn := fn.(type) {
+	case Func:
+		defer func() {
+			log.DebugJSValues(js.ValueOf("completed sync op: "+name), js.ValueOf(returnedVal))
+			handlePanic(0)
+		}()
+
+		ret, err := fn(args)
+		if err != nil {
+			log.Error(errors.Wrap(err, name).Error())
+			return nil
+		}
+		return ret
+	case CallbackFunc:
+		// callback style detected, so pop callback arg and call it with the return values
+		// error always goes first
+		callback := args[len(args)-1]
+		args = args[:len(args)-1]
+		go func() (returnedVal interface{}) {
+			defer func() {
+				log.DebugJSValues(js.ValueOf("completed op: "+name), js.ValueOf(returnedVal))
+				handlePanic(0)
+			}()
+			ret, err := fn(args)
+			err = wrapAsJSError(err, name)
+			callbackArgs := append([]interface{}{err}, ret...)
+			callback.Invoke(callbackArgs...)
+			return callbackArgs
+		}()
+		return nil
+	default:
+		panic("impossible case") // handled above
+	}
 }
 
 func handlePanic(skipPanicLines int) {
