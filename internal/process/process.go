@@ -14,9 +14,7 @@ import (
 )
 
 const (
-	minPID           = 1
-	currentPID       = 1
-	currentParentPID = 0
+	minPID = 1
 )
 
 func Init() {
@@ -24,7 +22,8 @@ func Init() {
 	if err != nil {
 		panic(err)
 	}
-	global.Set("context", &Process{})
+	pids[minPID] = &Process{pid: minPID}
+	global.Set("context", pids[minPID])
 
 	globals := js.Global()
 
@@ -34,8 +33,8 @@ func Init() {
 	interop.SetFunc(process, "getgid", getegid)
 	interop.SetFunc(process, "getegid", getegid)
 	interop.SetFunc(process, "getgroups", getgroups)
-	process.Set("pid", currentPID)
-	process.Set("ppid", currentParentPID)
+	process.Set("pid", Current().pid)
+	process.Set("ppid", Current().ppid)
 	interop.SetFunc(process, "umask", umask)
 	interop.SetFunc(process, "cwd", cwd)
 	interop.SetFunc(process, "chdir", chdir)
@@ -46,6 +45,12 @@ func Init() {
 	//interop.SetFunc(childProcess, "spawnSync", spawnSync) // TODO is there any way to run spawnSync so we don't hit deadlock?
 	interop.SetFunc(childProcess, "wait", wait)
 	interop.SetFunc(childProcess, "waitSync", waitSync)
+}
+
+func Current() *Process {
+	jsProcess := global.Get("context")
+	pid := PID(jsProcess.Get("pid").Int())
+	return pids[pid]
 }
 
 var (
@@ -64,10 +69,10 @@ func (p PID) String() string {
 }
 
 type Process struct {
-	pid     PID
-	command string
-	args    []string
-	state   string
+	pid, ppid PID
+	command   string
+	args      []string
+	state     string
 
 	err  error
 	done chan struct{}
@@ -164,13 +169,9 @@ func (p *Process) runWasmBytes(wasm []byte) {
 }
 
 func (p *Process) JSValue() js.Value {
-	if p == nil {
-		return js.ValueOf(map[string]interface{}{
-			"pid": currentPID,
-		})
-	}
 	return js.ValueOf(map[string]interface{}{
-		"pid": p.pid,
+		"pid":  p.pid,
+		"ppid": p.ppid,
 	})
 }
 
@@ -182,6 +183,10 @@ func switchContext(pid PID) (prev PID) {
 	prev = PID(global.Get("context").Get("pid").Int())
 	log.Debug("Switching context from PID ", prev, " to ", pid)
 	global.Set("context", pids[pid])
+
+	process := js.Global().Get("process")
+	process.Set("pid", pid)
+	process.Set("ppid", pids[pid].ppid)
 	return
 }
 
