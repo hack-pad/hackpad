@@ -18,9 +18,10 @@
 					console.error(`Failed to load ${name}`, e)
 				})
 
-		function runMain() {
+		function run(name, ...args) {
 			const go = new Go();
-			return load('main', go).then(m => go.run(m.instance))
+			go.argv = [name, ...args]
+			return load(name, go).then(m => go.run(m.instance))
 		}
 
 		function runGo(...args) {
@@ -54,7 +55,7 @@
 				console.log(`go-wasm status: ${goWasm.ready ? 'ready' : 'not ready'}`)
 
 				fs.mkdirSync("/go", 0o755)
-				runMain()
+				run('main')
 					.then(() => runGo('version'))
 					.then(() => runGo("build", "-o", "./prog", "main.go"))
 			})
