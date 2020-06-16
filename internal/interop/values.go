@@ -37,3 +37,11 @@ func Entries(value js.Value) map[string]js.Value {
 	}
 	return entries
 }
+
+func StringMap(m map[string]string) js.Value {
+	jsValue := make(map[string]interface{})
+	for key, value := range m {
+		jsValue[key] = value
+	}
+	return js.ValueOf(jsValue)
+}

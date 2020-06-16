@@ -34,6 +34,8 @@ func (p *process) runWasmBytes(wasm []byte) {
 	p.state = "compiling wasm"
 	goInstance := jsGo.New()
 	goInstance.Set("argv", interop.SliceFromStrings(p.args))
+	goInstance.Set("env", interop.StringMap(p.attr.Env))
+
 	importObject := goInstance.Get("importObject")
 	jsBuf := uint8Array.New(len(wasm))
 	js.CopyBytesToJS(jsBuf, wasm)
@@ -45,8 +47,7 @@ func (p *process) runWasmBytes(wasm []byte) {
 		return
 	}
 
-	instance := module.Get("instance")
-	exports := instance.Get("exports")
+	exports := module.Get("instance").Get("exports")
 
 	runFn := exports.Get("run")
 	resumeFn := exports.Get("resume")
@@ -70,7 +71,7 @@ func (p *process) runWasmBytes(wasm []byte) {
 			wrapperExports[export] = value
 		}
 	}
-	instance = js.ValueOf(map[string]interface{}{ // Instance.exports is read-only, so create a shim
+	instance := js.ValueOf(map[string]interface{}{ // Instance.exports is read-only, so create a shim
 		"exports": wrapperExports,
 	})
 
