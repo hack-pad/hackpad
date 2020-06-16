@@ -1,33 +1,44 @@
 package fs
 
 import (
-	"os"
+	"strconv"
 
 	"github.com/johnstarich/go-wasm/internal/interop"
 	"github.com/spf13/afero"
+	"go.uber.org/atomic"
 )
+
+var lastPipeNumber = atomic.NewUint64(0)
 
 func (f *FileDescriptors) Pipe() ([]FID, error) {
 	pipeC := newPipeChan()
-	r, err := f.openWithFile(readOnly{pipeC})
+	r, err := f.openWithFile(&pipeReadOnly{pipeC})
 	if err != nil {
 		return nil, err
 	}
-	w, err := f.openWithFile(writeOnly{pipeC})
+	w, err := f.openWithFile(&pipeWriteOnly{pipeC})
 	return []FID{r, w}, err
 }
 
-type pipeChan chan byte
+type pipeChan struct {
+	unimplementedFile
+
+	name string
+	buf  chan byte
+}
 
 func newPipeChan() afero.File {
 	const maxPipeBuffer = 4096
-	return pipeChan(make(chan byte, maxPipeBuffer))
+	return &pipeChan{
+		name: "pipe" + strconv.FormatUint(lastPipeNumber.Inc(), 10),
+		buf:  make(chan byte, maxPipeBuffer),
+	}
 }
 
-func (p pipeChan) Read(buf []byte) (n int, err error) {
+func (p *pipeChan) Read(buf []byte) (n int, err error) {
 	for n < len(buf) {
 		select {
-		case b := <-p:
+		case b := <-p.buf:
 			buf[n] = b
 			n++
 		default:
@@ -37,10 +48,10 @@ func (p pipeChan) Read(buf []byte) (n int, err error) {
 	return
 }
 
-func (p pipeChan) Write(buf []byte) (n int, err error) {
+func (p *pipeChan) Write(buf []byte) (n int, err error) {
 	for _, b := range buf {
 		select {
-		case p <- b:
+		case p.buf <- b:
 			n++
 		default:
 			return
@@ -49,39 +60,32 @@ func (p pipeChan) Write(buf []byte) (n int, err error) {
 	return
 }
 
-func (p pipeChan) Close() error {
-	close(p)
+func (p *pipeChan) Close() error {
+	close(p.buf)
 	return nil
 }
 
-func (p pipeChan) Name() string {
-	return "pipe"
+func (p *pipeChan) Name() string {
+	return p.name
 }
 
-func (p pipeChan) ReadAt(b []byte, off int64) (n int, err error) { return 0, interop.ErrNotImplemented }
-func (p pipeChan) WriteAt(b []byte, off int64) (n int, err error) {
-	return 0, interop.ErrNotImplemented
-}
-func (p pipeChan) Seek(offset int64, whence int) (int64, error) { return 0, interop.ErrNotImplemented }
-func (p pipeChan) Readdir(count int) ([]os.FileInfo, error)     { return nil, interop.ErrNotImplemented }
-func (p pipeChan) Readdirnames(n int) ([]string, error)         { return nil, interop.ErrNotImplemented }
-func (p pipeChan) Stat() (os.FileInfo, error)                   { return nil, interop.ErrNotImplemented }
-func (p pipeChan) Sync() error                                  { return interop.ErrNotImplemented }
-func (p pipeChan) Truncate(size int64) error                    { return interop.ErrNotImplemented }
-func (p pipeChan) WriteString(s string) (ret int, err error)    { return 0, interop.ErrNotImplemented }
-
-type readOnly struct {
+type pipeReadOnly struct {
 	afero.File
 }
 
-func (r readOnly) Read(buf []byte) (n int, err error) {
+func (r *pipeReadOnly) Write(buf []byte) (n int, err error) {
 	return 0, interop.ErrNotImplemented
 }
 
-type writeOnly struct {
+func (r *pipeReadOnly) Close() error {
+	// only write side of pipe should close the buffer
+	return nil
+}
+
+type pipeWriteOnly struct {
 	afero.File
 }
 
-func (w writeOnly) Write(buf []byte) (n int, err error) {
+func (w *pipeWriteOnly) Read(buf []byte) (n int, err error) {
 	return 0, interop.ErrNotImplemented
 }
