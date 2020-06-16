@@ -18,7 +18,8 @@ func main() {
 	fmt.Println("go-wasm")
 	err := run()
 	if err != nil {
-		fmt.Println("Error", err)
+		fmt.Fprintln(os.Stderr, "Error:", err)
+		os.Exit(1)
 	}
 }
 
