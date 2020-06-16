@@ -35,16 +35,15 @@ type Process interface {
 }
 
 type process struct {
-	pid, parentPID   PID
-	command          string
-	args             []string
-	state            string
-	attr             *ProcAttr
-	done             chan struct{}
-	err              error
-	fileDescriptors  *fs.FileDescriptors
-	setFilesWD       func(wd string) error
-	workingDirectory string
+	pid, parentPID  PID
+	command         string
+	args            []string
+	state           string
+	attr            *ProcAttr
+	done            chan struct{}
+	err             error
+	fileDescriptors *fs.FileDescriptors
+	setFilesWD      func(wd string) error
 }
 
 func New(command string, args []string, attr *ProcAttr) (Process, error) {
@@ -58,15 +57,14 @@ func newWithCurrent(current Process, newPID PID, command string, args []string, 
 	}
 	files, setFilesWD, err := fs.NewFileDescriptors(wd, current.Files(), attr.Files)
 	return &process{
-		pid:              newPID,
-		command:          command,
-		args:             args,
-		state:            "pending",
-		attr:             attr,
-		done:             make(chan struct{}),
-		fileDescriptors:  files,
-		setFilesWD:       setFilesWD,
-		workingDirectory: wd,
+		pid:             newPID,
+		command:         command,
+		args:            args,
+		state:           "pending",
+		attr:            attr,
+		done:            make(chan struct{}),
+		fileDescriptors: files,
+		setFilesWD:      setFilesWD,
 	}, err
 }
 
@@ -92,7 +90,7 @@ func (p *process) Wait() error {
 }
 
 func (p *process) WorkingDirectory() string {
-	return p.workingDirectory
+	return p.Files().WorkingDirectory()
 }
 
 func (p *process) SetWorkingDirectory(wd string) error {
@@ -107,7 +105,7 @@ func (p *process) JSValue() js.Value {
 }
 
 func (p *process) String() string {
-	return fmt.Sprintf("PID=%s, State=%s, WD=%s, Attr=%+v, Err=%+v", p.pid, p.state, p.workingDirectory, p.attr, p.err)
+	return fmt.Sprintf("PID=%s, State=%s, WD=%s, Attr=%+v, Err=%+v", p.pid, p.state, p.WorkingDirectory(), p.attr, p.err)
 }
 
 func Dump() interface{} {

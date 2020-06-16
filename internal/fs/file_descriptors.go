@@ -25,7 +25,7 @@ type FileDescriptors struct {
 	nameMap          map[string]*fileDescriptor
 	fidMap           map[FID]*fileDescriptor
 	mu               sync.Mutex
-	workingDirectory string
+	workingDirectory *atomic.String
 }
 
 type fileDescriptor struct {
@@ -39,7 +39,7 @@ func NewStdFileDescriptors(workingDirectory string) (*FileDescriptors, error) {
 		previousFID:      0,
 		nameMap:          make(map[string]*fileDescriptor),
 		fidMap:           make(map[FID]*fileDescriptor),
-		workingDirectory: workingDirectory,
+		workingDirectory: atomic.NewString(workingDirectory),
 	}
 	// order matters
 	_, err := f.Open("/dev/stdin", syscall.O_RDONLY, 0)
@@ -59,7 +59,7 @@ func NewFileDescriptors(workingDirectory string, parentFiles *FileDescriptors, i
 		previousFID:      0,
 		nameMap:          make(map[string]*fileDescriptor),
 		fidMap:           make(map[FID]*fileDescriptor),
-		workingDirectory: workingDirectory,
+		workingDirectory: atomic.NewString(workingDirectory),
 	}
 	if len(inheritFDs) == 0 {
 		inheritFDs = []*FID{ptr(0), ptr(1), ptr(2)}
@@ -84,25 +84,28 @@ func NewFileDescriptors(workingDirectory string, parentFiles *FileDescriptors, i
 	return f, f.setWorkingDirectory, nil
 }
 
-func (f *FileDescriptors) setWorkingDirectory(wd string) error {
-	info, err := f.Stat(wd)
+func (f *FileDescriptors) setWorkingDirectory(path string) error {
+	path = f.resolvePath(path)
+	info, err := f.Stat(path)
 	if err != nil {
 		return err
 	}
 	if !info.IsDir() {
 		return ErrNotDir
 	}
-	f.mu.Lock()
-	f.workingDirectory = wd
-	f.mu.Unlock()
+	f.workingDirectory.Store(path)
 	return nil
+}
+
+func (f *FileDescriptors) WorkingDirectory() string {
+	return f.workingDirectory.Load()
 }
 
 func (f *FileDescriptors) resolvePath(path string) string {
 	if filepath.IsAbs(path) {
 		return filepath.Clean(path)
 	}
-	return filepath.Join(f.workingDirectory, path)
+	return filepath.Join(f.workingDirectory.Load(), path)
 }
 
 func (f *FileDescriptors) Open(path string, flags int, mode os.FileMode) (fd FID, err error) {

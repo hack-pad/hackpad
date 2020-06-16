@@ -19,10 +19,7 @@ func Init(switchedContext func(PID, PID)) {
 		panic(err)
 	}
 	pids[minPID], err = newWithCurrent(
-		&process{
-			workingDirectory: initialDirectory,
-			fileDescriptors:  fileDescriptors,
-		},
+		&process{fileDescriptors: fileDescriptors},
 		minPID,
 		"",
 		nil,
