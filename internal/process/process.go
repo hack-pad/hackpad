@@ -2,6 +2,7 @@ package process
 
 import (
 	"fmt"
+	"strings"
 	"syscall/js"
 
 	"github.com/johnstarich/go-wasm/internal/fs"
@@ -109,5 +110,9 @@ func (p *process) String() string {
 }
 
 func Dump() interface{} {
-	return fmt.Sprintf("%v", pids)
+	var s strings.Builder
+	for _, process := range pids {
+		s.WriteString(process.String() + "\n")
+	}
+	return s.String()
 }

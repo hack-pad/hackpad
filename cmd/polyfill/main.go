@@ -14,7 +14,7 @@ func main() {
 	process.Init()
 	fs.Init()
 	global.Set("dump", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
-		log.Error("Process: ", process.Dump(), "\n\nFiles: ", fs.Dump())
+		log.Error("Process:\n", process.Dump(), "\n\nFiles:\n", fs.Dump())
 		return nil
 	}))
 	interop.SetInitialized()
