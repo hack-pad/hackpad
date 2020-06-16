@@ -47,16 +47,16 @@ type process struct {
 	workingDirectory string
 }
 
-func New(command string, args []string, attr *ProcAttr) Process {
+func New(command string, args []string, attr *ProcAttr) (Process, error) {
 	return newWithCurrent(Current(), PID(lastPID.Inc()), command, args, attr)
 }
 
-func newWithCurrent(current Process, newPID PID, command string, args []string, attr *ProcAttr) *process {
+func newWithCurrent(current Process, newPID PID, command string, args []string, attr *ProcAttr) (*process, error) {
 	wd := current.WorkingDirectory()
 	if attr.Dir != "" {
 		wd = attr.Dir
 	}
-	files, setFilesWD := fs.NewFileDescriptors(wd)
+	files, setFilesWD, err := fs.NewFileDescriptors(wd, current.Files(), attr.Files)
 	return &process{
 		pid:              newPID,
 		command:          command,
@@ -67,7 +67,7 @@ func newWithCurrent(current Process, newPID PID, command string, args []string, 
 		fileDescriptors:  files,
 		setFilesWD:       setFilesWD,
 		workingDirectory: wd,
-	}
+	}, err
 }
 
 func (p *process) PID() PID {

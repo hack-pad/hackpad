@@ -1,6 +1,7 @@
 package process
 
 import (
+	"github.com/johnstarich/go-wasm/internal/fs"
 	"github.com/johnstarich/go-wasm/log"
 )
 
@@ -13,9 +14,23 @@ var (
 )
 
 func Init(switchedContext func(PID, PID)) {
-	pids[minPID] = newWithCurrent(&process{
-		workingDirectory: initialDirectory,
-	}, minPID, "", nil, &ProcAttr{})
+	fileDescriptors, err := fs.NewStdFileDescriptors(initialDirectory)
+	if err != nil {
+		panic(err)
+	}
+	pids[minPID], err = newWithCurrent(
+		&process{
+			workingDirectory: initialDirectory,
+			fileDescriptors:  fileDescriptors,
+		},
+		minPID,
+		"",
+		nil,
+		&ProcAttr{},
+	)
+	if err != nil {
+		panic(err)
+	}
 	switchedContextListener = switchedContext
 	switchContext(minPID)
 }

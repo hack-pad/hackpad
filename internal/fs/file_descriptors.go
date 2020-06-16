@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"sync"
 	goAtomic "sync/atomic"
+	"syscall"
 	"time"
 
 	"github.com/johnstarich/go-wasm/internal/interop"
@@ -12,8 +13,6 @@ import (
 	"github.com/spf13/afero"
 	"go.uber.org/atomic"
 )
-
-const minFD = 3
 
 var (
 	ErrNotDir = interop.NewError("not a directory", "ENOTDIR")
@@ -35,14 +34,54 @@ type fileDescriptor struct {
 	openCount *atomic.Uint64
 }
 
-func NewFileDescriptors(workingDirectory string) (*FileDescriptors, func(wd string) error) {
+func NewStdFileDescriptors(workingDirectory string) (*FileDescriptors, error) {
 	f := &FileDescriptors{
-		previousFID:      minFD,
+		previousFID:      0,
 		nameMap:          make(map[string]*fileDescriptor),
 		fidMap:           make(map[FID]*fileDescriptor),
 		workingDirectory: workingDirectory,
 	}
-	return f, f.setWorkingDirectory
+	// order matters
+	_, err := f.Open("/dev/stdin", syscall.O_RDONLY, 0)
+	if err != nil {
+		return nil, err
+	}
+	_, err = f.Open("/dev/stdout", syscall.O_WRONLY, 0)
+	if err != nil {
+		return nil, err
+	}
+	_, err = f.Open("/dev/stderr", syscall.O_WRONLY, 0)
+	return f, err
+}
+
+func NewFileDescriptors(workingDirectory string, parentFiles *FileDescriptors, inheritFDs []*FID) (*FileDescriptors, func(wd string) error, error) {
+	f := &FileDescriptors{
+		previousFID:      0,
+		nameMap:          make(map[string]*fileDescriptor),
+		fidMap:           make(map[FID]*fileDescriptor),
+		workingDirectory: workingDirectory,
+	}
+	if len(inheritFDs) == 0 {
+		inheritFDs = []*FID{ptr(0), ptr(1), ptr(2)}
+	}
+	if len(inheritFDs) < 3 {
+		return nil, nil, errors.Errorf("Invalid number of inherited file descriptors, must be 0 or at least 3: %#v", inheritFDs)
+	}
+	for _, fidPtr := range inheritFDs {
+		if fidPtr == nil {
+			return nil, nil, errors.New("Ignored file descriptors are unsupported") // TODO be sure to align FDs properly when skipping iterations
+		}
+
+		parentFD := parentFiles.fidMap[*fidPtr]
+		if parentFD == nil {
+			return nil, nil, errors.Errorf("Invalid parent FID %d", *fidPtr)
+		}
+		_, err := f.openWithFile(parentFD.file)
+		if err != nil {
+			return nil, nil, errors.Wrap(err, "Failed to inherit file from parent process")
+		}
+	}
+	return f, f.setWorkingDirectory, nil
 }
 
 func (f *FileDescriptors) setWorkingDirectory(wd string) error {
@@ -68,7 +107,12 @@ func (f *FileDescriptors) resolvePath(path string) string {
 
 func (f *FileDescriptors) Open(path string, flags int, mode os.FileMode) (fd FID, err error) {
 	path = f.resolvePath(path)
-	file, err := getFile(path, flags, mode)
+	var file afero.File
+	if fd, ok := f.nameMap[path]; ok {
+		file = fd.file
+	} else {
+		file, err = getFile(path, flags, mode)
+	}
 	if err != nil {
 		return 0, err
 	}
@@ -96,8 +140,15 @@ func (f *FileDescriptors) openWithFile(file afero.File) (FID, error) {
 }
 
 func getFile(absPath string, flags int, mode os.FileMode) (afero.File, error) {
-	if absPath == "/dev/null" {
-		return newNullFile(), nil
+	switch absPath {
+	case "/dev/null":
+		return newNullFile("/dev/null"), nil
+	case "/dev/stdin":
+		return newNullFile("/dev/stdin"), nil // TODO can this be mocked?
+	case "/dev/stdout":
+		return os.Stdout, nil
+	case "/dev/stderr":
+		return os.Stderr, nil
 	}
 	return filesystem.OpenFile(absPath, flags, mode)
 }
@@ -182,4 +233,8 @@ func (f *FileDescriptors) Unlink(path string) error {
 
 func (f *FileDescriptors) Utimes(path string, atime, mtime time.Time) error {
 	return filesystem.Chtimes(f.resolvePath(path), atime, mtime)
+}
+
+func ptr(f FID) *FID {
+	return &f
 }
