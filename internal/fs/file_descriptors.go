@@ -1,8 +1,10 @@
 package fs
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	goAtomic "sync/atomic"
 	"syscall"
@@ -240,4 +242,12 @@ func (f *FileDescriptors) Utimes(path string, atime, mtime time.Time) error {
 
 func ptr(f FID) *FID {
 	return &f
+}
+
+func (f *FileDescriptors) String() string {
+	var s strings.Builder
+	for fid, fd := range f.fidMap {
+		s.WriteString(fmt.Sprintf("[%d]: %s\n", fid, fd.file.Name()))
+	}
+	return s.String()
 }
