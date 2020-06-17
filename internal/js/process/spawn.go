@@ -42,7 +42,7 @@ func Spawn(command string, args []string, attr *process.ProcAttr) (process.Proce
 
 func parseProcAttr(value js.Value) *process.ProcAttr {
 	attr := &process.ProcAttr{}
-	attr.Dir = value.Get("dir").String()
+	attr.Dir = value.Get("cwd").String()
 	attr.Env = make(map[string]string)
 	for name, prop := range interop.Entries(value.Get("env")) {
 		attr.Env[name] = prop.String()
