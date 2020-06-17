@@ -21,7 +21,7 @@ func (p *process) startWasm() error {
 
 func (p *process) runWasmBytes(wasm []byte) {
 	handleErr := func(err error) {
-		p.state = "done"
+		p.state = stateDone
 		if err != nil {
 			log.Errorf("Failed to start process: %s", err.Error())
 			p.err = err
@@ -30,7 +30,7 @@ func (p *process) runWasmBytes(wasm []byte) {
 		close(p.done)
 	}
 
-	p.state = "compiling wasm"
+	p.state = stateCompiling
 	goInstance := jsGo.New()
 	goInstance.Set("argv", interop.SliceFromStrings(p.args))
 	goInstance.Set("env", interop.StringMap(p.attr.Env))
@@ -74,7 +74,7 @@ func (p *process) runWasmBytes(wasm []byte) {
 		"exports": wrapperExports,
 	})
 
-	p.state = "running"
+	p.state = stateRunning
 	runPromise := promise.New(goInstance.Call("run", instance))
 	_, err = promise.Await(runPromise)
 	handleErr(err)

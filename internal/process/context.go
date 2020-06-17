@@ -14,11 +14,12 @@ var (
 )
 
 func Init(switchedContext func(PID, PID)) {
+	// create 'init' process
 	fileDescriptors, err := fs.NewStdFileDescriptors(initialDirectory)
 	if err != nil {
 		panic(err)
 	}
-	pids[minPID], err = newWithCurrent(
+	p, err := newWithCurrent(
 		&process{fileDescriptors: fileDescriptors},
 		minPID,
 		"",
@@ -28,6 +29,9 @@ func Init(switchedContext func(PID, PID)) {
 	if err != nil {
 		panic(err)
 	}
+	p.state = stateRunning
+	pids[minPID] = p
+
 	switchedContextListener = switchedContext
 	switchContext(minPID)
 }

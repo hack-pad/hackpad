@@ -13,6 +13,15 @@ const (
 	minPID = 1
 )
 
+type processState string
+
+const (
+	statePending   processState = "pending"
+	stateCompiling processState = "compiling wasm"
+	stateRunning   processState = "running"
+	stateDone      processState = "done"
+)
+
 var (
 	jsGo       = js.Global().Get("Go")
 	jsWasm     = js.Global().Get("WebAssembly")
@@ -39,7 +48,7 @@ type process struct {
 	pid, parentPID  PID
 	command         string
 	args            []string
-	state           string
+	state           processState
 	attr            *ProcAttr
 	done            chan struct{}
 	err             error
@@ -61,7 +70,7 @@ func newWithCurrent(current Process, newPID PID, command string, args []string, 
 		pid:             newPID,
 		command:         command,
 		args:            args,
-		state:           "pending",
+		state:           statePending,
 		attr:            attr,
 		done:            make(chan struct{}),
 		fileDescriptors: files,
