@@ -1,6 +1,7 @@
 package process
 
 import (
+	"os/exec"
 	"syscall/js"
 
 	"github.com/johnstarich/go-wasm/internal/interop"
@@ -11,7 +12,11 @@ import (
 func (p *process) startWasm() error {
 	pids[p.pid] = p
 	log.Printf("Spawning process: %v", p)
-	buf, err := p.Files().ReadFile(p.command)
+	command, err := exec.LookPath(p.command)
+	if err != nil {
+		return err
+	}
+	buf, err := p.Files().ReadFile(command)
 	if err != nil {
 		return err
 	}
