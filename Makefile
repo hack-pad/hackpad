@@ -100,3 +100,5 @@ go-ext:
 	cp internal/testdata/fs_* "${TMP_GO}"/src/syscall/
 	cp internal/testdata/syscall_* "${TMP_GO}"/src/syscall/
 	cp internal/testdata/filelock_* "${TMP_GO}"/src/cmd/go/internal/lockedfile/internal/filelock/
+	sed -i '' -e 's/+build\( [^j].*\)*$$/+build\1 js,wasm/' "${TMP_GO}"/src/os/exec/lp_unix.go
+	rm "${TMP_GO}"/src/os/exec/lp_js.go
