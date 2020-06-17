@@ -78,7 +78,7 @@ func NewFileDescriptors(workingDirectory string, parentFiles *FileDescriptors, i
 		if parentFD == nil {
 			return nil, nil, errors.Errorf("Invalid parent FID %d", *fidPtr)
 		}
-		_, err := f.openWithFile(parentFD.file)
+		_, err := f.openWithFile(parentFD.file, true)
 		if err != nil {
 			return nil, nil, errors.Wrap(err, "Failed to inherit file from parent process")
 		}
@@ -121,13 +121,13 @@ func (f *FileDescriptors) Open(path string, flags int, mode os.FileMode) (fd FID
 	if err != nil {
 		return 0, err
 	}
-	return f.openWithFile(file)
+	return f.openWithFile(file, false)
 }
 
-func (f *FileDescriptors) openWithFile(file afero.File) (FID, error) {
-	if f.nameMap[file.Name()] == nil {
+func (f *FileDescriptors) openWithFile(file afero.File, forceNewFID bool) (FID, error) {
+	if f.nameMap[file.Name()] == nil || forceNewFID {
 		f.mu.Lock()
-		if f.nameMap[file.Name()] == nil {
+		if f.nameMap[file.Name()] == nil || forceNewFID {
 			nextFID := goAtomic.AddUint64((*uint64)(&f.previousFID), 1)
 			fd := &fileDescriptor{
 				id:        FID(nextFID - 1),

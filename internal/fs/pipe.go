@@ -12,11 +12,11 @@ var lastPipeNumber = atomic.NewUint64(0)
 
 func (f *FileDescriptors) Pipe() ([]FID, error) {
 	pipeC := newPipeChan()
-	r, err := f.openWithFile(&pipeReadOnly{pipeC})
+	r, err := f.openWithFile(&pipeReadOnly{pipeC}, true)
 	if err != nil {
 		return nil, err
 	}
-	w, err := f.openWithFile(&pipeWriteOnly{pipeC})
+	w, err := f.openWithFile(&pipeWriteOnly{pipeC}, true)
 	return []FID{r, w}, err
 }
 
