@@ -1,6 +1,9 @@
 package process
 
 import (
+	"strings"
+	"syscall"
+
 	"github.com/johnstarich/go-wasm/internal/fs"
 	"github.com/johnstarich/go-wasm/log"
 )
@@ -24,7 +27,7 @@ func Init(switchedContext func(PID, PID)) {
 		minPID,
 		"",
 		nil,
-		&ProcAttr{},
+		&ProcAttr{Env: splitEnvPairs(syscall.Environ())},
 	)
 	if err != nil {
 		panic(err)
@@ -57,4 +60,18 @@ func Get(pid PID) (process Process, ok bool) {
 		return &pCopy, ok
 	}
 	return
+}
+
+func splitEnvPairs(pairs []string) map[string]string {
+	env := make(map[string]string)
+	for _, pair := range pairs {
+		equalIndex := strings.IndexRune(pair, '=')
+		if equalIndex == -1 {
+			env[pair] = ""
+		} else {
+			key, value := pair[:equalIndex], pair[equalIndex+1:]
+			env[key] = value
+		}
+	}
+	return env
 }
