@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"sync"
 	goAtomic "sync/atomic"
@@ -246,7 +247,15 @@ func ptr(f FID) *FID {
 
 func (f *FileDescriptors) String() string {
 	var s strings.Builder
-	for fid, fd := range f.fidMap {
+	var fids []FID
+	for fid := range f.fidMap {
+		fids = append(fids, fid)
+	}
+	sort.SliceStable(fids, func(a, b int) bool {
+		return fids[a] < fids[b]
+	})
+	for _, fid := range fids {
+		fd := f.fidMap[fid]
 		s.WriteString(fmt.Sprintf("[%d]: %s\n", fid, fd.file.Name()))
 	}
 	return s.String()
