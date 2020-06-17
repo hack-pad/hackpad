@@ -2,6 +2,7 @@ package process
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 	"syscall/js"
 
@@ -115,13 +116,20 @@ func (p *process) JSValue() js.Value {
 }
 
 func (p *process) String() string {
-	return fmt.Sprintf("PID=%s, State=%s, WD=%s, Attr=%+v, Err=%+v, Files:\n%v", p.pid, p.state, p.WorkingDirectory(), p.attr, p.err, p.fileDescriptors)
+	return fmt.Sprintf("PID=%s, Command=%v State=%s, WD=%s, Attr=%+v, Err=%+v, Files:\n%v", p.pid, p.args, p.state, p.WorkingDirectory(), p.attr, p.err, p.fileDescriptors)
 }
 
 func Dump() interface{} {
 	var s strings.Builder
-	for _, process := range pids {
-		s.WriteString(process.String() + "\n")
+	var pidSlice []PID
+	for pid := range pids {
+		pidSlice = append(pidSlice, pid)
+	}
+	sort.Slice(pidSlice, func(a, b int) bool {
+		return pidSlice[a] < pidSlice[b]
+	})
+	for _, pid := range pidSlice {
+		s.WriteString(pids[pid].String() + "\n")
 	}
 	return s.String()
 }

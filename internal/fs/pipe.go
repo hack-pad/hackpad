@@ -1,6 +1,7 @@
 package fs
 
 import (
+	"os"
 	"strconv"
 
 	"github.com/johnstarich/go-wasm/internal/interop"
@@ -23,8 +24,9 @@ func (f *FileDescriptors) Pipe() ([]FID, error) {
 type pipeChan struct {
 	unimplementedFile
 
-	name string
-	buf  chan byte
+	name   string
+	buf    chan byte
+	closed bool
 }
 
 func newPipeChan() afero.File {
@@ -50,6 +52,9 @@ func (p *pipeChan) Read(buf []byte) (n int, err error) {
 
 func (p *pipeChan) Write(buf []byte) (n int, err error) {
 	for _, b := range buf {
+		if p.closed {
+			return 0, os.ErrClosed
+		}
 		select {
 		case p.buf <- b:
 			n++
@@ -61,6 +66,7 @@ func (p *pipeChan) Write(buf []byte) (n int, err error) {
 }
 
 func (p *pipeChan) Close() error {
+	p.closed = true
 	close(p.buf)
 	return nil
 }

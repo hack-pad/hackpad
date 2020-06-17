@@ -256,7 +256,7 @@ func (f *FileDescriptors) String() string {
 	})
 	for _, fid := range fids {
 		fd := f.fidMap[fid]
-		s.WriteString(fmt.Sprintf("[%d]: %s\n", fid, fd.file.Name()))
+		s.WriteString(fmt.Sprintf("[%d]: %s (closed=%t)\n", fid, fd.file.Name(), fd.openCount.Load() == 0))
 	}
 	return s.String()
 }
