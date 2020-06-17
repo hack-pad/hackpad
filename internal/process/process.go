@@ -66,7 +66,7 @@ func newWithCurrent(current Process, newPID PID, command string, args []string, 
 	if attr.Dir != "" {
 		wd = attr.Dir
 	}
-	files, setFilesWD, err := fs.NewFileDescriptors(wd, current.Files(), attr.Files)
+	files, setFilesWD, err := fs.NewFileDescriptors(uint64(newPID), wd, current.Files(), attr.Files)
 	return &process{
 		pid:             newPID,
 		command:         command,

@@ -1,11 +1,11 @@
 package fs
 
 import (
+	"io"
 	"os"
 	"strconv"
 
 	"github.com/johnstarich/go-wasm/internal/interop"
-	"github.com/spf13/afero"
 	"go.uber.org/atomic"
 )
 
@@ -24,17 +24,25 @@ func (f *FileDescriptors) Pipe() ([]FID, error) {
 type pipeChan struct {
 	unimplementedFile
 
-	name   string
-	buf    chan byte
-	closed bool
+	name          string
+	buf           chan byte
+	processOpened map[uint64]bool
+	processClosed map[uint64]bool
+	closed        bool
 }
 
-func newPipeChan() afero.File {
+func newPipeChan() *pipeChan {
 	const maxPipeBuffer = 4096
 	return &pipeChan{
-		name: "pipe" + strconv.FormatUint(lastPipeNumber.Inc(), 10),
-		buf:  make(chan byte, maxPipeBuffer),
+		name:          "pipe" + strconv.FormatUint(lastPipeNumber.Inc(), 10),
+		buf:           make(chan byte, maxPipeBuffer),
+		processOpened: make(map[uint64]bool),
+		processClosed: make(map[uint64]bool),
 	}
+}
+
+func (p *pipeChan) OpenPID(pid uint64) {
+	p.processOpened[pid] = true
 }
 
 func (p *pipeChan) Read(buf []byte) (n int, err error) {
@@ -44,6 +52,9 @@ func (p *pipeChan) Read(buf []byte) (n int, err error) {
 			buf[n] = b
 			n++
 		default:
+			if p.closed {
+				err = io.EOF
+			}
 			return
 		}
 	}
@@ -66,6 +77,9 @@ func (p *pipeChan) Write(buf []byte) (n int, err error) {
 }
 
 func (p *pipeChan) Close() error {
+	if len(p.processClosed) != len(p.processOpened) {
+		return nil
+	}
 	p.closed = true
 	close(p.buf)
 	return nil
@@ -76,7 +90,7 @@ func (p *pipeChan) Name() string {
 }
 
 type pipeReadOnly struct {
-	afero.File
+	*pipeChan
 }
 
 func (r *pipeReadOnly) Write(buf []byte) (n int, err error) {
@@ -88,10 +102,19 @@ func (r *pipeReadOnly) Close() error {
 	return nil
 }
 
+func (r *pipeReadOnly) ClosePID(pid uint64) error {
+	return r.pipeChan.Close()
+}
+
 type pipeWriteOnly struct {
-	afero.File
+	*pipeChan
 }
 
 func (w *pipeWriteOnly) Read(buf []byte) (n int, err error) {
 	return 0, interop.ErrNotImplemented
+}
+
+func (w *pipeWriteOnly) ClosePID(pid uint64) error {
+	w.pipeChan.processClosed[pid] = true
+	return w.pipeChan.Close()
 }

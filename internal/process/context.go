@@ -18,7 +18,7 @@ var (
 
 func Init(switchedContext func(PID, PID)) {
 	// create 'init' process
-	fileDescriptors, err := fs.NewStdFileDescriptors(initialDirectory)
+	fileDescriptors, err := fs.NewStdFileDescriptors(minPID, initialDirectory)
 	if err != nil {
 		panic(err)
 	}
