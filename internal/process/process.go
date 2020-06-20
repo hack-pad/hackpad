@@ -6,6 +6,7 @@ import (
 	"strings"
 	"syscall/js"
 
+	"github.com/johnstarich/go-wasm/internal/common"
 	"github.com/johnstarich/go-wasm/internal/fs"
 	"go.uber.org/atomic"
 )
@@ -13,6 +14,8 @@ import (
 const (
 	minPID = 1
 )
+
+type PID = common.PID
 
 type processState string
 
