@@ -1,6 +1,14 @@
 package interop
 
-import "errors"
+import (
+	"io"
+	"os"
+	"syscall/js"
+
+	"github.com/johnstarich/go-wasm/log"
+	"github.com/pkg/errors"
+	"github.com/spf13/afero"
+)
 
 var (
 	ErrNotImplemented = NewError("operation not supported", "ENOSYS")
@@ -34,4 +42,44 @@ func (e *interopErr) Message() string {
 
 func (e *interopErr) Code() string {
 	return e.code
+}
+
+func WrapAsJSError(err error, message string) error {
+	if err == nil {
+		return nil
+	}
+
+	val := js.ValueOf(map[string]interface{}{
+		"message": js.ValueOf(errors.Wrap(err, message).Error()),
+		"code":    js.ValueOf(mapToErrNo(err)),
+	})
+	return js.Error{Value: val}
+}
+
+// errno names pulled from syscall/tables_js.go
+func mapToErrNo(err error) string {
+	if err, ok := err.(Error); ok {
+		return err.Code()
+	}
+	switch err {
+	case io.EOF, os.ErrNotExist:
+		return "ENOENT"
+	case os.ErrExist:
+		return "EEXIST"
+	case os.ErrPermission:
+		return "EPERM"
+	}
+	switch err.Error() {
+	case os.ErrClosed.Error(), afero.ErrFileClosed.Error():
+		return "EBADF" // if it was already closed, then the file descriptor was invalid
+	}
+	switch {
+	case os.IsNotExist(err):
+		return "ENOENT"
+	case os.IsExist(err):
+		return "EEXIST"
+	default:
+		log.Errorf("Unknown error type: (%T) %+v", err, err)
+		return "EPERM"
+	}
 }
