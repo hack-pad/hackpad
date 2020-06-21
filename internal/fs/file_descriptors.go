@@ -119,6 +119,7 @@ func (f *FileDescriptors) Open(path string, flags int, mode os.FileMode) (fd FID
 	descriptor, ok := f.nameMap[path]
 	if !ok {
 		f.mu.Lock()
+		defer f.mu.Unlock()
 		descriptor, ok = f.nameMap[path]
 		if !ok {
 			descriptor, err = NewFileDescriptor(f.newFID(), path, flags, mode)
@@ -127,7 +128,6 @@ func (f *FileDescriptors) Open(path string, flags int, mode os.FileMode) (fd FID
 			}
 			f.addFileDescriptor(descriptor)
 		}
-		f.mu.Unlock()
 	}
 	descriptor.Open(f.parentPID)
 	return descriptor.id, nil
