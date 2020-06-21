@@ -49,7 +49,7 @@ func makeTestModule() error {
 package main
 
 func main() {
-	println("hello world")
+	println("Hello! I was compiled and run from inside a browser WASM runtime!")
 }
 `), 0600)
 	if err != nil {

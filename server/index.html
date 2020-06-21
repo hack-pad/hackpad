@@ -40,6 +40,9 @@
 		}
 
 		function ls(path) {
+			if (!path) {
+				path = ""
+			}
 			console.log(fs.readdirSync(path))
 		}
 
@@ -154,7 +157,7 @@
 		load('polyfill', go)
 			.then(async cmd => {
 				go.env = {
-					'PATH': '/bin:/go/bin/js_wasm',
+					'PATH': '/bin:/go/bin/js_wasm:/go/pkg/tool/js_wasm',
 					'GOROOT': '/go',
 					'HOME': '/home/me',
 				}
@@ -164,7 +167,10 @@
 				fs.mkdirSync("/go", 0o755)
 				run('main')
 					.then(() => spawn("go", "version"))
-					.then(() => spawn("go", "build", "-n", "-v", "-o", "./prog", "main.go"))
+					//.then(() => spawn("go", "build", "-n", "-v", "-o", "./prog", "main.go"))
+					.then(() => spawn("compile", "main.go"))
+					.then(() => spawn("link", "-o", "main", "main.o"))
+					.then(() => spawn("./main"))
 			})
 	</script>
 </head>
