@@ -20,8 +20,8 @@ func (f *FileDescriptors) Pipe() [2]FID {
 }
 
 func newPipe(newFID func() FID) (r, w *fileDescriptor) {
-	pipeC := newPipeChan()
 	readerFID, writerFID := newFID(), newFID()
+	pipeC := newPipeChan(readerFID, writerFID)
 	r = newIrregularFileDescriptor(readerFID, &pipeReadOnly{pipeChan: pipeC, fid: readerFID}, os.ModeNamedPipe)
 	w = newIrregularFileDescriptor(writerFID, &pipeWriteOnly{pipeChan: pipeC, fid: writerFID}, os.ModeNamedPipe)
 	return
@@ -30,16 +30,17 @@ func newPipe(newFID func() FID) (r, w *fileDescriptor) {
 type pipeChan struct {
 	unimplementedFile
 
-	name   string
-	buf    chan byte
-	closed bool
+	buf            chan byte
+	closed         bool
+	reader, writer FID
 }
 
-func newPipeChan() *pipeChan {
+func newPipeChan(reader, writer FID) *pipeChan {
 	const maxPipeBuffer = 32 << 10 // 32KiB
 	return &pipeChan{
-		name: "pipe",
-		buf:  make(chan byte, maxPipeBuffer),
+		buf:    make(chan byte, maxPipeBuffer),
+		reader: reader,
+		writer: writer,
 	}
 }
 
@@ -62,7 +63,7 @@ func (p *pipeChan) Read(buf []byte) (n int, err error) {
 func (p *pipeChan) Write(buf []byte) (n int, err error) {
 	for _, b := range buf {
 		if p.closed {
-			return 0, interop.BadFileErr(p.name)
+			return 0, interop.BadFileNumber(p.writer)
 		}
 		select {
 		case p.buf <- b:
@@ -76,25 +77,29 @@ func (p *pipeChan) Write(buf []byte) (n int, err error) {
 
 func (p *pipeChan) Close() error {
 	if p.closed {
-		return interop.BadFileErr(p.name)
+		return interop.BadFileNumber(p.writer)
 	}
 	p.closed = true
 	close(p.buf)
 	return nil
 }
 
-func (p *pipeChan) Name() string {
-	return p.name
-}
-
-type pipeReadOnly struct {
+type namedPipe struct {
 	*pipeChan
-
 	fid FID
 }
 
-func (r *pipeReadOnly) Name() string {
-	return "pipe" + r.fid.String()
+func (n *namedPipe) Name() string {
+	return "pipe" + n.fid.String()
+}
+
+type pipeReadOnly namedPipe
+
+func (r *pipeReadOnly) ReadAt(buf []byte, off int64) (n int, err error) {
+	if off == 0 {
+		return r.Read(buf)
+	}
+	return 0, interop.ErrNotImplemented
 }
 
 func (r *pipeReadOnly) Write(buf []byte) (n int, err error) {
@@ -106,20 +111,15 @@ func (r *pipeReadOnly) Close() error {
 	return nil
 }
 
-func (r *pipeReadOnly) ClosePID(pid uint64) error {
-	return r.pipeChan.Close()
-}
-
-type pipeWriteOnly struct {
-	*pipeChan
-
-	fid FID
-}
-
-func (w *pipeWriteOnly) Name() string {
-	return "pipe" + w.fid.String()
-}
+type pipeWriteOnly namedPipe
 
 func (w *pipeWriteOnly) Read(buf []byte) (n int, err error) {
+	return 0, interop.ErrNotImplemented
+}
+
+func (w *pipeWriteOnly) WriteAt(buf []byte, off int64) (n int, err error) {
+	if off == 0 {
+		return w.Write(buf)
+	}
 	return 0, interop.ErrNotImplemented
 }
