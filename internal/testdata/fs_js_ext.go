@@ -15,5 +15,7 @@ func Pipe(fd []int) error {
 	}
 	fd[0] = jsFD.Index(0).Int()
 	fd[1] = jsFD.Index(1).Int()
+	files[fd[0]] = &jsFile{}
+	files[fd[1]] = &jsFile{}
 	return nil
 }
