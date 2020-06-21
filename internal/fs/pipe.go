@@ -3,7 +3,6 @@ package fs
 import (
 	"io"
 	"os"
-	"strconv"
 
 	"github.com/johnstarich/go-wasm/internal/interop"
 	"go.uber.org/atomic"
@@ -12,12 +11,20 @@ import (
 var lastPipeNumber = atomic.NewUint64(0)
 
 func (f *FileDescriptors) Pipe() [2]FID {
-	pipeC := newPipeChan()
-	r := newIrregularFileDescriptor(f.newFID(), &pipeReadOnly{pipeC}, os.ModeNamedPipe)
+	r, w := newPipe(f.newFID)
 	f.addFileDescriptor(r)
-	w := newIrregularFileDescriptor(f.newFID(), &pipeWriteOnly{pipeC}, os.ModeNamedPipe)
 	f.addFileDescriptor(w)
+	r.Open(f.parentPID)
+	w.Open(f.parentPID)
 	return [2]FID{r.id, w.id}
+}
+
+func newPipe(newFID func() FID) (r, w *fileDescriptor) {
+	pipeC := newPipeChan()
+	readerFID, writerFID := newFID(), newFID()
+	r = newIrregularFileDescriptor(readerFID, &pipeReadOnly{pipeChan: pipeC, fid: readerFID}, os.ModeNamedPipe)
+	w = newIrregularFileDescriptor(writerFID, &pipeWriteOnly{pipeChan: pipeC, fid: writerFID}, os.ModeNamedPipe)
+	return
 }
 
 type pipeChan struct {
@@ -31,7 +38,7 @@ type pipeChan struct {
 func newPipeChan() *pipeChan {
 	const maxPipeBuffer = 32 << 10 // 32KiB
 	return &pipeChan{
-		name: "pipe" + strconv.FormatUint(lastPipeNumber.Inc(), 10),
+		name: "pipe",
 		buf:  make(chan byte, maxPipeBuffer),
 	}
 }
@@ -82,6 +89,12 @@ func (p *pipeChan) Name() string {
 
 type pipeReadOnly struct {
 	*pipeChan
+
+	fid FID
+}
+
+func (r *pipeReadOnly) Name() string {
+	return "pipe" + r.fid.String()
 }
 
 func (r *pipeReadOnly) Write(buf []byte) (n int, err error) {
@@ -99,6 +112,12 @@ func (r *pipeReadOnly) ClosePID(pid uint64) error {
 
 type pipeWriteOnly struct {
 	*pipeChan
+
+	fid FID
+}
+
+func (w *pipeWriteOnly) Name() string {
+	return "pipe" + w.fid.String()
 }
 
 func (w *pipeWriteOnly) Read(buf []byte) (n int, err error) {
