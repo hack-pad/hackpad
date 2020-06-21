@@ -63,18 +63,18 @@ func (p *process) runWasmBytes(wasm []byte) {
 
 	exports := module.Get("instance").Get("exports")
 
-	runFn := exports.Get("run")
-	resumeFn := exports.Get("resume")
 	wrapperExports := map[string]interface{}{
 		"run": js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+			defer interop.PanicLogger()
 			prev := switchContext(p.pid)
-			ret := runFn.Invoke(interop.SliceFromJSValues(args)...)
+			ret := exports.Call("run", interop.SliceFromJSValues(args)...)
 			switchContext(prev)
 			return ret
 		}),
 		"resume": js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+			defer interop.PanicLogger()
 			prev := switchContext(p.pid)
-			ret := resumeFn.Invoke(interop.SliceFromJSValues(args)...)
+			ret := exports.Call("resume", interop.SliceFromJSValues(args)...)
 			switchContext(prev)
 			return ret
 		}),

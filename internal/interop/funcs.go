@@ -70,10 +70,10 @@ func setFuncHandler(name string, fn interface{}, args []js.Value) (returnedVal i
 	}
 }
 
-func handlePanic(skipPanicLines int) {
+func handlePanic(skipPanicLines int) interface{} {
 	r := recover()
 	if r == nil {
-		return
+		return nil
 	}
 	stack := string(debug.Stack())
 	for iter := 0; iter < skipPanicLines; iter++ {
@@ -93,6 +93,13 @@ func handlePanic(skipPanicLines int) {
 	default:
 		log.Errorf("panic: (%T) %+v\n\n%s", r, r, stack)
 	}
-	// TODO keep the panic? need to find a way to just throw the error instead of crashing
-	//panic(r)
+	// TODO need to find a way to just throw the error instead of crashing
+	return r
+}
+
+func PanicLogger() {
+	r := handlePanic(0)
+	if r != nil {
+		panic(r)
+	}
 }
