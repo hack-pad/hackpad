@@ -3,6 +3,7 @@ package fs
 import (
 	"io"
 	"os"
+	"time"
 
 	"github.com/johnstarich/go-wasm/internal/interop"
 )
@@ -48,6 +49,27 @@ func newPipeChan(reader, writer FID) *pipeChan {
 		reader: reader,
 		writer: writer,
 	}
+}
+
+type pipeStat struct {
+	name string
+	size int64
+	mode os.FileMode
+}
+
+func (p pipeStat) Name() string       { return p.name }
+func (p pipeStat) Size() int64        { return p.size }
+func (p pipeStat) Mode() os.FileMode  { return p.mode }
+func (p pipeStat) ModTime() time.Time { return time.Time{} }
+func (p pipeStat) IsDir() bool        { return false }
+func (p pipeStat) Sys() interface{}   { return nil }
+
+func (p *pipeChan) Stat() (os.FileInfo, error) {
+	return &pipeStat{
+		name: p.Name(),
+		size: int64(len(p.buf)),
+		mode: os.ModeNamedPipe,
+	}, nil
 }
 
 func (p *pipeChan) Read(buf []byte) (n int, err error) {
