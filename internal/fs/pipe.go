@@ -19,8 +19,16 @@ func (f *FileDescriptors) Pipe() [2]FID {
 func newPipe(newFID func() FID) (r, w *fileDescriptor) {
 	readerFID, writerFID := newFID(), newFID()
 	pipeC := newPipeChan(readerFID, writerFID)
-	r = newIrregularFileDescriptor(readerFID, &pipeReadOnly{pipeChan: pipeC, fid: readerFID}, os.ModeNamedPipe)
-	w = newIrregularFileDescriptor(writerFID, &pipeWriteOnly{pipeChan: pipeC, fid: writerFID}, os.ModeNamedPipe)
+	r = newIrregularFileDescriptor(
+		readerFID,
+		&pipeReadOnly{&namedPipe{pipeChan: pipeC, fid: readerFID}},
+		os.ModeNamedPipe,
+	)
+	w = newIrregularFileDescriptor(
+		writerFID,
+		&pipeWriteOnly{&namedPipe{pipeChan: pipeC, fid: writerFID}},
+		os.ModeNamedPipe,
+	)
 	return
 }
 
@@ -104,7 +112,9 @@ func (n *namedPipe) Name() string {
 	return "pipe" + n.fid.String()
 }
 
-type pipeReadOnly namedPipe
+type pipeReadOnly struct {
+	*namedPipe
+}
 
 func (r *pipeReadOnly) ReadAt(buf []byte, off int64) (n int, err error) {
 	if off == 0 {
@@ -122,7 +132,9 @@ func (r *pipeReadOnly) Close() error {
 	return nil
 }
 
-type pipeWriteOnly namedPipe
+type pipeWriteOnly struct {
+	*namedPipe
+}
 
 func (w *pipeWriteOnly) Read(buf []byte) (n int, err error) {
 	return 0, interop.ErrNotImplemented
