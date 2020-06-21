@@ -5,10 +5,7 @@ import (
 	"os"
 
 	"github.com/johnstarich/go-wasm/internal/interop"
-	"go.uber.org/atomic"
 )
-
-var lastPipeNumber = atomic.NewUint64(0)
 
 func (f *FileDescriptors) Pipe() [2]FID {
 	r, w := newPipe(f.newFID)
@@ -31,7 +28,7 @@ type pipeChan struct {
 	unimplementedFile
 
 	buf            chan byte
-	closed         bool
+	done           chan struct{}
 	reader, writer FID
 }
 
@@ -39,6 +36,7 @@ func newPipeChan(reader, writer FID) *pipeChan {
 	const maxPipeBuffer = 32 << 10 // 32KiB
 	return &pipeChan{
 		buf:    make(chan byte, maxPipeBuffer),
+		done:   make(chan struct{}),
 		reader: reader,
 		writer: writer,
 	}
@@ -47,41 +45,54 @@ func newPipeChan(reader, writer FID) *pipeChan {
 func (p *pipeChan) Read(buf []byte) (n int, err error) {
 	for n < len(buf) {
 		select {
+		case <-p.done:
+			err = io.EOF
+			return
 		case b := <-p.buf:
 			buf[n] = b
 			n++
 		default:
-			if p.closed {
+			if n == 0 {
 				err = io.EOF
 			}
 			return
 		}
+	}
+	if n == 0 {
+		err = io.EOF
 	}
 	return
 }
 
 func (p *pipeChan) Write(buf []byte) (n int, err error) {
 	for _, b := range buf {
-		if p.closed {
-			return 0, interop.BadFileNumber(p.writer)
-		}
 		select {
+		case <-p.done:
+			return 0, interop.BadFileNumber(p.writer)
 		case p.buf <- b:
 			n++
 		default:
+			if n < len(buf) {
+				err = io.ErrShortWrite
+			}
 			return
 		}
+	}
+	if n < len(buf) {
+		err = io.ErrShortWrite
 	}
 	return
 }
 
 func (p *pipeChan) Close() error {
-	if p.closed {
+	select {
+	case <-p.done:
 		return interop.BadFileNumber(p.writer)
+	default:
+		close(p.done)
+		close(p.buf)
+		return nil
 	}
-	p.closed = true
-	close(p.buf)
-	return nil
 }
 
 type namedPipe struct {
