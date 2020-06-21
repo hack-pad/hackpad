@@ -17,9 +17,6 @@ func pipeSync(args []js.Value) (interface{}, error) {
 		return nil, errors.Errorf("Invalid number of args, expected 0: %v", args)
 	}
 	p := process.Current()
-	fds, err := p.Files().Pipe()
-	if err != nil {
-		return nil, err
-	}
-	return []interface{}{fds[0], fds[1]}, err
+	fds := p.Files().Pipe()
+	return []interface{}{fds[0], fds[1]}, nil
 }

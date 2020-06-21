@@ -1,7 +1,6 @@
 package fs
 
 import (
-	"fmt"
 	"os"
 	"path/filepath"
 	"sort"
@@ -11,6 +10,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/johnstarich/go-wasm/internal/common"
 	"github.com/johnstarich/go-wasm/internal/interop"
 	"github.com/pkg/errors"
 	"github.com/spf13/afero"
@@ -24,7 +24,7 @@ var (
 )
 
 type FileDescriptors struct {
-	parentPID        uint64
+	parentPID        common.PID
 	previousFID      FID
 	nameMap          map[string]*fileDescriptor
 	fidMap           map[FID]*fileDescriptor
@@ -32,24 +32,7 @@ type FileDescriptors struct {
 	workingDirectory *atomic.String
 }
 
-type fileDescriptor struct {
-	id        FID
-	file      afero.File
-	openCount *atomic.Uint64
-}
-
-func (fd *fileDescriptor) String() string {
-	switch file := fd.file.(type) {
-	case *pipeWriteOnly:
-		return fmt.Sprintf("%15s [%d] closed=%t, pids=%v, done=%v", fd.file.Name(), fd.id, fd.openCount.Load() == 0, pidBoolMapKeys(file.processOpened), pidBoolMapKeys(file.processClosed))
-	case *pipeReadOnly:
-		return fmt.Sprintf("%15s [%d] closed=%t, pids=%v, done=%v", fd.file.Name(), fd.id, fd.openCount.Load() == 0, pidBoolMapKeys(file.processOpened), pidBoolMapKeys(file.processClosed))
-	default:
-		return fmt.Sprintf("%15s [%d] closed=%t", fd.file.Name(), fd.id, fd.openCount.Load() == 0)
-	}
-}
-
-func NewStdFileDescriptors(parentPID uint64, workingDirectory string) (*FileDescriptors, error) {
+func NewStdFileDescriptors(parentPID common.PID, workingDirectory string) (*FileDescriptors, error) {
 	f := &FileDescriptors{
 		parentPID:        parentPID,
 		previousFID:      0,
@@ -70,7 +53,7 @@ func NewStdFileDescriptors(parentPID uint64, workingDirectory string) (*FileDesc
 	return f, err
 }
 
-func NewFileDescriptors(parentPID uint64, workingDirectory string, parentFiles *FileDescriptors, inheritFDs []*FID) (*FileDescriptors, func(wd string) error, error) {
+func NewFileDescriptors(parentPID common.PID, workingDirectory string, parentFiles *FileDescriptors, inheritFDs []*FID) (*FileDescriptors, func(wd string) error, error) {
 	f := &FileDescriptors{
 		parentPID:        parentPID,
 		previousFID:      0,
@@ -93,10 +76,13 @@ func NewFileDescriptors(parentPID uint64, workingDirectory string, parentFiles *
 		if parentFD == nil {
 			return nil, nil, errors.Errorf("Invalid parent FID %d", *fidPtr)
 		}
-		_, err := f.openWithFile(parentFD.file, true)
+		fid := f.newFID()
+		fd, err := parentFD.Dup(fid)
 		if err != nil {
 			return nil, nil, errors.Wrap(err, "Failed to inherit file from parent process")
 		}
+		f.addFileDescriptor(fd)
+		fd.Open(parentPID)
 	}
 	return f, f.setWorkingDirectory, nil
 }
@@ -125,44 +111,39 @@ func (f *FileDescriptors) resolvePath(path string) string {
 	return filepath.Join(f.workingDirectory.Load(), path)
 }
 
-func (f *FileDescriptors) Open(path string, flags int, mode os.FileMode) (fd FID, err error) {
-	path = f.resolvePath(path)
-	var file afero.File
-	if fd, ok := f.nameMap[path]; ok {
-		file = fd.file
-	} else {
-		file, err = getFile(path, flags, mode)
-	}
-	if err != nil {
-		return 0, err
-	}
-	return f.openWithFile(file, false)
+func (f *FileDescriptors) newFID() FID {
+	nextFID := goAtomic.AddUint64((*uint64)(&f.previousFID), 1)
+	return FID(nextFID - 1)
 }
 
-func (f *FileDescriptors) openWithFile(file afero.File, forceNewFID bool) (FID, error) {
-	if f.nameMap[file.Name()] == nil || forceNewFID {
+func (f *FileDescriptors) Open(path string, flags int, mode os.FileMode) (fd FID, err error) {
+	path = f.resolvePath(path)
+
+	descriptor, ok := f.nameMap[path]
+	if !ok {
 		f.mu.Lock()
-		if f.nameMap[file.Name()] == nil || forceNewFID {
-			nextFID := goAtomic.AddUint64((*uint64)(&f.previousFID), 1)
-			fd := &fileDescriptor{
-				id:        FID(nextFID - 1),
-				file:      file,
-				openCount: atomic.NewUint64(0),
+		descriptor, ok = f.nameMap[path]
+		if !ok {
+			descriptor, err = NewFileDescriptor(f.newFID(), path, flags, mode)
+			if err != nil {
+				return 0, err
 			}
-			f.nameMap[file.Name()] = fd
-			f.fidMap[fd.id] = fd
+			f.addFileDescriptor(descriptor)
 		}
 		f.mu.Unlock()
 	}
-	descriptor := f.nameMap[file.Name()]
-	descriptor.openCount.Inc()
-	switch pipe := file.(type) {
-	case *pipeReadOnly:
-		pipe.OpenPID(f.parentPID)
-	case *pipeWriteOnly:
-		pipe.OpenPID(f.parentPID)
-	}
+	descriptor.Open(f.parentPID)
 	return descriptor.id, nil
+}
+
+func (f *FileDescriptors) addFileDescriptor(descriptor *fileDescriptor) {
+	f.nameMap[descriptor.FileName()] = descriptor
+	f.fidMap[descriptor.id] = descriptor
+}
+
+func (f *FileDescriptors) removeFileDescriptor(descriptor *fileDescriptor) {
+	delete(f.nameMap, descriptor.FileName())
+	//delete(f.fidMap, fd) // TODO is it safe to leave the old FD's hanging around? they're useful for debugging
 }
 
 func getFile(absPath string, flags int, mode os.FileMode) (afero.File, error) {
@@ -182,31 +163,25 @@ func getFile(absPath string, flags int, mode os.FileMode) (afero.File, error) {
 func (f *FileDescriptors) Close(fd FID) error {
 	fileDescriptor := f.fidMap[fd]
 	if fileDescriptor == nil {
-		return errors.Errorf("unknown fd: %d", fd)
+		return interop.BadFileNumber(fd)
 	}
-	if fileDescriptor.openCount.Dec() == 0 {
-		f.mu.Lock()
-		if fileDescriptor.openCount.Load() == 0 {
-			//delete(f.fidMap, fd) // TODO is it safe to leave the old FD's hanging around? they're useful for debugging
-			delete(f.nameMap, fileDescriptor.file.Name())
-		}
-		f.mu.Unlock()
-		switch file := fileDescriptor.file.(type) {
-		case *pipeReadOnly:
-			return file.ClosePID(f.parentPID)
-		case *pipeWriteOnly:
-			return file.ClosePID(f.parentPID)
-		default:
-			return file.Close()
-		}
+	return fileDescriptor.Close(f.parentPID, &f.mu, func() {
+		f.removeFileDescriptor(fileDescriptor)
+	})
+}
+
+func (f *FileDescriptors) CloseAll() {
+	f.mu.Lock()
+	for _, fd := range f.fidMap {
+		_ = fd.closeAll(f.parentPID)
 	}
-	return nil
+	f.mu.Unlock()
 }
 
 func (f *FileDescriptors) Fstat(fd FID) (os.FileInfo, error) {
 	fileDescriptor := f.fidMap[fd]
 	if fileDescriptor == nil {
-		return nil, errors.Errorf("unknown fd: %d", fd)
+		return nil, interop.BadFileNumber(fd)
 	}
 	return fileDescriptor.file.Stat()
 }
@@ -270,15 +245,6 @@ func (f *FileDescriptors) Utimes(path string, atime, mtime time.Time) error {
 
 func ptr(f FID) *FID {
 	return &f
-}
-
-func pidBoolMapKeys(m map[uint64]bool) []int {
-	var keys []int
-	for pid := range m {
-		keys = append(keys, int(pid))
-	}
-	sort.Ints(keys)
-	return keys
 }
 
 func (f *FileDescriptors) String() string {

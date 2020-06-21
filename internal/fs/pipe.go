@@ -11,38 +11,29 @@ import (
 
 var lastPipeNumber = atomic.NewUint64(0)
 
-func (f *FileDescriptors) Pipe() ([]FID, error) {
+func (f *FileDescriptors) Pipe() [2]FID {
 	pipeC := newPipeChan()
-	r, err := f.openWithFile(&pipeReadOnly{pipeC}, true)
-	if err != nil {
-		return nil, err
-	}
-	w, err := f.openWithFile(&pipeWriteOnly{pipeC}, true)
-	return []FID{r, w}, err
+	r := newIrregularFileDescriptor(f.newFID(), &pipeReadOnly{pipeC}, os.ModeNamedPipe)
+	f.addFileDescriptor(r)
+	w := newIrregularFileDescriptor(f.newFID(), &pipeWriteOnly{pipeC}, os.ModeNamedPipe)
+	f.addFileDescriptor(w)
+	return [2]FID{r.id, w.id}
 }
 
 type pipeChan struct {
 	unimplementedFile
 
-	name          string
-	buf           chan byte
-	processOpened map[uint64]bool
-	processClosed map[uint64]bool
-	closed        bool
+	name   string
+	buf    chan byte
+	closed bool
 }
 
 func newPipeChan() *pipeChan {
-	const maxPipeBuffer = 4096
+	const maxPipeBuffer = 32 << 10 // 32KiB
 	return &pipeChan{
-		name:          "pipe" + strconv.FormatUint(lastPipeNumber.Inc(), 10),
-		buf:           make(chan byte, maxPipeBuffer),
-		processOpened: make(map[uint64]bool),
-		processClosed: make(map[uint64]bool),
+		name: "pipe" + strconv.FormatUint(lastPipeNumber.Inc(), 10),
+		buf:  make(chan byte, maxPipeBuffer),
 	}
-}
-
-func (p *pipeChan) OpenPID(pid uint64) {
-	p.processOpened[pid] = true
 }
 
 func (p *pipeChan) Read(buf []byte) (n int, err error) {
@@ -64,7 +55,7 @@ func (p *pipeChan) Read(buf []byte) (n int, err error) {
 func (p *pipeChan) Write(buf []byte) (n int, err error) {
 	for _, b := range buf {
 		if p.closed {
-			return 0, os.ErrClosed
+			return 0, interop.BadFileErr(p.name)
 		}
 		select {
 		case p.buf <- b:
@@ -77,8 +68,8 @@ func (p *pipeChan) Write(buf []byte) (n int, err error) {
 }
 
 func (p *pipeChan) Close() error {
-	if len(p.processClosed) != len(p.processOpened) {
-		return nil
+	if p.closed {
+		return interop.BadFileErr(p.name)
 	}
 	p.closed = true
 	close(p.buf)
@@ -112,9 +103,4 @@ type pipeWriteOnly struct {
 
 func (w *pipeWriteOnly) Read(buf []byte) (n int, err error) {
 	return 0, interop.ErrNotImplemented
-}
-
-func (w *pipeWriteOnly) ClosePID(pid uint64) error {
-	w.pipeChan.processClosed[pid] = true
-	return w.pipeChan.Close()
 }

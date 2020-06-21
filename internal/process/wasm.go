@@ -24,6 +24,12 @@ func (p *process) startWasm() error {
 	return nil
 }
 
+func (p *process) Done() {
+	log.Error("PID ", p.pid, " is done.\n", p.fileDescriptors)
+	p.fileDescriptors.CloseAll()
+	close(p.done)
+}
+
 func (p *process) runWasmBytes(wasm []byte) {
 	handleErr := func(err error) {
 		p.state = stateDone
@@ -32,7 +38,7 @@ func (p *process) runWasmBytes(wasm []byte) {
 			p.err = err
 			p.state = "error"
 		}
-		close(p.done)
+		p.Done()
 	}
 
 	p.state = stateCompiling

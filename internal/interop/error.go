@@ -1,10 +1,12 @@
 package interop
 
 import (
+	"fmt"
 	"io"
 	"os"
 	"syscall/js"
 
+	"github.com/johnstarich/go-wasm/internal/common"
 	"github.com/johnstarich/go-wasm/log"
 	"github.com/pkg/errors"
 	"github.com/spf13/afero"
@@ -82,4 +84,12 @@ func mapToErrNo(err error) string {
 		log.Errorf("Unknown error type: (%T) %+v", err, err)
 		return "EPERM"
 	}
+}
+
+func BadFileNumber(fd common.FID) error {
+	return NewError(fmt.Sprintf("Bad file number %d", fd), "EBADF")
+}
+
+func BadFileErr(identifier string) error {
+	return NewError(fmt.Sprintf("Bad file %q", identifier), "EBADF")
 }

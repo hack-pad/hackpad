@@ -76,3 +76,8 @@ func (b *bufferedLogger) Write(p []byte) (n int, err error) {
 func (b *bufferedLogger) Name() string {
 	return b.name
 }
+
+func (b *bufferedLogger) Close() error {
+	// TODO prevent writes and return os.ErrClosed
+	return nil
+}

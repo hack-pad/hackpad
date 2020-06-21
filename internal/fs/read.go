@@ -3,13 +3,13 @@ package fs
 import (
 	"io"
 
-	"github.com/pkg/errors"
+	"github.com/johnstarich/go-wasm/internal/interop"
 )
 
 func (f *FileDescriptors) Read(fd FID, buffer []byte, offset, length int, position *int64) (n int, err error) {
 	fileDescriptor := f.fidMap[fd]
 	if fileDescriptor == nil {
-		return 0, errors.Errorf("unknown fd: %d", fd)
+		return 0, interop.BadFileNumber(fd)
 	}
 	// 'offset' in Node.js's read is the offset in the buffer to start writing at,
 	// and 'position' is where to begin reading from in the file.
