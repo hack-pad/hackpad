@@ -15,7 +15,11 @@ import (
 type FID = common.FID
 
 type fileDescriptor struct {
-	id    FID
+	id FID
+	*fileCore
+}
+
+type fileCore struct {
 	file  afero.File
 	flags int
 	mode  os.FileMode
@@ -33,18 +37,19 @@ func NewFileDescriptor(fid FID, absPath string, flags int, mode os.FileMode) (*f
 
 func newIrregularFileDescriptor(fid FID, file afero.File, mode os.FileMode) *fileDescriptor {
 	return &fileDescriptor{
-		id:         fid,
-		file:       file,
-		mode:       mode,
-		openCounts: make(map[common.PID]*atomic.Uint64),
+		id: fid,
+		fileCore: &fileCore{
+			file:       file,
+			mode:       mode,
+			openCounts: make(map[common.PID]*atomic.Uint64),
+		},
 	}
 }
 
-func (fd *fileDescriptor) Dup(fid FID) (*fileDescriptor, error) {
-	if !fd.mode.IsRegular() {
-		return newIrregularFileDescriptor(fid, fd.file, fd.mode), nil
-	}
-	return NewFileDescriptor(fid, fd.FileName(), fd.flags, fd.mode)
+func (fd *fileDescriptor) Dup(fid FID) *fileDescriptor {
+	fdCopy := *fd
+	fdCopy.id = fid
+	return &fdCopy
 }
 
 func (fd *fileDescriptor) FileName() string {

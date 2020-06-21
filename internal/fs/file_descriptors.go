@@ -77,10 +77,7 @@ func NewFileDescriptors(parentPID common.PID, workingDirectory string, parentFil
 			return nil, nil, errors.Errorf("Invalid parent FID %d", *fidPtr)
 		}
 		fid := f.newFID()
-		fd, err := parentFD.Dup(fid)
-		if err != nil {
-			return nil, nil, errors.Wrap(err, "Failed to inherit file from parent process")
-		}
+		fd := parentFD.Dup(fid)
 		f.addFileDescriptor(fd)
 		fd.Open(parentPID)
 	}
