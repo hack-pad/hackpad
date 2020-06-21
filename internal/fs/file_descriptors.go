@@ -140,7 +140,7 @@ func (f *FileDescriptors) addFileDescriptor(descriptor *fileDescriptor) {
 
 func (f *FileDescriptors) removeFileDescriptor(descriptor *fileDescriptor) {
 	delete(f.nameMap, descriptor.FileName())
-	//delete(f.fidMap, fd) // TODO is it safe to leave the old FD's hanging around? they're useful for debugging
+	delete(f.fidMap, descriptor.id) // TODO is it safe to leave the old FD's hanging around? they're useful for debugging
 }
 
 func getFile(absPath string, flags int, mode os.FileMode) (afero.File, error) {
