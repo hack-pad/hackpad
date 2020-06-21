@@ -12,7 +12,7 @@ import (
 
 func (p *process) startWasm() error {
 	pids[p.pid] = p
-	log.Printf("Spawning process: %v", p)
+	log.Debugf("Spawning process: %v", p)
 	command, err := exec.LookPath(p.command)
 	if err != nil {
 		return err
@@ -26,7 +26,7 @@ func (p *process) startWasm() error {
 }
 
 func (p *process) Done() {
-	log.Error("PID ", p.pid, " is done.\n", p.fileDescriptors)
+	log.Debug("PID ", p.pid, " is done.\n", p.fileDescriptors)
 	p.fileDescriptors.CloseAll()
 	close(p.done)
 }

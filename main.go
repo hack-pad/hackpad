@@ -15,7 +15,6 @@ import (
 )
 
 func main() {
-	fmt.Println("go-wasm")
 	err := run()
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "Error:", err)
