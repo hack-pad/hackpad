@@ -59,11 +59,7 @@ func (p *pipeChan) Read(buf []byte) (n int, err error) {
 		case b := <-p.buf:
 			buf[n] = b
 			n++
-		default:
-			if n == 0 {
-				err = io.EOF
-			}
-			return
+			// default case is always hit immediately. this should be a blocking read
 		}
 	}
 	if n == 0 {
