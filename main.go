@@ -38,22 +38,9 @@ func run() error {
 	r := bytes.NewReader(buf)
 
 	err = unzip(r, r.Len(), "/go")
-	fmt.Println(err)
-
-	dir, err := ioutil.ReadDir("/go")
-	if err != nil {
-		fmt.Println(err)
-		return err
-	}
-
-	for _, f := range dir {
-		fmt.Println(f.Name())
-	}
-	info, err := os.Stat("/go")
 	if err != nil {
 		return err
 	}
-	fmt.Println("dir perm", info.Mode())
 	return makeTestModule()
 }
 

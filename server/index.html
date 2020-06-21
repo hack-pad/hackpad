@@ -137,23 +137,34 @@
 			})
 		}
 
+		function spawn(...args) {
+			return new Promise((resolve, reject) => {
+				const subprocess = child_process.spawn(args[0], args.slice(1))
+				child_process.wait(subprocess.pid, (err, pid) => {
+					if (err) {
+						reject(err)
+						return
+					}
+					resolve(pid)
+				})
+			})
+		}
+
 		const go = new Go();
 		load('polyfill', go)
 			.then(async cmd => {
 				go.env = {
-					'PATH': '/bin',
+					'PATH': '/bin:/go/bin/js_wasm',
+					'GOROOT': '/go',
+					'HOME': '/home/me',
 				}
 				go.run(cmd.instance)
 				console.log(`go-wasm status: ${goWasm.ready ? 'ready' : 'not ready'}`)
 
 				fs.mkdirSync("/go", 0o755)
-				//run('main')
-				//	.then(() => runGo('version'))
-				//	.then(() => runGo("build", "-o", "./prog", "main.go"))
-				const { r, w } = await pipe()
-				await writeFD(w, "hello world!")
-				const data = await readFD(r)
-				console.log("done:", data)
+				run('main')
+					.then(() => spawn("go", "version"))
+					.then(() => spawn("go", "build", "-n", "-v", "-o", "./prog", "main.go"))
 			})
 	</script>
 </head>

@@ -42,7 +42,7 @@ out/go.zip: out go
 			'pkg/*' \
 			'src/cmd/*' \
 			'test/*'; \
-		zip -ru -9 ../../out/go ./pkg/tool/js_wasm; \
+		zip -ru -9 ../../out/go ./pkg/tool/js_wasm ./bin/js_wasm/go; \
 		true
 
 .PHONY: clean

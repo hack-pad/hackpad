@@ -1,6 +1,7 @@
 package process
 
 import (
+	"os"
 	"os/exec"
 	"syscall/js"
 
@@ -44,6 +45,9 @@ func (p *process) runWasmBytes(wasm []byte) {
 	p.state = stateCompiling
 	goInstance := jsGo.New()
 	goInstance.Set("argv", interop.SliceFromStrings(p.args))
+	if p.attr.Env == nil {
+		p.attr.Env = splitEnvPairs(os.Environ())
+	}
 	goInstance.Set("env", interop.StringMap(p.attr.Env))
 
 	importObject := goInstance.Get("importObject")
