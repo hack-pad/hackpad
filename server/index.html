@@ -12,33 +12,17 @@
 			};
 		}
 
-		const load = (name, go) =>
-			WebAssembly.instantiateStreaming(fetch(`${name}.wasm`), go.importObject)
-				.catch(e => {
-					console.error(`Failed to load ${name}`, e)
-				})
-
 		async function run(name, ...args) {
 			const downloadPath = `/bin/${name}`
 			if (! await exists(downloadPath)) {
+				console.debug("Downloading WASM binary:", name)
 				const wasmBinary = await fetch(`${name}.wasm`)
 				const buf = await wasmBinary.arrayBuffer()
 				await writeBytes(downloadPath, new Uint8Array(buf))
+				console.debug("Done downloading:", name)
 				fs.chmodSync(downloadPath, 0o700)
 			}
-			return await spawn(downloadPath, ...args)
-		}
-
-		function runGo(...args) {
-			const go = new Go();
-			return load('go', go).then(m => {
-				go.env = {
-					'GOROOT': '/go',
-					'HOME': process.cwd(),
-				}
-				go.argv = ['go', ...args]
-				go.run(m.instance)
-			})
+			return await spawn(name, ...args)
 		}
 
 		function ls(path) {
@@ -163,11 +147,11 @@
 			})
 		}
 
-		function spawn(...args) {
+		function spawn(name, ...args) {
 			return new Promise((resolve, reject) => {
-				const subprocess = child_process.spawn(args[0], args.slice(1))
+				const subprocess = child_process.spawn(name, args)
 				if (! subprocess) {
-					reject(new Error(`Failed to spawn command: ${args}`))
+					reject(new Error(`Failed to spawn command: ${name} ${args.join(" ")}`))
 					return
 				}
 				child_process.wait(subprocess.pid, (err, pid) => {
@@ -181,7 +165,10 @@
 		}
 
 		const go = new Go();
-		load('polyfill', go)
+		WebAssembly.instantiateStreaming(fetch(`polyfill.wasm`), go.importObject)
+			.catch(e => {
+				console.error("Failed to load polyfill:", e)
+			})
 			.then(async cmd => {
 				go.env = {
 					'PATH': '/bin:/go/bin/js_wasm:/go/pkg/tool/js_wasm',
