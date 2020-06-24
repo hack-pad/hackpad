@@ -263,3 +263,9 @@ func (f *FileDescriptors) Fsync(fd FID) error {
 	}
 	return fileDescriptor.file.Sync()
 }
+
+func (f *FileDescriptors) Rename(oldPath, newPath string) error {
+	oldPath = f.resolvePath(oldPath)
+	newPath = f.resolvePath(newPath)
+	return filesystem.Rename(oldPath, newPath)
+}
