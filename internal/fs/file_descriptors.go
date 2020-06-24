@@ -26,8 +26,7 @@ var (
 type FileDescriptors struct {
 	parentPID        common.PID
 	previousFID      FID
-	nameMap          map[string]*fileDescriptor
-	fidMap           map[FID]*fileDescriptor
+	files            map[FID]*fileDescriptor
 	mu               sync.Mutex
 	workingDirectory *atomic.String
 }
@@ -36,8 +35,7 @@ func NewStdFileDescriptors(parentPID common.PID, workingDirectory string) (*File
 	f := &FileDescriptors{
 		parentPID:        parentPID,
 		previousFID:      0,
-		nameMap:          make(map[string]*fileDescriptor),
-		fidMap:           make(map[FID]*fileDescriptor),
+		files:            make(map[FID]*fileDescriptor),
 		workingDirectory: atomic.NewString(workingDirectory),
 	}
 	// order matters
@@ -57,8 +55,7 @@ func NewFileDescriptors(parentPID common.PID, workingDirectory string, parentFil
 	f := &FileDescriptors{
 		parentPID:        parentPID,
 		previousFID:      0,
-		nameMap:          make(map[string]*fileDescriptor),
-		fidMap:           make(map[FID]*fileDescriptor),
+		files:            make(map[FID]*fileDescriptor),
 		workingDirectory: atomic.NewString(workingDirectory),
 	}
 	if len(inheritFDs) == 0 {
@@ -72,7 +69,7 @@ func NewFileDescriptors(parentPID common.PID, workingDirectory string, parentFil
 			return nil, nil, errors.New("Ignored file descriptors are unsupported") // TODO be sure to align FDs properly when skipping iterations
 		}
 
-		parentFD := parentFiles.fidMap[*fidPtr]
+		parentFD := parentFiles.files[*fidPtr]
 		if parentFD == nil {
 			return nil, nil, errors.Errorf("Invalid parent FID %d", *fidPtr)
 		}
@@ -128,13 +125,11 @@ func (f *FileDescriptors) Open(path string, flags int, mode os.FileMode) (fd FID
 }
 
 func (f *FileDescriptors) addFileDescriptor(descriptor *fileDescriptor) {
-	f.nameMap[descriptor.FileName()] = descriptor
-	f.fidMap[descriptor.id] = descriptor
+	f.files[descriptor.id] = descriptor
 }
 
 func (f *FileDescriptors) removeFileDescriptor(descriptor *fileDescriptor) {
-	delete(f.nameMap, descriptor.FileName())
-	delete(f.fidMap, descriptor.id) // TODO is it safe to leave the old FD's hanging around? they're useful for debugging
+	delete(f.files, descriptor.id) // TODO is it safe to leave the old FD's hanging around? they're useful for debugging
 }
 
 func getFile(absPath string, flags int, mode os.FileMode) (afero.File, error) {
@@ -152,7 +147,7 @@ func getFile(absPath string, flags int, mode os.FileMode) (afero.File, error) {
 }
 
 func (f *FileDescriptors) Close(fd FID) error {
-	fileDescriptor := f.fidMap[fd]
+	fileDescriptor := f.files[fd]
 	if fileDescriptor == nil {
 		return interop.BadFileNumber(fd)
 	}
@@ -163,14 +158,14 @@ func (f *FileDescriptors) Close(fd FID) error {
 
 func (f *FileDescriptors) CloseAll() {
 	f.mu.Lock()
-	for _, fd := range f.fidMap {
+	for _, fd := range f.files {
 		_ = fd.closeAll(f.parentPID)
 	}
 	f.mu.Unlock()
 }
 
 func (f *FileDescriptors) Fstat(fd FID) (os.FileInfo, error) {
-	fileDescriptor := f.fidMap[fd]
+	fileDescriptor := f.files[fd]
 	if fileDescriptor == nil {
 		return nil, interop.BadFileNumber(fd)
 	}
@@ -241,14 +236,14 @@ func ptr(f FID) *FID {
 func (f *FileDescriptors) String() string {
 	var s strings.Builder
 	var fids []FID
-	for fid := range f.fidMap {
+	for fid := range f.files {
 		fids = append(fids, fid)
 	}
 	sort.SliceStable(fids, func(a, b int) bool {
 		return fids[a] < fids[b]
 	})
 	for _, fid := range fids {
-		s.WriteString(f.fidMap[fid].String() + "\n")
+		s.WriteString(f.files[fid].String() + "\n")
 	}
 	return s.String()
 }

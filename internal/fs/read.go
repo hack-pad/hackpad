@@ -7,7 +7,7 @@ import (
 )
 
 func (f *FileDescriptors) Read(fd FID, buffer []byte, offset, length int, position *int64) (n int, err error) {
-	fileDescriptor := f.fidMap[fd]
+	fileDescriptor := f.files[fd]
 	if fileDescriptor == nil {
 		return 0, interop.BadFileNumber(fd)
 	}
