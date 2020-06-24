@@ -85,19 +85,14 @@ func (p *pipeChan) Sync() error {
 
 func (p *pipeChan) Read(buf []byte) (n int, err error) {
 	for n < len(buf) {
-		select {
-		case <-p.done:
+		// Read should always block if the pipe is not closed
+		b, ok := <-p.buf
+		if !ok {
 			err = io.EOF
 			return
-		case b, ok := <-p.buf:
-			if !ok {
-				err = io.EOF
-				return
-			}
-			buf[n] = b
-			n++
-			// default case is always hit immediately. this should be a blocking read
 		}
+		buf[n] = b
+		n++
 	}
 	if n == 0 {
 		err = io.EOF
@@ -109,14 +104,11 @@ func (p *pipeChan) Write(buf []byte) (n int, err error) {
 	for _, b := range buf {
 		select {
 		case <-p.done:
+			// do not allow writes to a closed pipe
 			return 0, interop.BadFileNumber(p.writer)
 		case p.buf <- b:
 			n++
-		default:
-			if n < len(buf) {
-				err = io.ErrShortWrite
-			}
-			return
+			// no default case allowed, Write should always return immediately if the pipe buffer has space, otherwise it should block
 		}
 	}
 	if n < len(buf) {
