@@ -182,7 +182,7 @@
 				fs.mkdirSync("/go", 0o755)
 				run('main')
 					.then(() => spawn("go", "version"))
-					.then(() => spawn("go", "build", "-n", "-v", "-o", "./prog", "main.go"))
+					.then(() => spawn("go", "build", "-v", "-o", "./prog", "main.go"))
 					.then(() => spawn("./prog"))
 			})
 	</script>
