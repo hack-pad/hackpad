@@ -119,7 +119,7 @@ func (p *process) JSValue() js.Value {
 }
 
 func (p *process) String() string {
-	return fmt.Sprintf("PID=%s, Command=%v State=%s, WD=%s, Attr=%+v, Err=%+v, Files:\n%v", p.pid, p.args, p.state, p.WorkingDirectory(), p.attr, p.err, p.fileDescriptors)
+	return fmt.Sprintf("PID=%s, Command=%v, State=%s, WD=%s, Attr=%+v, Err=%+v, Files:\n%v", p.pid, p.args, p.state, p.WorkingDirectory(), p.attr, p.err, p.fileDescriptors)
 }
 
 func Dump() interface{} {
