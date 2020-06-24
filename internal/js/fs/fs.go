@@ -11,7 +11,6 @@ import (
 /*
 fchmod(fd, mode, callback) { callback(enosys()); },
 fchown(fd, uid, gid, callback) { callback(enosys()); },
-fsync(fd, callback) { callback(null); },
 lchown(path, uid, gid, callback) { callback(enosys()); },
 link(path, link, callback) { callback(enosys()); },
 readlink(path, callback) { callback(enosys()); },
@@ -40,6 +39,8 @@ func Init() {
 	interop.SetFunc(fs, "flockSync", flockSync)
 	interop.SetFunc(fs, "fstat", fstat)
 	interop.SetFunc(fs, "fstatSync", fstatSync)
+	interop.SetFunc(fs, "fsync", fsync)
+	interop.SetFunc(fs, "fsyncSync", fsyncSync)
 	interop.SetFunc(fs, "ftruncate", ftruncate)
 	interop.SetFunc(fs, "ftruncateSync", ftruncateSync)
 	interop.SetFunc(fs, "lstat", lstat)

@@ -255,3 +255,11 @@ func (f *FileDescriptors) Truncate(fd FID, length int64) error {
 	}
 	return fileDescriptor.file.Truncate(length)
 }
+
+func (f *FileDescriptors) Fsync(fd FID) error {
+	fileDescriptor := f.files[fd]
+	if fileDescriptor == nil {
+		return interop.BadFileNumber(fd)
+	}
+	return fileDescriptor.file.Sync()
+}
