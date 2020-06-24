@@ -25,7 +25,7 @@ func spawn(args []js.Value) (interface{}, error) {
 
 	procAttr := &process.ProcAttr{}
 	if len(args) >= 3 {
-		procAttr = parseProcAttr(args[2])
+		argv[0], procAttr = parseProcAttr(command, args[2])
 	}
 	return Spawn(command, argv, procAttr)
 }
@@ -38,8 +38,9 @@ func Spawn(command string, args []string, attr *process.ProcAttr) (process.Proce
 	return p, p.Start()
 }
 
-func parseProcAttr(value js.Value) *process.ProcAttr {
-	attr := &process.ProcAttr{}
+func parseProcAttr(defaultCommand string, value js.Value) (argv0 string, attr *process.ProcAttr) {
+	argv0 = defaultCommand
+	attr = &process.ProcAttr{}
 	if dir := value.Get("cwd"); dir.Truthy() {
 		attr.Dir = dir.String()
 	}
@@ -71,5 +72,10 @@ func parseProcAttr(value js.Value) *process.ProcAttr {
 			}
 		}
 	}
-	return attr
+
+	if jsArgv0 := value.Get("argv0"); jsArgv0.Truthy() {
+		argv0 = jsArgv0.String()
+	}
+
+	return
 }

@@ -20,10 +20,14 @@ func Flock(fd, how int) error {
 	return err
 }
 
-func StartProcess(argv0 string, argv []string, attr *ProcAttr) (pid int, handle uintptr, err error) {
-	jsArgv := make([]interface{}, 0, len(argv))
-	for _, arg := range argv {
-		jsArgv = append(jsArgv, arg)
+func StartProcess(name string, argv []string, attr *ProcAttr) (pid int, handle uintptr, err error) {
+	if len(argv) == 0 {
+		// ensure always at least 1 arg
+		argv = []string{name}
+	}
+	jsArgs := make([]interface{}, 0, len(argv)-1) // JS args don't include the command name
+	for _, arg := range argv[1:] {
+		jsArgs = append(jsArgs, arg)
 	}
 
 	cwd := attr.Dir
@@ -45,7 +49,8 @@ func StartProcess(argv0 string, argv []string, attr *ProcAttr) (pid int, handle 
 		fds = append(fds, f)
 	}
 
-	ret := jsChildProcess.Call("spawn", argv0, jsArgv, map[string]interface{}{
+	ret := jsChildProcess.Call("spawn", name, jsArgs, map[string]interface{}{
+		"argv0": argv[0],
 		"cwd":   attr.Dir,
 		"env":   env,
 		"stdio": fds,
