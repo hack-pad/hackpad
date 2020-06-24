@@ -18,13 +18,15 @@
 					console.error(`Failed to load ${name}`, e)
 				})
 
-		function run(name, ...args) {
-			const go = new Go();
-			go.env = {
-				'PATH': '/bin',
+		async function run(name, ...args) {
+			const downloadPath = `/bin/${name}`
+			if (! await exists(downloadPath)) {
+				const wasmBinary = await fetch(`${name}.wasm`)
+				const buf = await wasmBinary.arrayBuffer()
+				await writeBytes(downloadPath, new Uint8Array(buf))
+				fs.chmodSync(downloadPath, 0o700)
 			}
-			go.argv = [name, ...args]
-			return load(name, go).then(m => go.run(m.instance))
+			return await spawn(downloadPath, ...args)
 		}
 
 		function runGo(...args) {
@@ -46,6 +48,13 @@
 			console.log(fs.readdirSync(path))
 		}
 
+		function rm(path) {
+			if (!path) {
+				path = ""
+			}
+			fs.unlinkSync(path)
+		}
+
 		function cat(path) {
 			const fd = fs.openSync(path)
 			if (fd) {
@@ -54,6 +63,12 @@
 				console.log(new TextDecoder("utf-8").decode(buf).substr(0, n))
 				fs.closeSync(fd)
 			}
+		}
+
+		function exists(path) {
+			return new Promise(resolve => {
+				fs.stat(path, err => resolve(!err))
+			})
 		}
 
 		function fstat(fd) {
@@ -118,6 +133,14 @@
 			})
 		}
 
+		function writeBytes(path, contents) {
+			const fd = fs.openSync(path, fs.constants.O_WRONLY|fs.constants.O_CREAT|fs.constants.O_TRUNC)
+			if (fd) {
+				fs.writeSync(fd, contents, 0, contents.length, null)
+				fs.closeSync(fd)
+			}
+		}
+
 		function write(path, contents) {
 			const fd = fs.openSync(path, fs.constants.O_WRONLY|fs.constants.O_CREAT|fs.constants.O_TRUNC)
 			if (fd) {
@@ -143,6 +166,10 @@
 		function spawn(...args) {
 			return new Promise((resolve, reject) => {
 				const subprocess = child_process.spawn(args[0], args.slice(1))
+				if (! subprocess) {
+					reject(new Error(`Failed to spawn command: ${args}`))
+					return
+				}
 				child_process.wait(subprocess.pid, (err, pid) => {
 					if (err) {
 						reject(err)
@@ -164,6 +191,7 @@
 				go.run(cmd.instance)
 				console.log(`go-wasm status: ${goWasm.ready ? 'ready' : 'not ready'}`)
 
+				fs.mkdirSync("/bin", 0o755)
 				fs.mkdirSync("/go", 0o755)
 				run('main')
 					.then(() => spawn("go", "version"))
