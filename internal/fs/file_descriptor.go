@@ -20,9 +20,8 @@ type fileDescriptor struct {
 }
 
 type fileCore struct {
-	file  afero.File
-	flags int
-	mode  os.FileMode
+	file afero.File
+	mode os.FileMode
 
 	openMu     sync.Mutex
 	openCounts map[common.PID]*atomic.Uint64
@@ -31,7 +30,6 @@ type fileCore struct {
 func NewFileDescriptor(fid FID, absPath string, flags int, mode os.FileMode) (*fileDescriptor, error) {
 	file, err := getFile(absPath, flags, mode)
 	descriptor := newIrregularFileDescriptor(fid, file, mode)
-	descriptor.flags = flags
 	return descriptor, err
 }
 
@@ -66,13 +64,13 @@ func (fd *fileDescriptor) Open(pid common.PID) {
 		count.Inc()
 		return
 	}
-	fd.openMu.Lock()
+	fd.fileCore.openMu.Lock()
 	if count, ok := fd.openCounts[pid]; ok {
 		count.Inc()
 	} else {
 		fd.openCounts[pid] = atomic.NewUint64(1)
 	}
-	fd.openMu.Unlock()
+	fd.fileCore.openMu.Unlock()
 }
 
 // Close decrements this process's open count. If the open count is 0, then it locks and runs cleanup.
