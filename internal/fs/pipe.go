@@ -72,6 +72,17 @@ func (p *pipeChan) Stat() (os.FileInfo, error) {
 	}, nil
 }
 
+func (p *pipeChan) Sync() error {
+	timer := time.NewTimer(time.Second)
+	defer timer.Stop()
+	select {
+	case <-p.done:
+		return nil
+	case <-timer.C:
+		return io.ErrNoProgress
+	}
+}
+
 func (p *pipeChan) Read(buf []byte) (n int, err error) {
 	for n < len(buf) {
 		select {
