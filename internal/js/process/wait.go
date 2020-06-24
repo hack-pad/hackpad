@@ -18,13 +18,25 @@ func waitSync(args []js.Value) (interface{}, error) {
 		return nil, errors.Errorf("Invalid number of args, expected 1: %v", args)
 	}
 	pid := process.PID(args[0].Int())
-	return Wait(pid, nil, 0, nil)
+	waitStatus := new(syscall.WaitStatus)
+	wpid, err := Wait(pid, waitStatus, 0, nil)
+	return map[string]interface{}{
+		"pid":      wpid,
+		"exitCode": waitStatus.ExitStatus(),
+	}, err
 }
 
 func Wait(pid process.PID, wstatus *syscall.WaitStatus, options int, rusage *syscall.Rusage) (wpid process.PID, err error) {
-	// TODO support wait status, options, and rusage
-	if p, ok := process.Get(pid); ok {
-		return pid, p.Wait()
+	// TODO support options and rusage
+	p, ok := process.Get(pid)
+	if !ok {
+		return 0, errors.Errorf("Unknown child process: %d", pid)
 	}
-	return 0, errors.Errorf("Unknown child process: %d", pid)
+
+	exitCode, err := p.Wait()
+	if wstatus != nil {
+		const exitCodeShift = 8 // defined in syscall.WaitStatus
+		*wstatus = syscall.WaitStatus(exitCode << exitCodeShift)
+	}
+	return pid, err
 }

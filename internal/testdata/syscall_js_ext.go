@@ -64,9 +64,17 @@ func Wait4(pid int, wstatus *WaitStatus, options int, rusage *Rusage) (wpid int,
 		// waiting on any child process is not currently supported
 		return -1, ENOSYS
 	}
-	// TODO support wstatus, options, and rusage
-	ret, err := childProcessCall("wait", pid)
-	return ret.Int(), err
+	// TODO support options and rusage
+	wpid = pid
+	proc, err := childProcessCall("wait", pid)
+	if procPID := proc.Get("pid"); procPID.Truthy() {
+		wpid = procPID.Int()
+	}
+	if exitCode := proc.Get("exitCode"); exitCode.Truthy() && wstatus != nil {
+		const exitCodeShift = 8 // defined in syscall.WaitStatus
+		*wstatus = WaitStatus(exitCode.Int() << exitCodeShift)
+	}
+	return wpid, err
 }
 
 func childProcessCall(name string, args ...interface{}) (js.Value, error) {

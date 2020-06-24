@@ -49,6 +49,16 @@ func (p *process) runWasmBytes(wasm []byte) {
 		p.attr.Env = splitEnvPairs(os.Environ())
 	}
 	goInstance.Set("env", interop.StringMap(p.attr.Env))
+	goInstance.Set("exit", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+		if len(args) == 0 {
+			return nil
+		}
+		p.exitCode = args[0].Int()
+		if p.exitCode != 0 {
+			log.Warnf("Process exited with code %d: %s", p.exitCode, p)
+		}
+		return nil
+	}))
 
 	importObject := goInstance.Get("importObject")
 	jsBuf := uint8Array.New(len(wasm))

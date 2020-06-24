@@ -42,7 +42,7 @@ type Process interface {
 	ParentPID() PID
 
 	Start() error
-	Wait() error
+	Wait() (exitCode int, err error)
 	Files() *fs.FileDescriptors
 	WorkingDirectory() string
 	SetWorkingDirectory(wd string) error
@@ -55,6 +55,7 @@ type process struct {
 	state           processState
 	attr            *ProcAttr
 	done            chan struct{}
+	exitCode        int
 	err             error
 	fileDescriptors *fs.FileDescriptors
 	setFilesWD      func(wd string) error
@@ -98,9 +99,9 @@ func (p *process) Start() error {
 	return p.startWasm()
 }
 
-func (p *process) Wait() error {
+func (p *process) Wait() (exitCode int, err error) {
 	<-p.done
-	return p.err
+	return p.exitCode, p.err
 }
 
 func (p *process) WorkingDirectory() string {
