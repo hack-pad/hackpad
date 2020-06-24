@@ -15,6 +15,9 @@
 		async function run(name, ...args) {
 			const downloadPath = `/bin/${name}`
 			if (! await exists(downloadPath)) {
+				if (! await exists("/bin")) {
+					fs.mkdirSync("/bin", 0o700)
+				}
 				console.debug("Downloading WASM binary:", name)
 				const wasmBinary = await fetch(`${name}.wasm`)
 				const buf = await wasmBinary.arrayBuffer()
@@ -178,8 +181,6 @@
 				go.run(cmd.instance)
 				console.log(`go-wasm status: ${goWasm.ready ? 'ready' : 'not ready'}`)
 
-				fs.mkdirSync("/bin", 0o755)
-				fs.mkdirSync("/go", 0o755)
 				run('main')
 					.then(() => spawn("go", "version"))
 					.then(() => spawn("go", "build", "-v", "-o", "./prog", "main.go"))
