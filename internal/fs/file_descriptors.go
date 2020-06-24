@@ -247,3 +247,11 @@ func (f *FileDescriptors) String() string {
 	}
 	return s.String()
 }
+
+func (f *FileDescriptors) Truncate(fd FID, length int64) error {
+	fileDescriptor := f.files[fd]
+	if fileDescriptor == nil {
+		return interop.BadFileNumber(fd)
+	}
+	return fileDescriptor.file.Truncate(length)
+}
