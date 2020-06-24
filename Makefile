@@ -42,7 +42,7 @@ out/go.zip: out go
 			'pkg/*' \
 			'src/cmd/*' \
 			'test/*'; \
-		zip -ru -9 ../../out/go ./pkg/tool/js_wasm ./bin/js_wasm/go ./pkg/js_wasm; \
+		zip -ru -9 ../../out/go ./pkg/tool/js_wasm ./bin/js_wasm ./pkg/js_wasm; \
 		true
 
 .PHONY: clean
@@ -53,7 +53,7 @@ cache:
 	mkdir -p cache
 
 .PHONY: commands
-commands: out/go.wasm out/main.wasm $(patsubst cmd/%,out/%.wasm,$(wildcard cmd/*))
+commands: out/wasm_exec.js out/main.wasm $(patsubst cmd/%,out/%.wasm,$(wildcard cmd/*))
 
 .PHONY: go
 go: cache/go${GO_VERSION}
@@ -74,7 +74,7 @@ cache/go${GO_VERSION}: cache
 		export PATH="$$TMP/bin:$$PATH"; \
 		go version; \
 		mkdir -p ../bin/js_wasm; \
-		go build -o ../bin/js_wasm/ std cmd/go; \
+		go build -o ../bin/js_wasm/ std cmd/go cmd/buildid; \
 		go tool dist test -rebuild -list; \
 		popd; \
 		mv "$$TMP" cache/go${GO_VERSION}; \
@@ -87,8 +87,7 @@ out/%.wasm: out go
 out/main.wasm: out go
 	go build -o out/main.wasm .
 
-out/go.wasm: out go
-	cp cache/go${GO_VERSION}/bin/js_wasm/go out/go.wasm
+out/wasm_exec.js: out go
 	cp cache/go${GO_VERSION}/misc/wasm/wasm_exec.js out/wasm_exec.js
 
 .PHONY: go-ext
