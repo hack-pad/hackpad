@@ -62,14 +62,14 @@ module thing
 
 func unzip(r io.ReaderAt, size int, outPath string) error {
 	if err := os.MkdirAll(outPath, 0750); err != nil {
-		return err
+		return errors.Wrap(err, "Failed to prepare zip destination directory")
 	}
 
 	z, err := zip.NewReader(r, int64(size))
 	if err != nil {
-		return err
+		return errors.Wrap(err, "Failed to open zip")
 	}
-	return unzipFiles(z.File, outPath)
+	return errors.Wrap(unzipFiles(z.File, outPath), "Failed to unzip files")
 }
 
 func unzipFiles(files []*zip.File, destDir string) error {
