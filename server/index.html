@@ -169,9 +169,9 @@
 
 		const startTime = new Date().getTime()
 		const go = new Go();
-		WebAssembly.instantiateStreaming(fetch(`polyfill.wasm`), go.importObject)
+		WebAssembly.instantiateStreaming(fetch(`main.wasm`), go.importObject)
 			.catch(e => {
-				console.error("Failed to load polyfill:", e)
+				console.error("Failed to load go-wasm:", e)
 			})
 			.then(async cmd => {
 				go.env = {
