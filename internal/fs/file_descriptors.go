@@ -19,8 +19,6 @@ import (
 
 var (
 	ErrNotDir = interop.NewError("not a directory", "ENOTDIR")
-
-	filesystem = afero.NewMemMapFs()
 )
 
 type FileDescriptors struct {

@@ -1,11 +1,21 @@
 package fs
 
 import (
+	"archive/zip"
 	"fmt"
 	"os"
 
 	"github.com/spf13/afero"
+	"github.com/spf13/afero/zipfs"
 )
+
+var (
+	filesystem = afero.NewMemMapFs()
+)
+
+func OverlayZip(z *zip.Reader) {
+	filesystem = afero.NewCopyOnWriteFs(zipfs.New(z), filesystem)
+}
 
 func Dump() interface{} {
 	var total int64

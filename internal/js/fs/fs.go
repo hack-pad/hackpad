@@ -5,6 +5,7 @@ import (
 	"syscall/js"
 
 	"github.com/johnstarich/go-wasm/internal/fs"
+	"github.com/johnstarich/go-wasm/internal/global"
 	"github.com/johnstarich/go-wasm/internal/interop"
 )
 
@@ -66,6 +67,8 @@ func Init() {
 	interop.SetFunc(fs, "utimesSync", utimesSync)
 	interop.SetFunc(fs, "write", write)
 	interop.SetFunc(fs, "writeSync", writeSync)
+
+	global.Set("overlayZip", js.FuncOf(overlayZip))
 }
 
 func Dump() interface{} {

@@ -167,6 +167,7 @@
 			})
 		}
 
+		const startTime = new Date().getTime()
 		const go = new Go();
 		WebAssembly.instantiateStreaming(fetch(`polyfill.wasm`), go.importObject)
 			.catch(e => {
@@ -181,10 +182,18 @@
 				go.run(cmd.instance)
 				console.log(`go-wasm status: ${goWasm.ready ? 'ready' : 'not ready'}`)
 
-				run('main')
-					.then(() => spawn("go", "version"))
-					.then(() => spawn("go", "build", "-v", "-o", "./prog", "main.go"))
-					.then(() => spawn("./prog"))
+				await goWasm.overlayZip('/go.zip')
+				await write("main.go", `
+package main
+
+func main() {
+	println("Hello from WASM!")
+}
+`)
+				await spawn("go", "version")
+				console.debug("Startup took", (new Date().getTime() - startTime) / 1000, "seconds")
+				await spawn("go", "build", "-v", "-o", "./prog", "main.go")
+				await spawn("./prog")
 			})
 	</script>
 </head>

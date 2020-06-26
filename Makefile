@@ -35,18 +35,18 @@ out/index.html: out ./server/index.html ./server/reload.js
 	cp server/index.html ./server/reload.js ./out/
 
 out/go.zip: out go
-	cd cache/go${GO_VERSION}; \
-		zip -ru -9 ../../out/go . -x \
-			'.git/*' \
-			'bin/*' \
-			'pkg/*' \
-			'src/cmd/*' \
-			'test/*'; \
-		zip -ru -9 ../../out/go \
-			./bin/js_wasm \
-			./pkg/js_wasm \
-			./pkg/include \
-			./pkg/tool/js_wasm \
+	cd cache; \
+		zip -ru -9 ../out/go ./go -x \
+			'./go/.git/*' \
+			'./go/bin/*' \
+			'./go/pkg/*' \
+			'./go/src/cmd/*' \
+			'./go/test/*'; \
+		zip -ru -9 ../out/go \
+			./go/bin/js_wasm \
+			./go/pkg/js_wasm \
+			./go/pkg/include \
+			./go/pkg/tool/js_wasm \
 			; \
 		true
 
@@ -84,6 +84,7 @@ cache/go${GO_VERSION}: cache
 		go build -o ../pkg/tool/js_wasm/ std cmd/buildid cmd/pack; \
 		popd; \
 		mv "$$TMP" cache/go${GO_VERSION}; \
+		ln -sf go${GO_VERSION} go; \
 	fi
 	touch cache/go${GO_VERSION}
 
@@ -94,7 +95,7 @@ out/main.wasm: out go
 	go build -o out/main.wasm .
 
 out/wasm_exec.js: out go
-	cp cache/go${GO_VERSION}/misc/wasm/wasm_exec.js out/wasm_exec.js
+	cp cache/go/misc/wasm/wasm_exec.js out/wasm_exec.js
 
 .PHONY: go-ext
 go-ext:
