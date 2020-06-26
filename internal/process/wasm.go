@@ -64,7 +64,7 @@ func (p *process) runWasmBytes(wasm []byte) {
 	jsBuf := uint8Array.New(len(wasm))
 	js.CopyBytesToJS(jsBuf, wasm)
 	// TODO add module caching
-	instantiatePromise := promise.New(jsWasm.Call("instantiate", jsBuf, importObject))
+	instantiatePromise := promise.From(jsWasm.Call("instantiate", jsBuf, importObject))
 	module, err := promise.Await(instantiatePromise)
 	if err != nil {
 		handleErr(err)
@@ -100,7 +100,7 @@ func (p *process) runWasmBytes(wasm []byte) {
 	})
 
 	p.state = stateRunning
-	runPromise := promise.New(goInstance.Call("run", instance))
+	runPromise := promise.From(goInstance.Call("run", instance))
 	_, err = promise.Await(runPromise)
 	handleErr(err)
 }

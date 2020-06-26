@@ -7,12 +7,30 @@ import (
 	"github.com/johnstarich/go-wasm/log"
 )
 
+var jsPromise = js.Global().Get("Promise")
+
 type Promise struct {
 	value js.Value
 }
 
-func New(promiseValue js.Value) Promise {
+type Resolver func(interface{})
+
+func From(promiseValue js.Value) Promise {
 	return Promise{value: promiseValue}
+}
+
+func New() (resolve, reject Resolver, promise Promise) {
+	resolvers := make(chan Resolver, 2)
+	promise = From(
+		jsPromise.New(singleUseFunc(func(this js.Value, args []js.Value) interface{} {
+			resolve, reject := args[0], args[1]
+			resolvers <- func(result interface{}) { resolve.Invoke(result) }
+			resolvers <- func(result interface{}) { reject.Invoke(result) }
+			return nil
+		})),
+	)
+	resolve, reject = <-resolvers, <-resolvers
+	return
 }
 
 func (p Promise) Then(fn func(value js.Value) interface{}) Promise {
