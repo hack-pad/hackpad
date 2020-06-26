@@ -267,3 +267,11 @@ func (f *FileDescriptors) Rename(oldPath, newPath string) error {
 	newPath = f.resolvePath(newPath)
 	return filesystem.Rename(oldPath, newPath)
 }
+
+func (f *FileDescriptors) Fchmod(fd FID, mode os.FileMode) error {
+	fileDescriptor := f.files[fd]
+	if fileDescriptor == nil {
+		return interop.BadFileNumber(fd)
+	}
+	return filesystem.Chmod(f.resolvePath(fileDescriptor.FileName()), mode)
+}
