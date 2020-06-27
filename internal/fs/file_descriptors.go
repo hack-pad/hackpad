@@ -199,7 +199,10 @@ func (f *FileDescriptors) Stat(path string) (os.FileInfo, error) {
 }
 
 func (f *FileDescriptors) Lstat(path string) (os.FileInfo, error) {
-	// TODO add proper symlink support
+	if lstater, ok := filesystem.(afero.Lstater); ok {
+		info, _, err := lstater.LstatIfPossible(f.resolvePath(path))
+		return info, err
+	}
 	return filesystem.Stat(f.resolvePath(path))
 }
 
