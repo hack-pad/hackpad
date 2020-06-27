@@ -1,8 +1,12 @@
 package fs
 
 import (
+	"syscall"
 	"syscall/js"
 
+	"github.com/johnstarich/go-wasm/internal/common"
+	"github.com/johnstarich/go-wasm/internal/fs"
+	"github.com/johnstarich/go-wasm/internal/process"
 	"github.com/pkg/errors"
 )
 
@@ -15,13 +19,23 @@ func flockSync(args []js.Value) (interface{}, error) {
 	if len(args) != 2 {
 		return nil, errors.Errorf("Invalid number of args, expected 2: %v", args)
 	}
-	fd := args[0].Int()
-	flags := args[1].Int()
+	fid := common.FID(args[0].Int())
+	flag := args[1].Int()
+	var action fs.LockAction
+	shouldLock := true
+	switch flag {
+	case syscall.LOCK_EX:
+		action = fs.LockExclusive
+	case syscall.LOCK_SH:
+		action = fs.LockShared
+	case syscall.LOCK_UN:
+		action = fs.Unlock
+	}
 
-	return nil, Flock(fd, flags)
+	return nil, Flock(fid, action, shouldLock)
 }
 
-func Flock(fd, flags int) error {
-	// TODO implement flock's
-	return nil
+func Flock(fid common.FID, action fs.LockAction, shouldLock bool) error {
+	p := process.Current()
+	return p.Files().Flock(fid, action)
 }

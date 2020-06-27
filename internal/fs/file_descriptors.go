@@ -278,3 +278,42 @@ func (f *FileDescriptors) Fchmod(fd FID, mode os.FileMode) error {
 	}
 	return filesystem.Chmod(f.resolvePath(fileDescriptor.FileName()), mode)
 }
+
+type LockAction int
+
+const (
+	LockShared LockAction = iota
+	LockExclusive
+	Unlock
+)
+
+var (
+	processFileLocks = make(map[string]*sync.RWMutex)
+	newFileLockMu    sync.Mutex
+)
+
+func (f *FileDescriptors) Flock(fd FID, action LockAction) error {
+	fileDescriptor := f.files[fd]
+	if fileDescriptor == nil {
+		return interop.BadFileNumber(fd)
+	}
+	absPath := fileDescriptor.FileName()
+	if _, ok := processFileLocks[absPath]; !ok {
+		newFileLockMu.Lock()
+		if _, ok := processFileLocks[absPath]; !ok {
+			processFileLocks[absPath] = new(sync.RWMutex)
+		}
+		newFileLockMu.Unlock()
+	}
+	lock := processFileLocks[absPath]
+	switch action {
+	case LockShared, LockExclusive:
+		// TODO support shared locks
+		lock.Lock()
+	case Unlock:
+		lock.Unlock()
+	default:
+		return interop.ErrNotImplemented
+	}
+	return nil
+}
