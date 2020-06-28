@@ -31,8 +31,11 @@ static: out/index.html out/go.zip commands
 out:
 	mkdir -p out
 
-out/index.html: out ./server/index.html ./server/reload.js
+out/index.html: out ./server/index.html ./server/reload.js ./out/fetch.js
 	cp server/index.html ./server/reload.js ./out/
+
+out/fetch.js:
+	curl -L https://github.com/github/fetch/releases/download/v3.0.0/fetch.umd.js > out/fetch.js
 
 out/go.zip: out go
 	cd cache; \

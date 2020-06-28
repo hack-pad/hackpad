@@ -7,6 +7,7 @@ import (
 	"github.com/johnstarich/go-wasm/internal/fs"
 	"github.com/johnstarich/go-wasm/internal/global"
 	"github.com/johnstarich/go-wasm/internal/interop"
+	"github.com/johnstarich/go-wasm/internal/process"
 )
 
 /*
@@ -70,8 +71,14 @@ func Init() {
 	interop.SetFunc(fs, "writeSync", writeSync)
 
 	global.Set("overlayZip", js.FuncOf(overlayZip))
+
+	// Set up system directories
+	files := process.Current().Files()
+	if err := files.Mkdir("/tmp", 0777); err != nil {
+		panic(err)
+	}
 }
 
-func Dump() interface{} {
-	return fs.Dump()
+func Dump(basePath string) interface{} {
+	return fs.Dump(basePath)
 }

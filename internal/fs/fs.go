@@ -17,9 +17,9 @@ func OverlayZip(z *zip.Reader) {
 	filesystem = afero.NewCopyOnWriteFs(zipfs.New(z), filesystem)
 }
 
-func Dump() interface{} {
+func Dump(basePath string) interface{} {
 	var total int64
-	err := afero.Walk(filesystem, "/", func(path string, info os.FileInfo, err error) error {
+	err := afero.Walk(filesystem, basePath, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
