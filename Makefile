@@ -31,11 +31,14 @@ static: out/index.html out/go.zip commands
 out:
 	mkdir -p out
 
-out/index.html: out ./server/index.html ./server/js/*.js ./out/fetch.js
-	cp -r server/index.html ./server/js ./out/
+out/static: out
+	mkdir -p ./out/static
 
-out/fetch.js:
-	curl -L https://github.com/github/fetch/releases/download/v3.0.0/fetch.umd.js > out/fetch.js
+out/index.html: out/static ./server/index.html ./server/static/* ./out/static/fetch.js
+	cp -r server/index.html ./server/static ./out/
+
+out/static/fetch.js: out/static
+	curl -L https://github.com/github/fetch/releases/download/v3.0.0/fetch.umd.js > out/static/fetch.js
 
 out/go.zip: out go
 	cd cache; \
@@ -61,7 +64,7 @@ cache:
 	mkdir -p cache
 
 .PHONY: commands
-commands: out/wasm_exec.js out/main.wasm $(patsubst cmd/%,out/%.wasm,$(wildcard cmd/*))
+commands: out/static/wasm_exec.js out/main.wasm $(patsubst cmd/%,out/%.wasm,$(wildcard cmd/*))
 
 .PHONY: go
 go: cache/go${GO_VERSION}
@@ -97,8 +100,8 @@ out/%.wasm: out go
 out/main.wasm: out go
 	go build -o out/main.wasm .
 
-out/wasm_exec.js: out go
-	cp cache/go/misc/wasm/wasm_exec.js out/wasm_exec.js
+out/static/wasm_exec.js: out go
+	cp cache/go/misc/wasm/wasm_exec.js out/static/wasm_exec.js
 
 .PHONY: go-ext
 go-ext:

@@ -2,10 +2,11 @@
 
 <head>
 	<meta charset="utf-8" />
-	<script src="wasm_exec.js"></script>
-	<script src="js/reload.js"></script>
-	<script src="js/util.js"></script>
-	<script src="fetch.js"></script>
+	<script src="static/wasm_exec.js"></script>
+	<script src="static/reload.js"></script>
+	<script src="static/util.js"></script>
+	<script src="static/fetch.js"></script>
+	<link href="static/index.css" rel="stylesheet">
 	<script>
 		if (!WebAssembly.instantiateStreaming) { // polyfill
 			WebAssembly.instantiateStreaming = async (resp, importObject) => {
@@ -28,21 +29,15 @@
 					'PATH': '/bin:/home/me/go/bin:/go/bin/js_wasm:/go/pkg/tool/js_wasm',
 				}
 				go.run(cmd.instance)
-				console.log(`go-wasm status: ${goWasm.ready ? 'ready' : 'not ready'}`)
+				console.debug(`go-wasm status: ${goWasm.ready ? 'ready' : 'not ready'}`)
+				await Promise.all([
+					goWasm.overlayZip('/go.zip'),
+					goWasm.install('editor'),
+				])
+				spawn("editor")
+				spawn("go", "version")
 
-				await goWasm.overlayZip('/go.zip')
-				await spawn("go", "version")
 				console.debug("Startup took", (new Date().getTime() - startTime) / 1000, "seconds")
-				fs.mkdirSync("mywasm", 0o700)
-				process.chdir("mywasm")
-				await spawn("go", "mod", "init", "thing")
-				await write("main.go", `
-package main
-
-func main() {
-	println("Hello from WASM!")
-}
-`)
 			})
 	</script>
 </head>
