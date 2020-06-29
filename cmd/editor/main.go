@@ -32,7 +32,7 @@ func main() {
 <h3><pre>main.go</pre></h3>
 <textarea></textarea>
 <div class="controls">
-	<button onclick='editor.run("go", "build", ".")'>build</button>
+	<button onclick='editor.run("go", "build", "-v", ".")'>build</button>
 	<button onclick='editor.run("go", "run", ".")'>run</button>
 	<button onclick='editor.run("go", "fmt", ".").then(() => editor.reload())'>fmt</button>
 	<div class="loading-indicator"></div>
