@@ -8,7 +8,10 @@ var globals js.Value
 
 func init() {
 	global := js.Global()
-	if global.Get(globalKey).Truthy() {
+	if globals.IsUndefined() {
+		globals = global.Get(globalKey)
+	}
+	if !globals.IsUndefined() {
 		return
 	}
 	global.Set(globalKey, map[string]interface{}{})
