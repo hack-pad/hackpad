@@ -8,6 +8,8 @@ import (
 	"strings"
 	"syscall/js"
 
+	"github.com/johnstarich/go-wasm/internal/promise"
+	"github.com/johnstarich/go-wasm/log"
 	"go.uber.org/atomic"
 )
 
@@ -18,10 +20,6 @@ var (
 
 	document = js.Global().Get("document")
 )
-
-func printerr(args ...interface{}) {
-	fmt.Fprintln(os.Stderr, args...)
-}
 
 func main() {
 	app := document.Call("createElement", "div")
@@ -34,8 +32,9 @@ func main() {
 <h3><pre>main.go</pre></h3>
 <textarea></textarea>
 <div class="controls">
-	<button onclick='editor.build()'>Build</button>
-	<button onclick='editor.run()'>Run</button>
+	<button onclick='editor.run("go", "build", ".")'>build</button>
+	<button onclick='editor.run("go", "run", ".")'>run</button>
+	<button onclick='editor.run("go", "fmt", ".").then(() => editor.reload())'>fmt</button>
 	<div class="loading-indicator"></div>
 </div>
 <div class="console">
@@ -45,18 +44,36 @@ func main() {
 `)
 	loadingElem = app.Call("querySelector", ".controls .loading-indicator")
 	consoleElem = app.Call("querySelector", ".console-output")
+	editorElem := app.Call("querySelector", "textarea")
 
 	js.Global().Set("editor", map[string]interface{}{
-		"build": js.FuncOf(func(this js.Value, args []js.Value) interface{} {
-			go startProcess("go", "build", ".")
-			return nil
-		}),
 		"run": js.FuncOf(func(this js.Value, args []js.Value) interface{} {
-			go startProcess("go", "run", ".")
+			stringArgs := make([]string, len(args))
+			for i := range args {
+				stringArgs[i] = args[i].String()
+			}
+			var name string
+			if len(stringArgs) > 0 {
+				name = stringArgs[0]
+				stringArgs = stringArgs[1:]
+			}
+			resolve, _, prom := promise.New()
+			go func() {
+				startProcess(name, stringArgs...)
+				resolve(nil)
+			}()
+			return prom
+		}),
+		"reload": js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+			contents, err := ioutil.ReadFile("main.go")
+			if err != nil {
+				log.Error(err)
+				return nil
+			}
+			editorElem.Set("value", string(contents))
 			return nil
 		}),
 	})
-	editorElem := app.Call("querySelector", "textarea")
 	editorElem.Call("addEventListener", "input", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
 		go edited(func() string {
 			return editorElem.Get("value").String()
@@ -65,17 +82,17 @@ func main() {
 	}))
 
 	if err := os.Mkdir("playground", 0700); err != nil {
-		printerr("Failed to make playground dir", err)
+		log.Error("Failed to make playground dir", err)
 		return
 	}
 	if err := os.Chdir("playground"); err != nil {
-		printerr("Failed to switch to playground dir", err)
+		log.Error("Failed to switch to playground dir", err)
 		return
 	}
 	cmd := exec.Command("go", "mod", "init", "playground")
 	err := cmd.Start()
 	if err != nil {
-		printerr("Failed to run go mod init", err)
+		log.Error("Failed to run go mod init", err)
 		return
 	}
 
@@ -118,7 +135,7 @@ func startProcess(name string, args ...string) {
 func edited(newContents func() string) {
 	err := ioutil.WriteFile("main.go", []byte(newContents()), 0700)
 	if err != nil {
-		printerr("Failed to write main.go: ", err.Error())
+		log.Error("Failed to write main.go: ", err.Error())
 		return
 	}
 }

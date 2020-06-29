@@ -85,7 +85,7 @@ cache/go${GO_VERSION}: cache
 		export PATH="$$TMP/bin:$$PATH"; \
 		go version; \
 		mkdir -p ../bin/js_wasm; \
-		go build -o ../bin/js_wasm/ std cmd/go; \
+		go build -o ../bin/js_wasm/ std cmd/go cmd/gofmt; \
 		go tool dist test -rebuild -list; \
 		go build -o ../pkg/tool/js_wasm/ std cmd/buildid cmd/pack; \
 		popd; \
