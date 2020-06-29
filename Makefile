@@ -90,7 +90,7 @@ cache/go${GO_VERSION}: cache
 		go build -o ../pkg/tool/js_wasm/ std cmd/buildid cmd/pack; \
 		popd; \
 		mv "$$TMP" cache/go${GO_VERSION}; \
-		ln -sf go${GO_VERSION} go; \
+		ln -sf go${GO_VERSION} cache/go; \
 	fi
 	touch cache/go${GO_VERSION}
 
