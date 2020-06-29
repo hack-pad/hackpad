@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"os"
 	"os/exec"
+	"strings"
 	"syscall/js"
 
 	"go.uber.org/atomic"
@@ -47,11 +48,11 @@ func main() {
 
 	js.Global().Set("editor", map[string]interface{}{
 		"build": js.FuncOf(func(this js.Value, args []js.Value) interface{} {
-			go build()
+			go startProcess("go", "build", ".")
 			return nil
 		}),
 		"run": js.FuncOf(func(this js.Value, args []js.Value) interface{} {
-			go run()
+			go startProcess("go", "run", ".")
 			return nil
 		}),
 	})
@@ -89,48 +90,28 @@ func main() {
 	select {}
 }
 
-func startProcess() (shouldRun bool) {
-	shouldRun = showLoading.CAS(false, true)
-	if !shouldRun {
+func startProcess(name string, args ...string) {
+	if !showLoading.CAS(false, true) {
 		return
 	}
-
 	loadingElem.Get("classList").Call("add", "loading")
-	return
-}
+	defer func() {
+		showLoading.Store(false)
+		loadingElem.Get("classList").Call("remove", "loading")
+	}()
 
-func endProcess() {
-	showLoading.Store(false)
-	loadingElem.Get("classList").Call("remove", "loading")
-}
+	stdout := newElementWriter(consoleElem, "")
+	stderr := newElementWriter(consoleElem, "stderr")
 
-func build() {
-	if !startProcess() {
-		return
-	}
-	defer endProcess()
+	_, _ = stdout.WriteString(fmt.Sprintf("$ %s %s\n", name, strings.Join(args, " ")))
 
-	cmd := exec.Command("go", "build", ".")
-	consoleWriter := newElementWriter(consoleElem)
-	cmd.Stdout = consoleWriter
-	cmd.Stderr = consoleWriter
-	if err := cmd.Run(); err != nil {
-		printerr("Failed to build:", err)
-	}
-}
+	cmd := exec.Command(name, args...)
+	cmd.Stdout = stdout
+	cmd.Stderr = stderr
 
-func run() {
-	if !startProcess() {
-		return
-	}
-	defer endProcess()
-
-	cmd := exec.Command("go", "run", ".")
-	consoleWriter := newElementWriter(consoleElem)
-	cmd.Stdout = consoleWriter
-	cmd.Stderr = consoleWriter
-	if err := cmd.Run(); err != nil {
-		printerr("Failed to run:", err)
+	err := cmd.Run()
+	if err != nil {
+		_, _ = stderr.WriteString(err.Error() + "\n")
 	}
 }
 
