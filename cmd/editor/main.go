@@ -33,7 +33,8 @@ func main() {
 <textarea></textarea>
 <div class="controls">
 	<button onclick='editor.run("go", "build", "-v", ".")'>build</button>
-	<button onclick='editor.run("go", "run", ".")'>run</button>
+	<button onclick='editor.run("go", "build", "-v", ".")
+						.then(() => editor.run("./playground"))'>run</button>
 	<button onclick='editor.run("go", "fmt", ".").then(() => editor.reload())'>fmt</button>
 	<div class="loading-indicator"></div>
 </div>
@@ -98,8 +99,10 @@ func main() {
 
 	mainGoContents := `package main
 
+import "fmt"
+
 func main() {
-	println("Hello from WASM!")
+	fmt.Println("Hello from WASM!")
 }
 `
 	editorElem.Set("value", mainGoContents)
