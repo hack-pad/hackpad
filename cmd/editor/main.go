@@ -13,6 +13,9 @@ import (
 var (
 	showLoading = atomic.NewBool(false)
 	loadingElem js.Value
+	consoleElem js.Value
+
+	document = js.Global().Get("document")
 )
 
 func printerr(args ...interface{}) {
@@ -20,7 +23,6 @@ func printerr(args ...interface{}) {
 }
 
 func main() {
-	document := js.Global().Get("document")
 	app := document.Call("createElement", "div")
 	app.Call("setAttribute", "id", "app")
 	document.Get("body").Call("insertBefore", app, nil)
@@ -28,14 +30,20 @@ func main() {
 	app.Set("innerHTML", `
 <h1>Go WASM Playground</h1>
 
-<textarea> </textarea>
+<h3><pre>main.go</pre></h3>
+<textarea></textarea>
 <div class="controls">
 	<button onclick='editor.build()'>Build</button>
 	<button onclick='editor.run()'>Run</button>
-	<div class="loading-indicator" />
+	<div class="loading-indicator"></div>
+</div>
+<div class="console">
+	<h3>Console</h3>
+	<pre class="console-output"></pre>
 </div>
 `)
-	loadingElem = app.Call("querySelector", "#app .controls .loading-indicator")
+	loadingElem = app.Call("querySelector", ".controls .loading-indicator")
+	consoleElem = app.Call("querySelector", ".console-output")
 
 	js.Global().Set("editor", map[string]interface{}{
 		"build": js.FuncOf(func(this js.Value, args []js.Value) interface{} {
@@ -49,7 +57,9 @@ func main() {
 	})
 	editorElem := app.Call("querySelector", "textarea")
 	editorElem.Call("addEventListener", "input", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
-		go edited(editorElem.Get("value").String())
+		go edited(func() string {
+			return editorElem.Get("value").String()
+		})
 		return nil
 	}))
 
@@ -75,7 +85,7 @@ func main() {
 }
 `
 	editorElem.Set("value", mainGoContents)
-	go edited(mainGoContents)
+	go edited(func() string { return mainGoContents })
 	select {}
 }
 
@@ -101,8 +111,9 @@ func build() {
 	defer endProcess()
 
 	cmd := exec.Command("go", "build", ".")
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
+	consoleWriter := newElementWriter(consoleElem)
+	cmd.Stdout = consoleWriter
+	cmd.Stderr = consoleWriter
 	if err := cmd.Run(); err != nil {
 		printerr("Failed to build:", err)
 	}
@@ -115,15 +126,16 @@ func run() {
 	defer endProcess()
 
 	cmd := exec.Command("go", "run", ".")
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
+	consoleWriter := newElementWriter(consoleElem)
+	cmd.Stdout = consoleWriter
+	cmd.Stderr = consoleWriter
 	if err := cmd.Run(); err != nil {
 		printerr("Failed to run:", err)
 	}
 }
 
-func edited(newContents string) {
-	err := ioutil.WriteFile("main.go", []byte(newContents), 0700)
+func edited(newContents func() string) {
+	err := ioutil.WriteFile("main.go", []byte(newContents()), 0700)
 	if err != nil {
 		printerr("Failed to write main.go: ", err.Error())
 		return

@@ -8,17 +8,29 @@
         border: 1px solid;
         border-radius: 0.2em;
     }
+
+    .console {
+        border-top-color: #eee;
+    }
 }
 
 body {
     font-family: "Helvetica Neue", Helvetica;
     height: 100%;
-    padding: 0;
+    padding: 1em;
     margin: 0;
+    box-sizing: border-box;
 }
 
 h1, h2, h3, h4, h5, h6 {
     font-weight: 400;
+    margin: 0;
+    padding: 0;
+}
+
+h1 pre, h2 pre, h3 pre, h4 pre, h5 pre, h6 pre {
+    font-weight: 800;
+    letter-spacing: 0.05em;
 }
 
 #app {
@@ -35,10 +47,11 @@ textarea {
 .controls {
     display: flex;
     flex-direction: row;
+    align-items: center;
 }
 
 .controls > * {
-    margin: 0.5em;
+    margin: 0.75em 0.5em;
 }
 
 .controls .loading-indicator {
@@ -62,4 +75,18 @@ textarea {
     100% {
         transform: rotate(360deg);
     }
+}
+
+.console {
+    padding: 0.5em 0.25em;
+    display: flex;
+    flex-direction: column;
+}
+
+.console-output {
+    min-height: 3em;
+    border-radius: 0.25em;
+    background-color: rgba(255, 255, 255, 0.1);
+    border-color: #000;
+    padding: 0.5em 0.75em;
 }
