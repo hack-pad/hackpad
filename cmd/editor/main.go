@@ -75,6 +75,7 @@ func main() {
 			return nil
 		}),
 	})
+	editorElem.Call("addEventListener", "keydown", jsCodeTyper())
 	editorElem.Call("addEventListener", "input", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
 		go edited(func() string {
 			return editorElem.Get("value").String()
@@ -141,4 +142,82 @@ func edited(newContents func() string) {
 		log.Error("Failed to write main.go: ", err.Error())
 		return
 	}
+}
+
+func jsCodeTyper() js.Value {
+	// add raw JS func to handle typing events, to avoid slow WASM wake-ups
+	return js.Global().Call("Function", `
+"use strict"
+const e = arguments[0]
+
+if (e.code === 'Tab') {
+	e.preventDefault()
+	document.execCommand("insertText", false, "\t")
+	return
+}
+
+const val = e.target.value
+const sel = e.target.selectionStart
+
+if (e.code === 'Enter') {
+	const lastLine = val.substring(0, sel).lastIndexOf("\n")
+	if (lastLine !== -1) {
+		const leadingChars = val.substring(lastLine+1, sel)
+		const leadingSpace = leadingChars.substring(0, leadingChars.length - leadingChars.trimStart().length)
+		const prevChar = leadingChars.slice(-1)
+		let newText = "\n"+leadingSpace
+		if (prevChar === "{" || prevChar === "(" || prevChar === "[") {
+			newText += "\t"
+		}
+		document.execCommand("insertText", false, newText)
+		e.preventDefault()
+	}
+	return
+}
+
+if (sel !== e.target.selectionEnd) {
+	return
+}
+
+let closer = ""
+switch (e.key) {
+case "{":
+	closer = "}"
+	break
+case "[":
+	closer = "]"
+	break
+case "(":
+	closer = ")"
+	break
+case '"':
+	closer = '"'
+	break
+case "'":
+	closer = "'"
+	break
+}
+if (closer !== "" && val.slice(sel).trimStart().slice(0, 1) !== closer) {
+	e.preventDefault()
+	document.execCommand("insertText", false, e.key+closer)
+	e.target.selectionStart = sel+1
+	e.target.selectionEnd = sel+1
+	return
+}
+
+const nextChar = val.slice(sel, sel+1)
+if (e.key === nextChar) {
+	switch (nextChar) {
+	case "}":
+	case "]":
+	case ")":
+	case '"':
+	case "'":
+		e.preventDefault()
+		e.target.selectionStart = sel+1
+		e.target.selectionEnd = sel+1
+		return
+	}
+}
+`)
 }
