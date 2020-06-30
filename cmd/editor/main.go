@@ -159,18 +159,60 @@ if (e.code === 'Tab') {
 const val = e.target.value
 const sel = e.target.selectionStart
 
+function parseBracket(s) {
+	switch (s) {
+	case "{":
+		return {opener: true, closer: false, next: "}"}
+	case "}":
+		return {opener: false, closer: true, next: ""}
+	case "[":
+		return {opener: true, closer: false, next: "]"}
+	case "]":
+		return {opener: false, closer: true, next: ""}
+	case "(":
+		return {opener: true, closer: false, next: ")"}
+	case ")":
+		return {opener: false, closer: true, next: ""}
+	case '"':
+		return {opener: true, closer: true, next: '"'}
+	case "'":
+		return {opener: true, closer: true, next: "'"}
+	default:
+		return {next: ""}
+	}
+}
+
 if (e.code === 'Enter') {
-	const lastLine = val.substring(0, sel).lastIndexOf("\n")
+	const lastLine = val.slice(0, sel).lastIndexOf("\n")
 	if (lastLine !== -1) {
-		const leadingChars = val.substring(lastLine+1, sel)
-		const leadingSpace = leadingChars.substring(0, leadingChars.length - leadingChars.trimStart().length)
+		const leadingChars = val.slice(lastLine+1, sel)
+		const leadingSpace = leadingChars.slice(0, leadingChars.length - leadingChars.trimStart().length)
 		const prevChar = leadingChars.slice(-1)
-		let newText = "\n"+leadingSpace
-		if (prevChar === "{" || prevChar === "(" || prevChar === "[") {
-			newText += "\t"
+		const nextChar = val.slice(sel, sel+1)
+		let newLinePrefix = "\n"+leadingSpace
+		let newLineSuffix = ""
+		const prevBracket = parseBracket(prevChar)
+		const nextBracket = parseBracket(nextChar)
+		console.log("opener", prevChar, prevBracket, nextBracket)
+		if (prevBracket.opener) {
+			newLinePrefix += "\t"
+			if (nextBracket.closer) {
+				newLineSuffix += "\n"+leadingSpace
+			}
 		}
-		document.execCommand("insertText", false, newText)
+		document.execCommand("insertText", false, newLinePrefix+newLineSuffix)
+		e.target.selectionStart = sel + newLinePrefix.length
+		e.target.selectionEnd = sel + newLinePrefix.length
 		e.preventDefault()
+	}
+	return
+}
+
+if (e.code === 'Backspace') {
+	const prevChar = val.slice(sel-1, sel)
+	const nextChar = val.slice(sel, sel+1)
+	if (parseBracket(prevChar).next === nextChar) {
+		document.execCommand("forwardDelete", false)
 	}
 	return
 }
@@ -179,25 +221,9 @@ if (sel !== e.target.selectionEnd) {
 	return
 }
 
-let closer = ""
-switch (e.key) {
-case "{":
-	closer = "}"
-	break
-case "[":
-	closer = "]"
-	break
-case "(":
-	closer = ")"
-	break
-case '"':
-	closer = '"'
-	break
-case "'":
-	closer = "'"
-	break
-}
-if (closer !== "" && val.slice(sel).trimStart().slice(0, 1) !== closer) {
+const closer = parseBracket(e.key).next
+const afterSel = val.slice(sel).slice(0, 1)
+if (closer !== "" && afterSel !== closer) {
 	e.preventDefault()
 	document.execCommand("insertText", false, e.key+closer)
 	e.target.selectionStart = sel+1
@@ -207,12 +233,7 @@ if (closer !== "" && val.slice(sel).trimStart().slice(0, 1) !== closer) {
 
 const nextChar = val.slice(sel, sel+1)
 if (e.key === nextChar) {
-	switch (nextChar) {
-	case "}":
-	case "]":
-	case ")":
-	case '"':
-	case "'":
+	if (parseBracket(nextChar).closer) {
 		e.preventDefault()
 		e.target.selectionStart = sel+1
 		e.target.selectionEnd = sel+1
