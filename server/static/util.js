@@ -31,9 +31,15 @@ function rm(path) {
 function cat(path) {
     const fd = fs.openSync(path)
     if (fd) {
-        const buf = new Uint8Array(4096)
-        const n = fs.readSync(fd, buf, 0, buf.length, 0)
-        console.log(new TextDecoder("utf-8").decode(buf).substr(0, n))
+        let s = ""
+        const len = 4096
+        let n = len
+        while (n === len) {
+            const buf = new Uint8Array(len)
+            n = fs.readSync(fd, buf, 0, buf.length, null)
+            s += new TextDecoder("utf-8").decode(buf).substr(0, n)
+        }
+        console.log(s)
         fs.closeSync(fd)
     }
 }
