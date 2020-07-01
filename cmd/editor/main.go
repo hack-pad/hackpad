@@ -34,7 +34,8 @@ func main() {
 <div class="controls">
 	<button onclick='editor.run("go", "build", "-v", ".")'>build</button>
 	<button onclick='editor.run("go", "build", "-v", ".")
-						.then(() => editor.run("./playground"))'>run</button>
+						.then(() => editor.run("./playground"))
+						.catch(() => {})'>run</button>
 	<button onclick='editor.run("go", "fmt", ".").then(() => editor.reload())'>fmt</button>
 	<div class="loading-indicator"></div>
 </div>
