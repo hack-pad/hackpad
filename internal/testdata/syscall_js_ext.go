@@ -63,6 +63,14 @@ func StartProcess(name string, argv []string, attr *ProcAttr) (pid int, handle u
 	return pid, 0, err
 }
 
+const (
+	exitCodeShift = 8
+	exitedMask    = 0x7F
+)
+
+func (w WaitStatus) Exited() bool    { return w&exitedMask != 0 }
+func (w WaitStatus) ExitStatus() int { return int(w >> exitCodeShift) }
+
 func Wait4(pid int, wstatus *WaitStatus, options int, rusage *Rusage) (wpid int, err error) {
 	if pid <= 0 {
 		// waiting on any child process is not currently supported
@@ -75,8 +83,10 @@ func Wait4(pid int, wstatus *WaitStatus, options int, rusage *Rusage) (wpid int,
 		wpid = procPID.Int()
 	}
 	if exitCode := proc.Get("exitCode"); exitCode.Type() == js.TypeNumber && wstatus != nil {
-		const exitCodeShift = 8 // defined in syscall.WaitStatus
-		*wstatus = WaitStatus(exitCode.Int() << exitCodeShift)
+		status := 0
+		status |= exitCode.Int() << exitCodeShift // exit code
+		status |= exitedMask                      // exited
+		*wstatus = WaitStatus(status)
 	}
 	return wpid, err
 }

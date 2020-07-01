@@ -35,8 +35,15 @@ func Wait(pid process.PID, wstatus *syscall.WaitStatus, options int, rusage *sys
 
 	exitCode, err := p.Wait()
 	if wstatus != nil {
-		const exitCodeShift = 8 // defined in syscall.WaitStatus
-		*wstatus = syscall.WaitStatus(exitCode << exitCodeShift)
+		const (
+			// defined in syscall.WaitStatus
+			exitCodeShift = 8
+			exitedMask    = 0x7F
+		)
+		status := 0
+		status |= exitCode << exitCodeShift // exit code
+		status |= exitedMask                // exited
+		*wstatus = syscall.WaitStatus(status)
 	}
 	return pid, err
 }

@@ -55,11 +55,7 @@ func Current() Process {
 
 func Get(pid PID) (process Process, ok bool) {
 	p, ok := pids[pid]
-	if ok {
-		pCopy := *p
-		return &pCopy, ok
-	}
-	return
+	return p, ok
 }
 
 func splitEnvPairs(pairs []string) map[string]string {

@@ -37,7 +37,7 @@ func (p *process) runWasmBytes(wasm []byte) {
 		if err != nil {
 			log.Errorf("Failed to start process: %s", err.Error())
 			p.err = err
-			p.state = "error"
+			p.state = stateError
 		}
 		p.Done()
 	}
@@ -48,14 +48,17 @@ func (p *process) runWasmBytes(wasm []byte) {
 	if p.attr.Env == nil {
 		p.attr.Env = splitEnvPairs(os.Environ())
 	}
+	exitChan := make(chan int, 1)
 	goInstance.Set("env", interop.StringMap(p.attr.Env))
 	goInstance.Set("exit", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
 		if len(args) == 0 {
+			exitChan <- -1
 			return nil
 		}
-		p.exitCode = args[0].Int()
-		if p.exitCode != 0 {
-			log.Warnf("Process exited with code %d: %s", p.exitCode, p)
+		code := args[0].Int()
+		exitChan <- code
+		if code != 0 {
+			log.Warnf("Process exited with code %d: %s", code, p)
 		}
 		return nil
 	}))
@@ -102,5 +105,6 @@ func (p *process) runWasmBytes(wasm []byte) {
 	p.state = stateRunning
 	runPromise := promise.From(goInstance.Call("run", instance))
 	_, err = promise.Await(runPromise)
+	p.exitCode = <-exitChan
 	handleErr(err)
 }

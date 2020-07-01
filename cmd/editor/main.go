@@ -58,10 +58,14 @@ func main() {
 				name = stringArgs[0]
 				stringArgs = stringArgs[1:]
 			}
-			resolve, _, prom := promise.New()
+			resolve, reject, prom := promise.New()
 			go func() {
-				startProcess(name, stringArgs...)
-				resolve(nil)
+				success := startProcess(name, stringArgs...)
+				if success {
+					resolve(nil)
+				} else {
+					reject(nil)
+				}
 			}()
 			return prom
 		}),
@@ -111,9 +115,9 @@ func main() {
 	select {}
 }
 
-func startProcess(name string, args ...string) {
+func startProcess(name string, args ...string) (success bool) {
 	if !showLoading.CAS(false, true) {
-		return
+		return false
 	}
 	loadingElem.Get("classList").Call("add", "loading")
 	defer func() {
@@ -130,10 +134,16 @@ func startProcess(name string, args ...string) {
 	cmd.Stdout = stdout
 	cmd.Stderr = stderr
 
-	err := cmd.Run()
+	err := cmd.Start()
+	if err != nil {
+		_, _ = stderr.WriteString("Failed to start process: " + err.Error() + "\n")
+		return false
+	}
+	err = cmd.Wait()
 	if err != nil {
 		_, _ = stderr.WriteString(err.Error() + "\n")
 	}
+	return err == nil
 }
 
 func edited(newContents func() string) {

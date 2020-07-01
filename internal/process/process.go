@@ -25,6 +25,7 @@ const (
 	stateCompiling processState = "compiling wasm"
 	stateRunning   processState = "running"
 	stateDone      processState = "done"
+	stateError     processState = "error"
 )
 
 var (

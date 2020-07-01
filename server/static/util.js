@@ -156,12 +156,12 @@ function spawn(name, ...args) {
             reject(new Error(`Failed to spawn command: ${name} ${args.join(" ")}: ${subprocess.error}`))
             return
         }
-        child_process.wait(subprocess.pid, (err, pid) => {
+        child_process.wait(subprocess.pid, (err, process) => {
             if (err) {
                 reject(err)
                 return
             }
-            resolve(pid)
+            resolve(process)
         })
     })
 }
