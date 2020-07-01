@@ -183,6 +183,12 @@ function parseBracket(s) {
 }
 
 if (e.code === 'Enter') {
+	if (e.metaKey) {
+		e.preventDefault()
+		editor.run("go", "run", ".")
+		return
+	}
+
 	const lastLine = val.slice(0, sel).lastIndexOf("\n")
 	if (lastLine !== -1) {
 		const leadingChars = val.slice(lastLine+1, sel)
