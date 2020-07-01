@@ -56,7 +56,11 @@ func StartProcess(name string, argv []string, attr *ProcAttr) (pid int, handle u
 		"stdio": fds,
 	})
 	pid = ret.Get("pid").Int()
-	return pid, 0, nil
+	jsErr := ret.Get("error")
+	if jsErr.Type() == js.TypeObject {
+		err = js.Error{jsErr}
+	}
+	return pid, 0, err
 }
 
 func Wait4(pid int, wstatus *WaitStatus, options int, rusage *Rusage) (wpid int, err error) {
@@ -67,10 +71,10 @@ func Wait4(pid int, wstatus *WaitStatus, options int, rusage *Rusage) (wpid int,
 	// TODO support options and rusage
 	wpid = pid
 	proc, err := childProcessCall("wait", pid)
-	if procPID := proc.Get("pid"); procPID.Truthy() {
+	if procPID := proc.Get("pid"); procPID.Type() == js.TypeNumber {
 		wpid = procPID.Int()
 	}
-	if exitCode := proc.Get("exitCode"); exitCode.Truthy() && wstatus != nil {
+	if exitCode := proc.Get("exitCode"); exitCode.Type() == js.TypeNumber && wstatus != nil {
 		const exitCodeShift = 8 // defined in syscall.WaitStatus
 		*wstatus = WaitStatus(exitCode.Int() << exitCodeShift)
 	}

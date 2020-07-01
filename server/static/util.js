@@ -152,8 +152,8 @@ function pipe() {
 function spawn(name, ...args) {
     return new Promise((resolve, reject) => {
         const subprocess = child_process.spawn(name, args)
-        if (!subprocess) {
-            reject(new Error(`Failed to spawn command: ${name} ${args.join(" ")}`))
+        if (subprocess.error) {
+            reject(new Error(`Failed to spawn command: ${name} ${args.join(" ")}: ${subprocess.error}`))
             return
         }
         child_process.wait(subprocess.pid, (err, pid) => {

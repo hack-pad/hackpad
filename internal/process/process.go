@@ -8,6 +8,7 @@ import (
 
 	"github.com/johnstarich/go-wasm/internal/common"
 	"github.com/johnstarich/go-wasm/internal/fs"
+	"github.com/johnstarich/go-wasm/internal/interop"
 	"go.uber.org/atomic"
 )
 
@@ -78,6 +79,7 @@ func newWithCurrent(current Process, newPID PID, command string, args []string, 
 		state:           statePending,
 		attr:            attr,
 		done:            make(chan struct{}),
+		err:             err,
 		fileDescriptors: files,
 		setFilesWD:      setFilesWD,
 	}, err
@@ -96,7 +98,11 @@ func (p *process) Files() *fs.FileDescriptors {
 }
 
 func (p *process) Start() error {
-	return p.startWasm()
+	err := p.startWasm()
+	if p.err == nil {
+		p.err = err
+	}
+	return p.err
 }
 
 func (p *process) Wait() (exitCode int, err error) {
@@ -114,8 +120,9 @@ func (p *process) SetWorkingDirectory(wd string) error {
 
 func (p *process) JSValue() js.Value {
 	return js.ValueOf(map[string]interface{}{
-		"pid":  p.pid,
-		"ppid": p.parentPID,
+		"pid":   p.pid,
+		"ppid":  p.parentPID,
+		"error": interop.WrapAsJSError(p.err, "spawn"),
 	})
 }
 

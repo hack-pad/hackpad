@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"os/exec"
 	"syscall/js"
 
 	"github.com/johnstarich/go-wasm/internal/common"
@@ -63,8 +64,12 @@ func mapToErrNo(err error) string {
 	if err, ok := err.(Error); ok {
 		return err.Code()
 	}
+	switch err := err.(type) {
+	case interface{ Unwrap() error }:
+		return mapToErrNo(err.Unwrap())
+	}
 	switch err {
-	case io.EOF, os.ErrNotExist:
+	case io.EOF, os.ErrNotExist, exec.ErrNotFound:
 		return "ENOENT"
 	case os.ErrExist:
 		return "EEXIST"

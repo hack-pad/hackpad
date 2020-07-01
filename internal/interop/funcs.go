@@ -45,7 +45,6 @@ func setFuncHandler(name string, fn interface{}, args []js.Value) (returnedVal i
 		ret, err := fn(args)
 		if err != nil {
 			log.Error(errors.Wrap(err, name).Error())
-			return nil
 		}
 		return ret
 	case CallbackFunc:

@@ -33,7 +33,7 @@ func spawn(args []js.Value) (interface{}, error) {
 func Spawn(command string, args []string, attr *process.ProcAttr) (process.Process, error) {
 	p, err := process.New(command, args, attr)
 	if err != nil {
-		return nil, err
+		return p, err
 	}
 	return p, p.Start()
 }
