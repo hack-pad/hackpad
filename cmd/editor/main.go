@@ -97,6 +97,8 @@ func main() {
 		return
 	}
 	cmd := exec.Command("go", "mod", "init", "playground")
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
 	err := cmd.Start()
 	if err != nil {
 		log.Error("Failed to run go mod init", err)
@@ -105,7 +107,11 @@ func main() {
 
 	mainGoContents := `package main
 
-import "fmt"
+import (
+	"fmt"
+
+	_ "github.com/johnstarich/go/datasize"
+)
 
 func main() {
 	fmt.Println("Hello from WASM!")
