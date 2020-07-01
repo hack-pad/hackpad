@@ -5,6 +5,10 @@ import (
 	"syscall/js"
 )
 
+const (
+	maxJSInt = (1 << 53) - 1
+)
+
 type elementWriter struct {
 	element js.Value
 	class   string
@@ -31,6 +35,6 @@ func (w *elementWriter) WriteString(s string) (n int, err error) {
 		textNode.Get("classList").Call("add", w.class)
 	}
 	textNode.Set("innerText", s)
-	textNode.Call("scrollIntoView", false)
+	w.element.Set("scrollTop", maxJSInt)
 	return len(s), nil
 }
