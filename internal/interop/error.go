@@ -64,8 +64,7 @@ func mapToErrNo(err error) string {
 	if err, ok := err.(Error); ok {
 		return err.Code()
 	}
-	switch err := err.(type) {
-	case interface{ Unwrap() error }:
+	if err, ok := err.(interface{ Unwrap() error }); ok {
 		return mapToErrNo(err.Unwrap())
 	}
 	switch err {

@@ -148,7 +148,7 @@ func startProcess(name string, args ...string) (success bool) {
 }
 
 func edited(newContents func() string) {
-	err := ioutil.WriteFile("main.go", []byte(newContents()), 0700)
+	err := ioutil.WriteFile("main.go", []byte(newContents()), 0600)
 	if err != nil {
 		log.Error("Failed to write main.go: ", err.Error())
 		return

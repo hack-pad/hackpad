@@ -93,6 +93,7 @@ cache/go${GO_VERSION}: cache
 		ln -sf go${GO_VERSION} cache/go; \
 	fi
 	touch cache/go${GO_VERSION}
+	touch cache/go.mod  # Makes it so linters will ignore this dir
 
 out/%.wasm: out go
 	go build -o $@ ./cmd/$*
