@@ -43,22 +43,6 @@ func switchedContext(pid, ppid process.PID) {
 	jsProcess.Set("ppid", ppid)
 }
 
-/*
-func environ() map[string]interface{} {
-	env := make(map[string]interface{})
-	for _, pair := range os.Environ() {
-		equalsIndex := strings.IndexRune(pair, '=')
-		if equalsIndex == -1 {
-			env[pair] = ""
-		} else {
-			key, val := pair[:equalsIndex], pair[equalsIndex+1:]
-			env[key] = val
-		}
-	}
-	return env
-}
-*/
-
 func Dump() interface{} {
 	return process.Dump()
 }
