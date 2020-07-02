@@ -2,7 +2,6 @@ package fs
 
 import (
 	"os"
-	"path/filepath"
 	"sort"
 	"strings"
 	"sync"
@@ -97,10 +96,7 @@ func (f *FileDescriptors) WorkingDirectory() string {
 }
 
 func (f *FileDescriptors) resolvePath(path string) string {
-	if filepath.IsAbs(path) {
-		return filepath.Clean(path)
-	}
-	return filepath.Join(f.workingDirectory.Load(), path)
+	return common.ResolvePath(f.workingDirectory.Load(), path)
 }
 
 func (f *FileDescriptors) newFID() FID {

@@ -1,9 +1,11 @@
 package fs
 
 import (
+	"errors"
 	"syscall"
 	"syscall/js"
 
+	"github.com/johnstarich/go-wasm/internal/common"
 	"github.com/johnstarich/go-wasm/internal/fs"
 	"github.com/johnstarich/go-wasm/internal/global"
 	"github.com/johnstarich/go-wasm/internal/interop"
@@ -71,6 +73,7 @@ func Init() {
 	interop.SetFunc(fs, "writeSync", writeSync)
 
 	global.Set("overlayZip", js.FuncOf(overlayZip))
+	global.Set("dumpZip", js.FuncOf(dumpZip))
 
 	// Set up system directories
 	files := process.Current().Files()
@@ -80,5 +83,15 @@ func Init() {
 }
 
 func Dump(basePath string) interface{} {
+	basePath = common.ResolvePath(process.Current().WorkingDirectory(), basePath)
 	return fs.Dump(basePath)
+}
+
+func dumpZip(this js.Value, args []js.Value) interface{} {
+	if len(args) != 1 {
+		return interop.WrapErr(errors.New("dumpZip: file path is required"), "EINVAL")
+	}
+	path := args[0].String()
+	path = common.ResolvePath(process.Current().WorkingDirectory(), path)
+	return interop.WrapAsJSError(fs.DumpZip(path), "dumpZip")
 }
