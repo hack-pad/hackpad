@@ -29,9 +29,8 @@ const (
 )
 
 var (
-	jsGo       = js.Global().Get("Go")
-	jsWasm     = js.Global().Get("WebAssembly")
-	uint8Array = js.Global().Get("Uint8Array")
+	jsGo   = js.Global().Get("Go")
+	jsWasm = js.Global().Get("WebAssembly")
 )
 
 var (

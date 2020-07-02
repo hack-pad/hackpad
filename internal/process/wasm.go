@@ -64,8 +64,7 @@ func (p *process) runWasmBytes(wasm []byte) {
 	}))
 
 	importObject := goInstance.Get("importObject")
-	jsBuf := uint8Array.New(len(wasm))
-	js.CopyBytesToJS(jsBuf, wasm)
+	jsBuf := interop.NewByteArray(wasm)
 	// TODO add module caching
 	instantiatePromise := promise.From(jsWasm.Call("instantiate", jsBuf, importObject))
 	module, err := promise.Await(instantiatePromise)
