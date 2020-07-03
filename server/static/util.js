@@ -165,3 +165,10 @@ function spawn(name, ...args) {
         })
     })
 }
+
+function sh(str) {
+    let args = str.split(" ")
+    const name = args[0]
+    args = args.slice(1)
+    return spawn(name, ...args)
+}
