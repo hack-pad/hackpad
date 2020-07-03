@@ -52,16 +52,22 @@ func setFuncHandler(name string, fn interface{}, args []js.Value) (returnedVal i
 		// error always goes first
 		callback := args[len(args)-1]
 		args = args[:len(args)-1]
-		go func() (returnedVal interface{}) {
+		go func() {
+			var ret []interface{}
+			var err error
 			defer func() {
-				log.DebugJSValues(js.ValueOf("completed op: "+name), js.ValueOf(returnedVal))
+				if err != nil {
+					log.DebugJSValues(js.ValueOf("completed op failed: "+name), js.ValueOf(ret))
+				} else {
+					log.DebugJSValues(js.ValueOf("completed op: "+name), js.ValueOf(ret))
+				}
 				handlePanic(0)
 			}()
-			ret, err := fn(args)
+
+			ret, err = fn(args)
 			err = WrapAsJSError(err, name)
-			callbackArgs := append([]interface{}{err}, ret...)
-			callback.Invoke(callbackArgs...)
-			return callbackArgs
+			ret = append([]interface{}{err}, ret...)
+			callback.Invoke(ret...)
 		}()
 		return nil
 	default:
