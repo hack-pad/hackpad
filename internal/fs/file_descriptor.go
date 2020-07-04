@@ -25,6 +25,7 @@ type fileCore struct {
 
 	openMu     sync.Mutex
 	openCounts map[common.PID]*atomic.Uint64
+	openedName string // used for debugging
 }
 
 func NewFileDescriptor(fid FID, absPath string, flags int, mode os.FileMode) (*fileDescriptor, error) {
@@ -34,12 +35,17 @@ func NewFileDescriptor(fid FID, absPath string, flags int, mode os.FileMode) (*f
 }
 
 func newIrregularFileDescriptor(fid FID, file afero.File, mode os.FileMode) *fileDescriptor {
+	var name string
+	if file != nil {
+		name = file.Name()
+	}
 	return &fileDescriptor{
 		id: fid,
 		fileCore: &fileCore{
 			file:       file,
 			mode:       mode,
 			openCounts: make(map[common.PID]*atomic.Uint64),
+			openedName: name,
 		},
 	}
 }
@@ -55,7 +61,7 @@ func (fd *fileDescriptor) FileName() string {
 }
 
 func (fd *fileDescriptor) String() string {
-	return fmt.Sprintf("%15s [%d] open=%v", fd.file.Name(), fd.id, openCountToString(fd.openCounts))
+	return fmt.Sprintf("%15s [%d] open=%v", fd.openedName, fd.id, openCountToString(fd.openCounts))
 }
 
 func (fd *fileDescriptor) Open(pid common.PID) {
