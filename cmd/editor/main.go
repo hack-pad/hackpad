@@ -110,11 +110,11 @@ func main() {
 import (
 	"fmt"
 
-	_ "github.com/johnstarich/go/datasize"
+	"github.com/johnstarich/go/datasize"
 )
 
 func main() {
-	fmt.Println("Hello from WASM!")
+	fmt.Println("Hello from WASM!", datasize.Gigabytes(4))
 }
 `
 	editorElem.Set("value", mainGoContents)
