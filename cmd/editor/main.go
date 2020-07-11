@@ -202,7 +202,8 @@ function parseBracket(s) {
 if (e.code === 'Enter') {
 	if (e.metaKey) {
 		e.preventDefault()
-		editor.run("go", "run", ".")
+		editor.run("go", "build", "-v", ".")
+			.then(() => editor.run("./playground"))
 		return
 	}
 
