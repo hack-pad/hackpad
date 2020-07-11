@@ -18,7 +18,7 @@ function ls(path) {
     if (!path) {
         path = ""
     }
-    console.log(fs.readdirSync(path))
+    return fs.readdirSync(path)
 }
 
 function rm(path) {
@@ -26,6 +26,13 @@ function rm(path) {
         path = ""
     }
     fs.unlinkSync(path)
+}
+
+function mv(path, newPath) {
+    if (!path || !newPath) {
+        throw Error("Both old path and new path must be set")
+    }
+    fs.renameSync(path, newPath)
 }
 
 function cat(path) {
@@ -39,8 +46,8 @@ function cat(path) {
             n = fs.readSync(fd, buf, 0, buf.length, null)
             s += new TextDecoder("utf-8").decode(buf).substr(0, n)
         }
-        console.log(s)
         fs.closeSync(fd)
+        return s
     }
 }
 
