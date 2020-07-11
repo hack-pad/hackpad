@@ -2,6 +2,7 @@ package fs
 
 import (
 	"errors"
+	"os"
 	"syscall"
 	"syscall/js"
 
@@ -77,7 +78,7 @@ func Init() {
 
 	// Set up system directories
 	files := process.Current().Files()
-	if err := files.Mkdir("/tmp", 0777); err != nil {
+	if err := files.MkdirAll(os.TempDir(), 0777); err != nil {
 		panic(err)
 	}
 }
