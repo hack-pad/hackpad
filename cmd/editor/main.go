@@ -80,7 +80,7 @@ func main() {
 			return nil
 		}),
 	})
-	editorElem.Call("addEventListener", "keydown", jsCodeTyper())
+	editorElem.Call("addEventListener", "keydown", js.FuncOf(codeTyper))
 	editorElem.Call("addEventListener", "input", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
 		go edited(func() string {
 			return editorElem.Get("value").String()
@@ -159,110 +159,4 @@ func edited(newContents func() string) {
 		log.Error("Failed to write main.go: ", err.Error())
 		return
 	}
-}
-
-func jsCodeTyper() js.Value {
-	// add raw JS func to handle typing events, to avoid slow WASM wake-ups
-	return js.Global().Call("Function", `
-"use strict"
-const e = arguments[0]
-
-if (e.code === 'Tab') {
-	e.preventDefault()
-	document.execCommand("insertText", false, "\t")
-	return
-}
-
-const val = e.target.value
-const sel = e.target.selectionStart
-
-function parseBracket(s) {
-	switch (s) {
-	case "{":
-		return {opener: true, closer: false, next: "}"}
-	case "}":
-		return {opener: false, closer: true, next: ""}
-	case "[":
-		return {opener: true, closer: false, next: "]"}
-	case "]":
-		return {opener: false, closer: true, next: ""}
-	case "(":
-		return {opener: true, closer: false, next: ")"}
-	case ")":
-		return {opener: false, closer: true, next: ""}
-	case '"':
-		return {opener: true, closer: true, next: '"'}
-	case "'":
-		return {opener: true, closer: true, next: "'"}
-	default:
-		return {next: ""}
-	}
-}
-
-if (e.code === 'Enter') {
-	if (e.metaKey) {
-		e.preventDefault()
-		editor.run("go", "build", "-v", ".")
-			.then(() => editor.run("./playground"))
-		return
-	}
-
-	const lastLine = val.slice(0, sel).lastIndexOf("\n")
-	if (lastLine !== -1) {
-		const leadingChars = val.slice(lastLine+1, sel)
-		const leadingSpace = leadingChars.slice(0, leadingChars.length - leadingChars.trimStart().length)
-		const prevChar = leadingChars.slice(-1)
-		const nextChar = val.slice(sel, sel+1)
-		let newLinePrefix = "\n"+leadingSpace
-		let newLineSuffix = ""
-		const prevBracket = parseBracket(prevChar)
-		const nextBracket = parseBracket(nextChar)
-		console.log("opener", prevChar, prevBracket, nextBracket)
-		if (prevBracket.opener) {
-			newLinePrefix += "\t"
-			if (nextBracket.closer) {
-				newLineSuffix += "\n"+leadingSpace
-			}
-		}
-		document.execCommand("insertText", false, newLinePrefix+newLineSuffix)
-		e.target.selectionStart = sel + newLinePrefix.length
-		e.target.selectionEnd = sel + newLinePrefix.length
-		e.preventDefault()
-	}
-	return
-}
-
-if (e.code === 'Backspace') {
-	const prevChar = val.slice(sel-1, sel)
-	const nextChar = val.slice(sel, sel+1)
-	if (parseBracket(prevChar).next === nextChar) {
-		document.execCommand("forwardDelete", false)
-	}
-	return
-}
-
-if (sel !== e.target.selectionEnd) {
-	return
-}
-
-const closer = parseBracket(e.key).next
-const afterSel = val.slice(sel).slice(0, 1)
-if (closer !== "" && afterSel !== closer) {
-	e.preventDefault()
-	document.execCommand("insertText", false, e.key+closer)
-	e.target.selectionStart = sel+1
-	e.target.selectionEnd = sel+1
-	return
-}
-
-const nextChar = val.slice(sel, sel+1)
-if (e.key === nextChar) {
-	if (parseBracket(nextChar).closer) {
-		e.preventDefault()
-		e.target.selectionStart = sel+1
-		e.target.selectionEnd = sel+1
-		return
-	}
-}
-`)
 }
