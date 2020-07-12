@@ -11,16 +11,11 @@ import (
 
 	"github.com/johnstarich/go-wasm/internal/interop"
 	"github.com/spf13/afero"
-	"github.com/spf13/afero/zipfs"
 )
 
 var (
 	filesystem = afero.NewMemMapFs()
 )
-
-func OverlayZip(z *zip.Reader) {
-	filesystem = afero.NewCopyOnWriteFs(zipfs.New(z), filesystem)
-}
 
 // Dump prints out file system statistics
 func Dump(basePath string) interface{} {
