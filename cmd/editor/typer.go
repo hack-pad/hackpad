@@ -1,6 +1,8 @@
 package main
 
 import (
+	"fmt"
+	"runtime/debug"
 	"strings"
 	"syscall/js"
 	"unicode"
@@ -8,6 +10,16 @@ import (
 
 // codeTyper is fired on keydown event
 func codeTyper(this js.Value, args []js.Value) interface{} {
+	defer func() {
+		r := recover()
+		if r == nil {
+			return
+		}
+
+		stderr := newElementWriter(consoleElem, "stderr")
+		fmt.Fprintln(stderr, "Failed to handle keydown:", r, "\n"+string(debug.Stack()))
+	}()
+
 	if len(args) > 0 {
 		event := args[0]
 		handleKeydown(event)
@@ -50,12 +62,12 @@ func handleKeydown(event js.Value) {
 			return
 		}
 
-		lastNewLine := strings.LastIndexByte(text[:selectionStart], '\n')
+		lastNewLine := strings.LastIndexByte(slice(text, 0, selectionStart), '\n')
 		if lastNewLine != -1 {
-			leadingChars := text[lastNewLine+1 : selectionStart]
-			leadingSpace := leadingChars[:len(leadingChars)-len(strings.TrimLeftFunc(leadingChars, unicode.IsSpace))]
-			prevChar := string(leadingChars[len(leadingChars)-1])
-			nextChar := text[selectionStart : selectionStart+1]
+			leadingChars := slice(text, lastNewLine+1, selectionStart)
+			leadingSpace := slice(leadingChars, 0, len(leadingChars)-len(strings.TrimLeftFunc(leadingChars, unicode.IsSpace)))
+			prevChar := slice(leadingChars, -1, 0)
+			nextChar := slice(text, selectionStart, selectionStart+1)
 
 			newLinePrefix := "\n" + leadingSpace
 			newLineSuffix := ""
@@ -76,8 +88,8 @@ func handleKeydown(event js.Value) {
 	}
 
 	if code == KeyBackspace {
-		prevChar := text[selectionStart-1 : selectionStart]
-		nextChar := text[selectionStart : selectionStart+1]
+		prevChar := slice(text, selectionStart-1, selectionStart)
+		nextChar := slice(text, selectionStart, selectionStart+1)
 		if parseBracket(prevChar).next == nextChar {
 			document.Call("execCommand", "forwardDelete", false)
 		}
@@ -89,7 +101,7 @@ func handleKeydown(event js.Value) {
 	}
 
 	closer := parseBracket(key).next
-	afterSelection := text[selectionStart : selectionStart+1] // TODO handle end case
+	afterSelection := slice(text, selectionStart, selectionStart+1)
 	if closer != "" && afterSelection != closer {
 		preventDefault()
 		insertText(key + closer)
@@ -98,7 +110,7 @@ func handleKeydown(event js.Value) {
 		return
 	}
 
-	nextChar := text[selectionStart : selectionStart+1]
+	nextChar := slice(text, selectionStart, selectionStart+1)
 	if key == nextChar && parseBracket(nextChar).closer {
 		preventDefault()
 		target.Set("selectionStart", selectionStart+1)
@@ -134,4 +146,20 @@ func parseBracket(s string) Bracket {
 	default:
 		return Bracket{next: ""}
 	}
+}
+
+func slice(s string, start, end int) string {
+	if start < 0 {
+		start += len(s)
+		if start < 0 {
+			start = 0
+		}
+	}
+	if start > len(s) {
+		start = len(s) - 1
+	}
+	if end < start || end > len(s) {
+		end = len(s)
+	}
+	return s[start:end]
 }
