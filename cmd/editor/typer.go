@@ -46,7 +46,7 @@ func handleKeydown(event js.Value) {
 	if code == KeyEnter {
 		if metaKey {
 			preventDefault()
-			// TODO do run
+			runPlayground()
 			return
 		}
 
