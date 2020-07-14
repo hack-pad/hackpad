@@ -37,6 +37,7 @@
 				])
 				spawn("editor")
 				spawn("go", "version")
+				setTimeout(() => goWasm.overlayStorage("/home/me/.cache", localStorage), 1000)
 
 				console.debug("Startup took", (new Date().getTime() - startTime) / 1000, "seconds")
 			})

@@ -11,6 +11,7 @@ import (
 
 	"github.com/johnstarich/go-wasm/internal/interop"
 	"github.com/johnstarich/go-wasm/internal/mountfs"
+	"github.com/johnstarich/go-wasm/internal/storer"
 	"github.com/spf13/afero"
 	"github.com/spf13/afero/zipfs"
 )
@@ -18,6 +19,10 @@ import (
 var (
 	filesystem = mountfs.New(afero.NewMemMapFs())
 )
+
+func OverlayStorage(mountPath string, s storer.Storer) error {
+	return filesystem.Mount(mountPath, storer.New(s))
+}
 
 func OverlayZip(mountPath string, z *zip.Reader) error {
 	return filesystem.Mount(mountPath, zipfs.New(z))

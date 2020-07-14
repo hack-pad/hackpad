@@ -63,3 +63,17 @@ func OverlayZip(args []js.Value) error {
 	}
 	return fs.OverlayZip(mountPath, z)
 }
+
+func overlayStorage(this js.Value, args []js.Value) interface{} {
+	if len(args) != 2 {
+		return errors.New("overlayStorage: mount path and storer value (i.e. localStorage) are required")
+	}
+
+	mountPath := args[0].String()
+	jsStorer := args[1]
+	err := fs.OverlayStorage(mountPath, fs.NewJSStorage(jsStorer))
+	if err != nil {
+		log.Error("Failed to overlay storage FS:", err)
+	}
+	return nil
+}

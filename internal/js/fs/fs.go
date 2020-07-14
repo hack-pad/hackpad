@@ -74,6 +74,7 @@ func Init() {
 	interop.SetFunc(fs, "writeSync", writeSync)
 
 	global.Set("overlayZip", js.FuncOf(overlayZip))
+	global.Set("overlayStorage", js.FuncOf(overlayStorage))
 	global.Set("dumpZip", js.FuncOf(dumpZip))
 
 	// Set up system directories
