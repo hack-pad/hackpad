@@ -31,11 +31,12 @@ func overlayZip(this js.Value, args []js.Value) interface{} {
 }
 
 func OverlayZip(args []js.Value) error {
-	if len(args) != 1 {
-		return errors.New("overlayZip: zip path is required")
+	if len(args) != 2 {
+		return errors.New("overlayZip: mount path and zip URL path is required")
 	}
 
-	zipPath := args[0].String()
+	mountPath := args[0].String()
+	zipPath := args[1].String()
 	log.Debug("Downloading overlay zip FS: ", zipPath)
 	u, err := url.Parse(zipPath)
 	if err != nil {
@@ -60,6 +61,5 @@ func OverlayZip(args []js.Value) error {
 	if err != nil {
 		return err
 	}
-	fs.OverlayZip(z)
-	return nil
+	return fs.OverlayZip(mountPath, z)
 }

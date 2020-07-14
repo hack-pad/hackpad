@@ -195,11 +195,8 @@ func (f *FileDescriptors) Stat(path string) (os.FileInfo, error) {
 }
 
 func (f *FileDescriptors) Lstat(path string) (os.FileInfo, error) {
-	if lstater, ok := filesystem.(afero.Lstater); ok {
-		info, _, err := lstater.LstatIfPossible(f.resolvePath(path))
-		return info, err
-	}
-	return filesystem.Stat(f.resolvePath(path))
+	info, _, err := filesystem.LstatIfPossible(f.resolvePath(path))
+	return info, err
 }
 
 func (f *FileDescriptors) Mkdir(path string, mode os.FileMode) error {

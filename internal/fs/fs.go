@@ -10,16 +10,17 @@ import (
 	"strings"
 
 	"github.com/johnstarich/go-wasm/internal/interop"
+	"github.com/johnstarich/go-wasm/internal/mountfs"
 	"github.com/spf13/afero"
 	"github.com/spf13/afero/zipfs"
 )
 
 var (
-	filesystem = afero.NewMemMapFs()
+	filesystem = mountfs.New(afero.NewMemMapFs())
 )
 
-func OverlayZip(z *zip.Reader) {
-	filesystem = afero.NewCopyOnWriteFs(zipfs.New(z), filesystem)
+func OverlayZip(mountPath string, z *zip.Reader) error {
+	return filesystem.Mount(mountPath, zipfs.New(z))
 }
 
 // Dump prints out file system statistics
