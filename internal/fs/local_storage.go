@@ -1,7 +1,7 @@
 package fs
 
 import (
-	"encoding/base64"
+	"encoding/json"
 	"os"
 	"syscall/js"
 
@@ -35,25 +35,28 @@ type localStorer struct {
 	getItem, setItem, removeItem js.Value
 }
 
-func (l *localStorer) GetData(key string) ([]byte, error) {
+func (l *localStorer) GetFileRecord(key string, dest *storer.FileRecord) error {
 	defer interop.PanicLogger()
 	log.Warn("Getting data ", key, l)
 	value := l.getItem.Invoke(localStorageKeyPrefix + key)
 	if value.IsNull() {
 		log.Warn("No data ", key)
-		return nil, os.ErrNotExist
+		return os.ErrNotExist
 	}
 	log.Warn("Got data ", value.Length())
-	return base64.StdEncoding.DecodeString(value.String())
+	return json.Unmarshal([]byte(value.String()), dest)
 }
 
-func (l *localStorer) SetData(key string, data []byte) error {
+func (l *localStorer) SetFileRecord(key string, data *storer.FileRecord) error {
 	defer interop.PanicLogger()
-	log.Warn("Setting data ", key, " ", len(data))
+	log.Warn("Setting data ", key)
 	if data == nil {
 		l.removeItem.Invoke(localStorageKeyPrefix + key)
 		return nil
 	}
-	l.setItem.Invoke(localStorageKeyPrefix+key, base64.StdEncoding.EncodeToString(data))
-	return nil
+	buf, err := json.Marshal(data)
+	if err == nil {
+		l.setItem.Invoke(localStorageKeyPrefix+key, string(buf))
+	}
+	return err
 }

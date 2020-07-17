@@ -1,19 +1,18 @@
 package storer
 
 import (
-	"encoding/json"
-
 	"github.com/johnstarich/go-wasm/internal/fsutil"
 	"github.com/spf13/afero"
 )
 
 // Storer holds arbitrary data at the given 'key' locations. This can be mapped to a key-value store fairly easily.
 type Storer interface {
-	// GetData retrieves data for the given 'key'. Returns an error if the key is not set or could not be retrieved.
-	// If the key is not set, the error must satisfy os.IsNotExist().
-	GetData(key string) ([]byte, error)
-	// SetData assigns 'data' to the given 'key'. Returns an error if the data could not be set.
-	SetData(key string, data []byte) error
+	// GetFileRecord retrieves a file for the given 'path' and stores it in 'dest'.
+	// Returns an error if the path was not found or could not be retrieved.
+	// If the path was not found, the error must satisfy os.IsNotExist().
+	GetFileRecord(path string, dest *FileRecord) error
+	// SetFileRecord assigns 'data' to the given 'path'. Returns an error if the data could not be set.
+	SetFileRecord(path string, src *FileRecord) error
 }
 
 type fileStorer struct {
@@ -28,14 +27,11 @@ func newFileStorer(s Storer, sourceFS afero.Fs) *fileStorer {
 // GetFile returns a file for 'path' if it exists, os.ErrNotExist otherwise
 func (f *fileStorer) GetFile(path string) (*File, error) {
 	path = fsutil.NormalizePath(path)
-	data, err := f.GetData(path)
-	if err != nil {
-		return nil, err
+	file := fileData{
+		path:   path,
+		storer: f,
 	}
-	var file fileData
-	err = json.Unmarshal(data, &file)
-	file.path = path
-	file.storer = f
+	err := f.GetFileRecord(path, &file.FileRecord)
 	return &File{fileData: &file}, err
 }
 
@@ -43,11 +39,7 @@ func (f *fileStorer) GetFile(path string) (*File, error) {
 func (f *fileStorer) SetFile(path string, file *fileData) error {
 	path = fsutil.NormalizePath(path)
 	if file == nil {
-		return f.SetData(path, nil)
+		return f.SetFileRecord(path, nil)
 	}
-	data, err := json.Marshal(file)
-	if err == nil {
-		err = f.SetData(path, data)
-	}
-	return err
+	return f.SetFileRecord(path, &file.FileRecord)
 }

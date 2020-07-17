@@ -18,9 +18,13 @@ type File struct {
 }
 
 type fileData struct {
+	FileRecord
+
 	path   string // path is stored as the "key", keeping it here is for generating os.FileInfo's
 	storer *fileStorer
+}
 
+type FileRecord struct {
 	Data     []byte
 	DirNames []string
 	ModTime  time.Time
@@ -30,10 +34,12 @@ type fileData struct {
 func (fs *Fs) newFile(path string, mode os.FileMode) *File {
 	return &File{
 		fileData: &fileData{
-			storer:  fs.fileStorer,
-			path:    path,
-			ModTime: time.Now(),
-			Mode:    mode,
+			storer: fs.fileStorer,
+			path:   path,
+			FileRecord: FileRecord{
+				ModTime: time.Now(),
+				Mode:    mode,
+			},
 		},
 	}
 }
