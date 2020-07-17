@@ -14,8 +14,6 @@ const (
 	localStorageKeyPrefix = "storer$1$"
 )
 
-var jsUint8Array = js.Global().Get("Uint8Array")
-
 // TODO consider adding "locks": https://balpha.de/2012/03/javascript-concurrency-and-locking-the-html5-localstorage/
 
 type LocalStorageFs struct {
