@@ -24,3 +24,8 @@ func Await(promise Promise) (js.Value, error) {
 		return result, nil
 	}
 }
+
+func AwaitGo(promise GoPromise) (interface{}, interface{}) {
+	// TODO support error handling inside promise functions instead
+	return <-promise.resolveChan, <-promise.rejectChan
+}

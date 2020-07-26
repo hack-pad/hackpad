@@ -2,8 +2,6 @@ package indexeddb
 
 import (
 	"syscall/js"
-
-	"github.com/johnstarich/go-wasm/internal/promise"
 )
 
 type CursorDirection int
@@ -53,13 +51,13 @@ func (c *Cursor) ContinuePrimaryKey(key, primaryKey js.Value) (err error) {
 func (c *Cursor) Delete() (err error) {
 	defer catch(&err)
 	req := c.jsCursor.Call("delete")
-	_, err = promise.Await(processRequest(req))
+	_, err = await(processRequest(req))
 	return
 }
 
 func (c *Cursor) Update(value js.Value) (err error) {
 	defer catch(&err)
 	req := c.jsCursor.Call("update", value)
-	_, err = promise.Await(processRequest(req))
+	_, err = await(processRequest(req))
 	return
 }

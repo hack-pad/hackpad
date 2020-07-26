@@ -16,24 +16,24 @@ type DB struct {
 
 func DeleteDatabase(name string) error {
 	prom := processRequest(jsIndexedDB.Call("deleteDatabase", name))
-	_, err := promise.Await(prom)
+	_, err := await(prom)
 	return err
 }
 
-func New(name string, version int, upgrader func(result *DB, oldVersion, newVersion int) error) (*DB, error) {
+func New(name string, version int, upgrader func(db *DB, oldVersion, newVersion int) error) (*DB, error) {
 	db := &DB{}
 	request := jsIndexedDB.Call("open", name, version)
 
-	resolve, reject, prom := promise.New()
-	request.Set("onerror", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+	resolve, reject, prom := promise.NewGoPromise()
+	request.Call("addEventListener", "error", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
 		reject(request.Get("error"))
 		return nil
 	}))
-	request.Set("onsuccess", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+	request.Call("addEventListener", "success", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
 		resolve(request.Get("result"))
 		return nil
 	}))
-	request.Set("onupgradeneeded", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+	request.Call("addEventListener", "upgradeneeded", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
 		event := args[0]
 		db.jsDB = request.Get("result")
 		err := upgrader(db, event.Get("oldVersion").Int(), event.Get("newVersion").Int())
@@ -43,7 +43,7 @@ func New(name string, version int, upgrader func(result *DB, oldVersion, newVers
 		return nil
 	}))
 	var err error
-	db.jsDB, err = promise.Await(prom)
+	db.jsDB, err = await(prom)
 	return db, err
 }
 

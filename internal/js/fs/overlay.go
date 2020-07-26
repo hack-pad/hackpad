@@ -77,3 +77,30 @@ func overlayStorage(this js.Value, args []js.Value) interface{} {
 	}
 	return nil
 }
+
+func overlayIndexedDB(this js.Value, args []js.Value) interface{} {
+	resolve, reject, prom := promise.New()
+	go func() {
+		err := OverlayIndexedDB(args)
+		if err != nil {
+			reject(interop.WrapAsJSError(err, "Failed overlaying IndexedDB FS"))
+		} else {
+			log.Debug("Successfully overlayed IndexedDB FS")
+			resolve(nil)
+		}
+	}()
+	return prom
+}
+
+func OverlayIndexedDB(args []js.Value) error {
+	if len(args) != 1 {
+		return errors.New("overlayIndexedDB: mount path is required")
+	}
+
+	mountPath := args[0].String()
+	idb, err := fs.NewIndexedDBFs(mountPath)
+	if err != nil {
+		return err
+	}
+	return fs.OverlayStorage(mountPath, idb)
+}

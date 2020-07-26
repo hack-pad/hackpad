@@ -33,28 +33,28 @@ type localStorer struct {
 	getItem, setItem, removeItem js.Value
 }
 
-func (l *localStorer) GetFileRecord(key string, dest *storer.FileRecord) error {
+func (l *localStorer) GetFileRecord(path string, dest *storer.FileRecord) error {
 	defer interop.PanicLogger()
-	log.Warn("Getting data ", key, l)
-	value := l.getItem.Invoke(localStorageKeyPrefix + key)
+	log.Warn("Getting data ", path, l)
+	value := l.getItem.Invoke(localStorageKeyPrefix + path)
 	if value.IsNull() {
-		log.Warn("No data ", key)
+		log.Warn("No data ", path)
 		return os.ErrNotExist
 	}
 	log.Warn("Got data ", value.Length())
 	return json.Unmarshal([]byte(value.String()), dest)
 }
 
-func (l *localStorer) SetFileRecord(key string, data *storer.FileRecord) error {
+func (l *localStorer) SetFileRecord(path string, data *storer.FileRecord) error {
 	defer interop.PanicLogger()
-	log.Warn("Setting data ", key)
+	log.Warn("Setting data ", path)
 	if data == nil {
-		l.removeItem.Invoke(localStorageKeyPrefix + key)
+		l.removeItem.Invoke(localStorageKeyPrefix + path)
 		return nil
 	}
 	buf, err := json.Marshal(data)
 	if err == nil {
-		l.setItem.Invoke(localStorageKeyPrefix+key, string(buf))
+		l.setItem.Invoke(localStorageKeyPrefix+path, string(buf))
 	}
 	return err
 }

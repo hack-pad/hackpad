@@ -7,17 +7,25 @@ import (
 	"github.com/pkg/errors"
 )
 
-func processRequest(request js.Value) promise.Promise {
-	resolve, reject, prom := promise.New()
-	request.Set("onerror", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+func processRequest(request js.Value) promise.GoPromise {
+	resolve, reject, prom := promise.NewGoPromise()
+	request.Call("addEventListener", "error", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
 		reject(request.Get("error"))
 		return nil
 	}))
-	request.Set("onsuccess", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+	request.Call("addEventListener", "success", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
 		resolve(request.Get("result"))
 		return nil
 	}))
 	return prom
+}
+
+func await(prom promise.GoPromise) (js.Value, error) {
+	val, errVal := promise.AwaitGo(prom)
+	if errVal != nil {
+		return js.Value{}, js.Error{Value: errVal.(js.Value)}
+	}
+	return val.(js.Value), nil
 }
 
 func catch(err *error) {

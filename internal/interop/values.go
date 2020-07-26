@@ -12,6 +12,15 @@ func SliceFromStrings(strs []string) js.Value {
 	return js.ValueOf(values)
 }
 
+func StringsFromJSValue(value js.Value) []string {
+	var strs []string
+	length := value.Length()
+	for i := 0; i < length; i++ {
+		strs = append(strs, value.Index(i).String())
+	}
+	return strs
+}
+
 func SliceFromJSValues(args []js.Value) []interface{} {
 	var values []interface{}
 	for _, arg := range args {

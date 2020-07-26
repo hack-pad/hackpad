@@ -3,7 +3,6 @@ package storer
 import (
 	"os"
 	"path/filepath"
-	"sync"
 	"syscall"
 	"time"
 
@@ -14,8 +13,6 @@ import (
 
 type Fs struct {
 	*fileStorer
-
-	mu sync.RWMutex
 }
 
 // New returns a file system that relies on data fetched and set on Storer.
@@ -42,12 +39,12 @@ func (fs *Fs) Create(name string) (afero.File, error) {
 }
 
 func (fs *Fs) Mkdir(name string, perm os.FileMode) error {
-	file, err := fs.fileStorer.GetFile(name)
+	_, err := fs.fileStorer.GetFile(name)
 	switch {
 	case err == nil:
 		return &os.PathError{Op: "mkdir", Path: name, Err: os.ErrExist}
 	case os.IsNotExist(err):
-		file = fs.newFile(name, os.ModeDir|(perm&os.ModePerm))
+		file := fs.newFile(name, os.ModeDir|(perm&os.ModePerm))
 		return fs.wrapperErr("mkdir", name, file.save())
 	default:
 		return &os.PathError{Op: "mkdir", Path: name, Err: err}

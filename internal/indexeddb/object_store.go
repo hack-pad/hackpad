@@ -2,8 +2,6 @@ package indexeddb
 
 import (
 	"syscall/js"
-
-	"github.com/johnstarich/go-wasm/internal/promise"
 )
 
 type ObjectStoreOptions struct {
@@ -17,21 +15,21 @@ type ObjectStore struct {
 
 func (o *ObjectStore) Add(key, value js.Value) (err error) {
 	defer catch(&err)
-	_, err = promise.Await(processRequest(o.jsObjectStore.Call("add", value, key)))
+	_, err = await(processRequest(o.jsObjectStore.Call("add", value, key)))
 	return err
 }
 
 func (o *ObjectStore) Clear() (err error) {
 	defer catch(&err)
 	req := o.jsObjectStore.Call("clear")
-	_, err = promise.Await(processRequest(req))
+	_, err = await(processRequest(req))
 	return err
 }
 
 func (o *ObjectStore) Count() (count int, err error) {
 	defer catch(&err)
 	req := o.jsObjectStore.Call("count")
-	jsCount, err := promise.Await(processRequest(req))
+	jsCount, err := await(processRequest(req))
 	if err == nil {
 		count = jsCount.Int()
 	}
@@ -50,7 +48,7 @@ func (o *ObjectStore) CreateIndex(name string, keyPath js.Value, options IndexOp
 func (o *ObjectStore) Delete(key js.Value) (err error) {
 	defer catch(&err)
 	req := o.jsObjectStore.Call("delete", key)
-	_, err = promise.Await(processRequest(req))
+	_, err = await(processRequest(req))
 	return err
 }
 
@@ -63,13 +61,13 @@ func (o *ObjectStore) DeleteIndex(name string) (err error) {
 func (o *ObjectStore) Get(key js.Value) (val js.Value, err error) {
 	defer catch(&err)
 	req := o.jsObjectStore.Call("get", key)
-	return promise.Await(processRequest(req))
+	return await(processRequest(req))
 }
 
 func (o *ObjectStore) GetKey(value js.Value) (val js.Value, err error) {
 	defer catch(&err)
 	req := o.jsObjectStore.Call("getKey", value)
-	return promise.Await(processRequest(req))
+	return await(processRequest(req))
 }
 
 func (o *ObjectStore) Index(name string) (index *Index, err error) {
@@ -81,7 +79,7 @@ func (o *ObjectStore) Index(name string) (index *Index, err error) {
 func (o *ObjectStore) OpenCursor(key js.Value, direction CursorDirection) (cursor *Cursor, err error) {
 	defer catch(&err)
 	req := o.jsObjectStore.Call("openCursor", key, direction.String())
-	jsCursor, err := promise.Await(processRequest(req))
+	jsCursor, err := await(processRequest(req))
 	return &Cursor{jsCursor: jsCursor}, err
 }
 
@@ -94,6 +92,6 @@ func (o *ObjectStore) OpenKeyCursor(keyRange KeyRange, direction CursorDirection
 func (o *ObjectStore) Put(key, value js.Value) (err error) {
 	defer catch(&err)
 	req := o.jsObjectStore.Call("put", value, key)
-	_, err = promise.Await(processRequest(req))
+	_, err = await(processRequest(req))
 	return err
 }
