@@ -7,6 +7,7 @@ import (
 	"os/exec"
 	"strings"
 	"syscall/js"
+	"time"
 
 	"github.com/johnstarich/go-wasm/internal/promise"
 	"github.com/johnstarich/go-wasm/log"
@@ -117,8 +118,12 @@ func main() {
 }
 
 func runProcess(name string, args ...string) promise.Promise {
+	start := time.Now()
 	resolve, reject, prom := promise.New()
 	go func() {
+		defer func() {
+			log.Printf("Process [%s %s] finished: %6.2fs", name, strings.Join(args, " "), time.Since(start).Seconds())
+		}()
 		success := startProcess(name, args...)
 		if success {
 			resolve(nil)
