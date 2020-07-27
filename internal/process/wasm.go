@@ -4,11 +4,19 @@ import (
 	"os"
 	"os/exec"
 	"syscall/js"
+	"time"
 
 	"github.com/johnstarich/go-wasm/internal/interop"
 	"github.com/johnstarich/go-wasm/internal/promise"
 	"github.com/johnstarich/go-wasm/log"
 )
+
+var wasmCache = make(map[string]wasmCacheValue)
+
+type wasmCacheValue struct {
+	modTime time.Time
+	module  js.Value
+}
 
 func (p *process) startWasm() error {
 	pids[p.pid] = p
@@ -17,7 +25,7 @@ func (p *process) startWasm() error {
 	if err != nil {
 		return err
 	}
-	go p.runWasmBytes(command)
+	go p.runWasm(command)
 	return nil
 }
 
@@ -37,8 +45,36 @@ func (p *process) handleErr(err error) {
 	p.Done()
 }
 
-func (p *process) runWasmBytes(command string) {
-	wasm, err := p.Files().ReadFile(command)
+func (p *process) loadWasmModule(path string) (js.Value, error) {
+	info, err := p.Files().Stat(path)
+	if err != nil {
+		return js.Value{}, err
+	}
+	val, ok := wasmCache[path]
+	if ok && info.ModTime() == val.modTime {
+		return val.module, nil
+	}
+
+	wasm, err := p.Files().ReadFile(path)
+	if err != nil {
+		return js.Value{}, err
+	}
+	jsBuf := interop.NewByteArray(wasm)
+	compilePromise := promise.From(jsWasm.Call("compile", jsBuf))
+	module, err := promise.Await(compilePromise)
+	if err != nil {
+		return js.Value{}, err
+	}
+
+	wasmCache[path] = wasmCacheValue{
+		modTime: info.ModTime(),
+		module:  module,
+	}
+	return module, nil
+}
+
+func (p *process) runWasm(path string) {
+	module, err := p.loadWasmModule(path)
 	if err != nil {
 		p.handleErr(err)
 		return
@@ -66,16 +102,14 @@ func (p *process) runWasmBytes(command string) {
 	}))
 
 	importObject := goInstance.Get("importObject")
-	jsBuf := interop.NewByteArray(wasm)
-	// TODO add module caching
-	instantiatePromise := promise.From(jsWasm.Call("instantiate", jsBuf, importObject))
-	module, err := promise.Await(instantiatePromise)
+	instantiatePromise := promise.From(jsWasm.Call("instantiate", module, importObject))
+	instance, err := promise.Await(instantiatePromise)
 	if err != nil {
 		p.handleErr(err)
 		return
 	}
 
-	exports := module.Get("instance").Get("exports")
+	exports := instance.Get("exports")
 
 	wrapperExports := map[string]interface{}{
 		"run": js.FuncOf(func(this js.Value, args []js.Value) interface{} {
@@ -99,12 +133,12 @@ func (p *process) runWasmBytes(command string) {
 			wrapperExports[export] = value
 		}
 	}
-	instance := js.ValueOf(map[string]interface{}{ // Instance.exports is read-only, so create a shim
+	wrapperInstance := js.ValueOf(map[string]interface{}{ // Instance.exports is read-only, so create a shim
 		"exports": wrapperExports,
 	})
 
 	p.state = stateRunning
-	runPromise := promise.From(goInstance.Call("run", instance))
+	runPromise := promise.From(goInstance.Call("run", wrapperInstance))
 	_, err = promise.Await(runPromise)
 	p.exitCode = <-exitChan
 	p.handleErr(err)
