@@ -42,6 +42,9 @@ func Init(switchedContext func(PID, PID)) {
 func switchContext(pid PID) (prev PID) {
 	prev = currentPID
 	log.Debug("Switching context from PID ", prev, " to ", pid)
+	if pid == prev {
+		return
+	}
 	newProcess := pids[pid]
 	currentPID = pid
 	switchedContextListener(pid, newProcess.parentPID)
