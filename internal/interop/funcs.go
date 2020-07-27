@@ -32,13 +32,16 @@ func SetFunc(val js.Value, name string, fn interface{}) js.Func {
 }
 
 func setFuncHandler(name string, fn interface{}, args []js.Value) (returnedVal interface{}) {
-	logArgs := append([]js.Value{js.ValueOf("running op: " + name)}, args...)
+	logArgs := []interface{}{"running op: " + name}
+	for _, arg := range args {
+		logArgs = append(logArgs, arg)
+	}
 	log.DebugJSValues(logArgs...)
 
 	switch fn := fn.(type) {
 	case Func:
 		defer func() {
-			log.DebugJSValues(js.ValueOf("completed sync op: "+name), js.ValueOf(returnedVal))
+			log.DebugJSValues("completed sync op: "+name, returnedVal)
 			handlePanic(0)
 		}()
 
@@ -57,9 +60,9 @@ func setFuncHandler(name string, fn interface{}, args []js.Value) (returnedVal i
 			var err error
 			defer func() {
 				if err != nil {
-					log.DebugJSValues(js.ValueOf("completed op failed: "+name), js.ValueOf(ret))
+					log.DebugJSValues("completed op failed: "+name, ret)
 				} else {
-					log.DebugJSValues(js.ValueOf("completed op: "+name), js.ValueOf(ret))
+					log.DebugJSValues("completed op: "+name, ret)
 				}
 				handlePanic(0)
 			}()
@@ -91,9 +94,9 @@ func handlePanic(skipPanicLines int) interface{} {
 	switch r := r.(type) {
 	case js.Value:
 		log.ErrorJSValues(
-			js.ValueOf("panic:"),
+			"panic:",
 			r,
-			js.ValueOf("\n\n"+stack),
+			"\n\n"+stack,
 		)
 	default:
 		log.Errorf("panic: (%T) %+v\n\n%s", r, r, stack)

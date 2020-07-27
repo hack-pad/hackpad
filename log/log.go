@@ -129,30 +129,26 @@ func log(kind consoleType, args ...interface{}) int {
 	return len(s)
 }
 
-func DebugJSValues(args ...js.Value) int {
+func DebugJSValues(args ...interface{}) int {
 	return logJSValues(LevelDebug, args...)
 }
 
-func PrintJSValues(args ...js.Value) int {
+func PrintJSValues(args ...interface{}) int {
 	return logJSValues(LevelLog, args...)
 }
 
-func WarnJSValues(args ...js.Value) int {
+func WarnJSValues(args ...interface{}) int {
 	return logJSValues(LevelWarn, args...)
 }
 
-func ErrorJSValues(args ...js.Value) int {
+func ErrorJSValues(args ...interface{}) int {
 	return logJSValues(LevelError, args...)
 }
 
-func logJSValues(kind consoleType, args ...js.Value) int {
+func logJSValues(kind consoleType, args ...interface{}) int {
 	if kind < logLevel {
 		return 0
 	}
-	var intArgs []interface{}
-	for _, arg := range args {
-		intArgs = append(intArgs, arg)
-	}
-	console.Call(kind.String(), intArgs...)
+	console.Call(kind.String(), args...)
 	return 0
 }
