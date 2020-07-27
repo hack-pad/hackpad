@@ -17,11 +17,7 @@ func (p *process) startWasm() error {
 	if err != nil {
 		return err
 	}
-	buf, err := p.Files().ReadFile(command)
-	if err != nil {
-		return err
-	}
-	go p.runWasmBytes(buf)
+	go p.runWasmBytes(command)
 	return nil
 }
 
@@ -31,15 +27,21 @@ func (p *process) Done() {
 	close(p.done)
 }
 
-func (p *process) runWasmBytes(wasm []byte) {
-	handleErr := func(err error) {
-		p.state = stateDone
-		if err != nil {
-			log.Errorf("Failed to start process: %s", err.Error())
-			p.err = err
-			p.state = stateError
-		}
-		p.Done()
+func (p *process) handleErr(err error) {
+	p.state = stateDone
+	if err != nil {
+		log.Errorf("Failed to start process: %s", err.Error())
+		p.err = err
+		p.state = stateError
+	}
+	p.Done()
+}
+
+func (p *process) runWasmBytes(command string) {
+	wasm, err := p.Files().ReadFile(command)
+	if err != nil {
+		p.handleErr(err)
+		return
 	}
 
 	p.state = stateCompiling
@@ -69,7 +71,7 @@ func (p *process) runWasmBytes(wasm []byte) {
 	instantiatePromise := promise.From(jsWasm.Call("instantiate", jsBuf, importObject))
 	module, err := promise.Await(instantiatePromise)
 	if err != nil {
-		handleErr(err)
+		p.handleErr(err)
 		return
 	}
 
@@ -105,5 +107,5 @@ func (p *process) runWasmBytes(wasm []byte) {
 	runPromise := promise.From(goInstance.Call("run", instance))
 	_, err = promise.Await(runPromise)
 	p.exitCode = <-exitChan
-	handleErr(err)
+	p.handleErr(err)
 }
