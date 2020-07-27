@@ -25,9 +25,7 @@ func OverlayStorage(mountPath string, s storer.Storer) error {
 }
 
 func OverlayZip(mountPath string, z *zip.Reader) error {
-	zfs := zipfs.New(z)
-	cacheFs := newReadOnlyCacheFs(zfs, afero.NewMemMapFs())
-	return filesystem.Mount(mountPath, cacheFs)
+	return filesystem.Mount(mountPath, zipfs.New(z))
 }
 
 // Dump prints out file system statistics

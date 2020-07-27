@@ -5,7 +5,6 @@ import (
 	"io"
 	"os"
 	"os/exec"
-	"syscall"
 	"syscall/js"
 
 	"github.com/johnstarich/go-wasm/internal/common"
@@ -75,10 +74,6 @@ func mapToErrNo(err error) string {
 		return "EEXIST"
 	case os.ErrPermission:
 		return "EPERM"
-	case syscall.EISDIR:
-		return "EISDIR"
-	case syscall.ENOTDIR:
-		return "ENOTDIR"
 	}
 	switch err.Error() {
 	case os.ErrClosed.Error(), afero.ErrFileClosed.Error():
