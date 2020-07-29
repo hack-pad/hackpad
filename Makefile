@@ -26,7 +26,7 @@ lint-fix: lint-deps
 	golangci-lint run --fix
 
 .PHONY: static
-static: out/index.html out/go.zip commands
+static: out/index.html out/go.tar.gz commands
 
 out:
 	mkdir -p out
@@ -40,21 +40,9 @@ out/index.html: out/static ./server/index.html ./server/static/* ./out/static/fe
 out/static/fetch.js: out/static
 	curl -L https://github.com/github/fetch/releases/download/v3.0.0/fetch.umd.js > out/static/fetch.js
 
-out/go.zip: out go
-	cd cache; \
-		zip -ru -9 ../out/go ./go -x \
-			'./go/.git/*' \
-			'./go/bin/*' \
-			'./go/pkg/*' \
-			'./go/src/cmd/*' \
-			'./go/test/*'; \
-		zip -ru -9 ../out/go \
-			./go/bin/js_wasm \
-			./go/pkg/js_wasm \
-			./go/pkg/include \
-			./go/pkg/tool/js_wasm \
-			; \
-		true
+out/go.tar.gz: out cache/go${GO_VERSION}
+	GOARCH=$$(go env GOHOSTARCH) GOOS=$$(go env GOHOSTOS) \
+		go run ./internal/cmd/gozip cache/go > out/go.tar.gz
 
 .PHONY: clean
 clean:
