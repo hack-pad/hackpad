@@ -153,6 +153,21 @@ func TestFsCreate(t *testing.T, undertest, expected FSTester) {
 		assert.Equal(t, "open", pathErr.Op)
 		assert.Equal(t, "foo", strings.TrimPrefix(pathErr.Path, "/"))
 	})
+
+	t.Run("parent directory must exist", func(t *testing.T) {
+		_, err := expected.FS().Create("foo/bar")
+		assert.Error(t, err)
+		expected.Clean()
+
+		_, uErr := undertest.FS().Create("foo/bar")
+		assert.Error(t, uErr)
+		undertest.Clean()
+
+		require.IsType(t, &os.PathError{}, uErr)
+		pathErr := uErr.(*os.PathError)
+		assert.Equal(t, "open", pathErr.Op)
+		assert.Equal(t, "foo/bar", strings.TrimPrefix(pathErr.Path, "/"))
+	})
 }
 
 // Mkdir creates a new directory with the specified name and permission bits (before umask). If there is an error, it will be of type *PathError.
@@ -222,6 +237,25 @@ func TestFsMkdir(t *testing.T, undertest, expected FSTester) {
 		assert.NoError(t, undertest.FS().Mkdir("foo", os.ModeSocket|0755))
 		assertEqualFS(t, expectedStat, statFS(t, undertest.FS()))
 		undertest.Clean()
+	})
+
+	t.Run("parent directory must exist", func(t *testing.T) {
+		assert.Error(t, expected.FS().Mkdir("foo/bar", 0755))
+		expectedStat := statFS(t, expected.FS())
+		expected.Clean()
+
+		uErr := undertest.FS().Mkdir("foo/bar", 0755)
+		assert.Error(t, uErr)
+		undertestStat := statFS(t, undertest.FS())
+		undertest.Clean()
+
+		assert.True(t, os.IsNotExist(uErr))
+		require.IsType(t, &os.PathError{}, uErr)
+		pathErr := uErr.(*os.PathError)
+		assert.Equal(t, "mkdir", pathErr.Op)
+		assert.Equal(t, "foo/bar", strings.TrimPrefix(pathErr.Path, "/"))
+
+		assertEqualFS(t, expectedStat, undertestStat)
 	})
 }
 
