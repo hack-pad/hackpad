@@ -359,7 +359,72 @@ func TestFsRename(t *testing.T, undertest, expected FSTester) {
 
 // Stat returns a FileInfo describing the named file. If there is an error, it will be of type *PathError.
 func TestFsStat(t *testing.T, undertest, expected FSTester) {
-	t.Skip()
+	t.Run("stat a file", func(t *testing.T) {
+		f, err := expected.FS().Create("foo")
+		require.NoError(t, err)
+		require.NoError(t, f.Close())
+		require.NoError(t, expected.FS().Chmod("foo", 0755))
+		eInfo, err := expected.FS().Stat("foo")
+		assert.NoError(t, err)
+		expected.Clean()
+
+		f, err = undertest.FS().Create("foo")
+		require.NoError(t, err)
+		require.NoError(t, f.Close())
+		require.NoError(t, undertest.FS().Chmod("foo", 0755))
+		uInfo, err := undertest.FS().Stat("foo")
+		assert.NoError(t, err)
+		undertest.Clean()
+
+		assertEqualFileInfo(t, eInfo, uInfo)
+	})
+
+	t.Run("stat a directory", func(t *testing.T) {
+		err := expected.FS().Mkdir("foo", 0755)
+		require.NoError(t, err)
+		eInfo, err := expected.FS().Stat("foo")
+		assert.NoError(t, err)
+		expected.Clean()
+
+		err = undertest.FS().Mkdir("foo", 0755)
+		require.NoError(t, err)
+		uInfo, err := undertest.FS().Stat("foo")
+		assert.NoError(t, err)
+		undertest.Clean()
+
+		assertEqualFileInfo(t, eInfo, uInfo)
+	})
+
+	t.Run("stat nested files", func(t *testing.T) {
+		err := expected.FS().Mkdir("foo", 0755)
+		require.NoError(t, err)
+		err = expected.FS().Mkdir("foo/bar", 0755)
+		require.NoError(t, err)
+		f, err := expected.FS().Create("foo/bar/baz")
+		require.NoError(t, err)
+		require.NoError(t, f.Close())
+		eInfo1, err := expected.FS().Stat("foo/bar")
+		assert.NoError(t, err)
+		eInfo2, err := expected.FS().Stat("foo/bar/baz")
+		assert.NoError(t, err)
+		expected.Clean()
+
+		err = undertest.FS().Mkdir("foo", 0755)
+		require.NoError(t, err)
+		err = undertest.FS().Mkdir("foo/bar", 0755)
+		require.NoError(t, err)
+		f, err = undertest.FS().Create("foo/bar/baz")
+		require.NoError(t, err)
+		require.NoError(t, f.Close())
+		uInfo1, err := undertest.FS().Stat("foo/bar")
+		assert.NoError(t, err)
+		uInfo2, err := undertest.FS().Stat("foo/bar/baz")
+		assert.NoError(t, err)
+		undertest.Clean()
+
+		assertEqualFileInfo(t, eInfo1, uInfo1)
+		assertEqualFileInfo(t, eInfo2, uInfo2)
+	})
 }
 
 // Chmod changes the mode of the named file to mode.
