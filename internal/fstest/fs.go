@@ -19,7 +19,6 @@ func TestFsBasicCreate(t *testing.T, undertest, expected FSTester) {
 	assert.NotNil(t, uFile)
 }
 
-// Mkdir creates a new directory with the specified name and permission bits (before umask). If there is an error, it will be of type *PathError.
 func TestFsBasicMkdir(t *testing.T, undertest, expected FSTester) {
 	eErr := expected.FS().Mkdir("foo", 0600)
 	expected.Clean()
@@ -29,6 +28,11 @@ func TestFsBasicMkdir(t *testing.T, undertest, expected FSTester) {
 	undertest.Clean()
 }
 
+// Create creates or truncates the named file.
+// If the file already exists, it is truncated.
+// If the file does not exist, it is created with mode 0666 (before umask).
+// If successful, methods on the returned File can be used for I/O; the associated file descriptor has mode O_RDWR.
+// If there is an error, it will be of type *PathError.
 func TestFsCreate(t *testing.T, undertest, expected FSTester) {
 	t.Skip()
 }
@@ -103,10 +107,16 @@ func TestFsMkdir(t *testing.T, undertest, expected FSTester) {
 	})
 }
 
+// MkdirAll creates a directory named path, along with any necessary parents, and returns nil, or else returns an error.
+// The permission bits perm (before umask) are used for all directories that MkdirAll creates.
+// If path is already a directory, MkdirAll does nothing and returns nil.
 func TestFsMkdirAll(t *testing.T, undertest, expected FSTester) {
 	t.Skip()
 }
 
+// Open opens the named file for reading.
+// If successful, methods on the returned file can be used for reading; the associated file descriptor has mode O_RDONLY.
+// If there is an error, it will be of type *PathError.
 func TestFsOpen(t *testing.T, undertest, expected FSTester) {
 	t.Run("does not exist", func(t *testing.T) {
 		_, eErr := expected.FS().Open("foo")
@@ -199,26 +209,48 @@ func TestFsOpen(t *testing.T, undertest, expected FSTester) {
 	})
 }
 
+// OpenFile is the generalized open call; most users will use Open or Create instead.
+// It opens the named file with specified flag (O_RDONLY etc.).
+// If the file does not exist, and the O_CREATE flag is passed, it is created with mode perm (before umask).
+// If successful, methods on the returned File can be used for I/O.
+// If there is an error, it will be of type *PathError.
 func TestFsOpenFile(t *testing.T, undertest, expected FSTester) {
 	t.Skip()
 }
 
+// Remove removes the named file or (empty) directory. If there is an error, it will be of type *PathError.
 func TestFsRemove(t *testing.T, undertest, expected FSTester) {
 	t.Skip()
 }
 
+// RemoveAll removes path and any children it contains.
+// It removes everything it can but returns the first error it encounters.
+// If the path does not exist, RemoveAll returns nil (no error).
+// If there is an error, it will be of type *PathError.
 func TestFsRemoveAll(t *testing.T, undertest, expected FSTester) {
 	t.Skip()
 }
 
+// Rename renames (moves) oldpath to newpath.
+// If newpath already exists and is not a directory, Rename replaces it.
+// OS-specific restrictions may apply when oldpath and newpath are in different directories.
+// If there is an error, it will be of type *LinkError.
 func TestFsRename(t *testing.T, undertest, expected FSTester) {
 	t.Skip()
 }
 
+// Stat returns a FileInfo describing the named file. If there is an error, it will be of type *PathError.
 func TestFsStat(t *testing.T, undertest, expected FSTester) {
 	t.Skip()
 }
 
+// Chmod changes the mode of the named file to mode.
+// If the file is a symbolic link, it changes the mode of the link's target.
+// If there is an error, it will be of type *PathError.
+//
+// A different subset of the mode bits are used, depending on the operating system.
+//
+// fstest will only check permission bits
 func TestFsChmod(t *testing.T, undertest, expected FSTester) {
 	t.Skip()
 }
