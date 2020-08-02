@@ -1,6 +1,7 @@
 package fstest
 
 import (
+	"io"
 	"os"
 	"strings"
 	"testing"
@@ -107,7 +108,95 @@ func TestFsMkdirAll(t *testing.T, undertest, expected FSTester) {
 }
 
 func TestFsOpen(t *testing.T, undertest, expected FSTester) {
-	t.Skip()
+	t.Run("does not exist", func(t *testing.T) {
+		_, eErr := expected.FS().Open("foo")
+		assert.Error(t, eErr)
+		_, uErr := undertest.FS().Open("foo")
+		assert.Error(t, uErr)
+
+		assert.True(t, os.IsNotExist(uErr))
+		require.IsType(t, &os.PathError{}, uErr)
+		pathErr := uErr.(*os.PathError)
+		assert.Equal(t, "open", pathErr.Op)
+		assert.Equal(t, "foo", strings.TrimPrefix(pathErr.Path, "/"))
+	})
+
+	t.Run("open file", func(t *testing.T) {
+		f, err := expected.FS().Create("foo")
+		require.NoError(t, err)
+		require.NoError(t, f.Close())
+
+		f, err = expected.FS().Open("foo")
+		assert.NoError(t, err)
+		assert.NotNil(t, f)
+		require.NoError(t, f.Close())
+		expected.Clean()
+
+		f, err = undertest.FS().Create("foo")
+		require.NoError(t, err)
+		require.NoError(t, f.Close())
+
+		f, err = undertest.FS().Open("foo")
+		assert.NoError(t, err)
+		assert.NotNil(t, f)
+		require.NoError(t, f.Close())
+		undertest.Clean()
+	})
+
+	t.Run("supports reads", func(t *testing.T) {
+		const fileContents = `hello world`
+		f, err := expected.FS().Create("foo")
+		require.NoError(t, err)
+		n, err := f.Write([]byte(fileContents))
+		require.NoError(t, err)
+		require.NoError(t, f.Close())
+
+		f, err = expected.FS().Open("foo")
+		assert.NoError(t, err)
+		buf := make([]byte, n)
+		n2, err := io.ReadFull(f, buf)
+		assert.NoError(t, err)
+		assert.Equal(t, n, n2)
+		assert.Equal(t, fileContents, string(buf))
+		expected.Clean()
+
+		f, err = undertest.FS().Create("foo")
+		require.NoError(t, err)
+		n, err = f.Write([]byte(fileContents))
+		require.NoError(t, err)
+		require.NoError(t, f.Close())
+
+		f, err = undertest.FS().Open("foo")
+		assert.NoError(t, err)
+		buf = make([]byte, n)
+		n2, err = io.ReadFull(f, buf)
+		assert.NoError(t, err)
+		assert.Equal(t, n, n2)
+		assert.Equal(t, fileContents, string(buf))
+		undertest.Clean()
+	})
+
+	t.Run("fails writes", func(t *testing.T) {
+		f, err := expected.FS().Create("foo")
+		require.NoError(t, err)
+		require.NoError(t, f.Close())
+
+		f, err = expected.FS().Open("foo")
+		require.NoError(t, err)
+		_, err = f.Write([]byte(`bar`))
+		assert.Error(t, err)
+		expected.Clean()
+
+		f, err = undertest.FS().Create("foo")
+		require.NoError(t, err)
+		require.NoError(t, f.Close())
+
+		f, err = undertest.FS().Open("foo")
+		require.NoError(t, err)
+		_, err = f.Write([]byte(`bar`))
+		assert.Error(t, err)
+		undertest.Clean()
+	})
 }
 
 func TestFsOpenFile(t *testing.T, undertest, expected FSTester) {
