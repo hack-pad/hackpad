@@ -33,7 +33,7 @@ func Run(t *testing.T, fs afero.Fs, cleanUp CleanFunc) {
 	if err := os.Chdir(dir); err != nil {
 		t.Fatal("Failed to chdir to temporary directory for an OsFs:", err)
 	}
-	defer os.Chdir(wd)
+	defer func() { _ = os.Chdir(wd) }()
 
 	RunWith(t, fs, afero.NewOsFs(), cleanUp, cleanUpOsFs)
 }
@@ -89,6 +89,7 @@ func cleanUpOsFs() error {
 	if err != nil {
 		return err
 	}
+	defer func() { _ = file.Close() }()
 	names, err := file.Readdirnames(0)
 	if err != nil {
 		return err

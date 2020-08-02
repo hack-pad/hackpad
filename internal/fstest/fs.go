@@ -13,12 +13,16 @@ import (
 )
 
 func TestFsBasicCreate(t *testing.T, undertest, expected FSTester) {
-	eFile, eErr := expected.FS().Create("foo")
+	file, err := expected.FS().Create("foo")
+	require.NoError(t, err)
+	assert.NotNil(t, file)
+	require.NoError(t, file.Close())
 	expected.Clean()
-	uFile, uErr := undertest.FS().Create("foo")
-	assert.Equal(t, eErr, uErr)
-	assert.NotNil(t, eFile)
-	assert.NotNil(t, uFile)
+
+	file, err = undertest.FS().Create("foo")
+	require.NoError(t, err)
+	assert.NotNil(t, file)
+	require.NoError(t, file.Close())
 }
 
 func TestFsBasicMkdir(t *testing.T, undertest, expected FSTester) {
@@ -35,7 +39,7 @@ func TestFsBasicChmod(t *testing.T, undertest, expected FSTester) {
 	require.NoError(t, err)
 	require.NoError(t, f.Close())
 
-	err = expected.FS().Chmod("foo", 755)
+	err = expected.FS().Chmod("foo", 0755)
 	assert.NoError(t, err)
 	expected.Clean()
 
@@ -43,7 +47,7 @@ func TestFsBasicChmod(t *testing.T, undertest, expected FSTester) {
 	require.NoError(t, err)
 	require.NoError(t, f.Close())
 
-	err = undertest.FS().Chmod("foo", 755)
+	err = undertest.FS().Chmod("foo", 0755)
 	assert.NoError(t, err)
 	undertest.Clean()
 }
@@ -77,7 +81,78 @@ func TestFsBasicChtimes(t *testing.T, undertest, expected FSTester) {
 // If successful, methods on the returned File can be used for I/O; the associated file descriptor has mode O_RDWR.
 // If there is an error, it will be of type *PathError.
 func TestFsCreate(t *testing.T, undertest, expected FSTester) {
-	t.Skip()
+	t.Run("new file", func(t *testing.T) {
+		file, err := expected.FS().Create("foo")
+		require.NoError(t, err)
+		assert.NotNil(t, file)
+		require.NoError(t, file.Close())
+		eInfo, err := expected.FS().Stat("foo")
+		require.NoError(t, err)
+		expected.Clean()
+
+		file, err = undertest.FS().Create("foo")
+		require.NoError(t, err)
+		assert.NotNil(t, file)
+		require.NoError(t, file.Close())
+		uInfo, err := undertest.FS().Stat("foo")
+		require.NoError(t, err)
+		undertest.Clean()
+
+		assert.Equal(t, os.FileMode(0666).String(), uInfo.Mode().String())
+		assertEqualFileInfo(t, eInfo, uInfo)
+	})
+
+	t.Run("existing file", func(t *testing.T) {
+		const fileContents = `hello world`
+
+		file, err := expected.FS().Create("foo")
+		require.NoError(t, err)
+		_, err = file.Write([]byte(fileContents))
+		assert.NoError(t, err)
+		require.NoError(t, file.Close())
+		require.NoError(t, expected.FS().Chmod("foo", 0755))
+
+		file, err = expected.FS().Create("foo")
+		require.NoError(t, err)
+		require.NoError(t, file.Close())
+		eInfo, err := expected.FS().Stat("foo")
+		require.NoError(t, err)
+		expected.Clean()
+
+		file, err = undertest.FS().Create("foo")
+		require.NoError(t, err)
+		_, err = file.Write([]byte(fileContents))
+		assert.NoError(t, err)
+		require.NoError(t, file.Close())
+		require.NoError(t, undertest.FS().Chmod("foo", 0755))
+
+		file, err = undertest.FS().Create("foo")
+		require.NoError(t, err)
+		require.NoError(t, file.Close())
+		uInfo, err := undertest.FS().Stat("foo")
+		require.NoError(t, err)
+		undertest.Clean()
+
+		assertEqualFileInfo(t, eInfo, uInfo)
+	})
+
+	t.Run("existing directory", func(t *testing.T) {
+		require.NoError(t, expected.FS().Mkdir("foo", 0700))
+		_, eErr := expected.FS().Create("foo")
+		assert.Error(t, eErr)
+		expected.Clean()
+
+		require.NoError(t, undertest.FS().Mkdir("foo", 0700))
+		_, uErr := undertest.FS().Create("foo")
+		assert.Error(t, uErr)
+		undertest.Clean()
+
+		assert.True(t, afero.IsDirErr(uErr))
+		require.IsType(t, &os.PathError{}, uErr)
+		pathErr := uErr.(*os.PathError)
+		assert.Equal(t, "open", pathErr.Op)
+		assert.Equal(t, "foo", strings.TrimPrefix(pathErr.Path, "/"))
+	})
 }
 
 // Mkdir creates a new directory with the specified name and permission bits (before umask). If there is an error, it will be of type *PathError.
@@ -300,7 +375,7 @@ func TestFsChmod(t *testing.T, undertest, expected FSTester) {
 		require.NoError(t, err)
 		require.NoError(t, f.Close())
 
-		err = expected.FS().Chmod("foo", 755)
+		err = expected.FS().Chmod("foo", 0755)
 		assert.NoError(t, err)
 		eInfo, err := expected.FS().Stat("foo")
 		require.NoError(t, err)
@@ -310,7 +385,7 @@ func TestFsChmod(t *testing.T, undertest, expected FSTester) {
 		require.NoError(t, err)
 		require.NoError(t, f.Close())
 
-		err = undertest.FS().Chmod("foo", 755)
+		err = undertest.FS().Chmod("foo", 0755)
 		assert.NoError(t, err)
 		uInfo, err := undertest.FS().Stat("foo")
 		require.NoError(t, err)
@@ -333,7 +408,7 @@ func TestFsChmod(t *testing.T, undertest, expected FSTester) {
 		require.NoError(t, f.Close())
 		require.NoError(t, eLinker.SymlinkIfPossible("foo", "bar"))
 
-		err = expected.FS().Chmod("foo", 755)
+		err = expected.FS().Chmod("foo", 0755)
 		assert.NoError(t, err)
 		eLinkInfo, err := expected.FS().Stat("foo")
 		require.NoError(t, err)
@@ -346,7 +421,7 @@ func TestFsChmod(t *testing.T, undertest, expected FSTester) {
 		require.NoError(t, f.Close())
 		require.NoError(t, uLinker.SymlinkIfPossible("foo", "bar"))
 
-		err = undertest.FS().Chmod("foo", 755)
+		err = undertest.FS().Chmod("foo", 0755)
 		assert.NoError(t, err)
 		uLinkInfo, err := undertest.FS().Stat("foo")
 		require.NoError(t, err)
