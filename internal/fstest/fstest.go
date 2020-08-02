@@ -59,12 +59,14 @@ func RunWith(
 	for _, result := range []bool{
 		fsTest.Run("basic fs.Create", TestFsBasicCreate),
 		fsTest.Run("basic fs.Mkdir", TestFsBasicMkdir),
+		fsTest.Run("basic fs.Chmod", TestFsBasicChmod),
+		fsTest.Run("basic fs.Chtimes", TestFsBasicChtimes),
 		fsTest.Run("fs.Open", TestFsOpen),
 		fsTest.Run("fs.Stat", TestFsStat),
 		fsTest.Run("file.Readdirnames", TestFileReaddirnames),
 	} {
 		if !result {
-			t.Fatal("Cannot verify further tests without basic scenarios passing. (e.g. fs.Stat and file.Readdirnames)")
+			t.Skip("Cannot verify further tests without basic scenarios passing. (e.g. fs.Stat and file.Readdirnames)")
 		}
 	}
 
@@ -77,6 +79,7 @@ func RunWith(
 	fsTest.Run("fs.Rename", TestFsRename)
 	fsTest.Run("fs.Chmod", TestFsChmod)
 	fsTest.Run("fs.Chtimes", TestFsChtimes)
+	// TODO fs.Symlink
 }
 
 // cleanUpOsFs runs basic cleanup for the current directory.

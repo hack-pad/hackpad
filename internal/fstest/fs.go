@@ -5,7 +5,9 @@ import (
 	"os"
 	"strings"
 	"testing"
+	"time"
 
+	"github.com/spf13/afero"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -25,6 +27,47 @@ func TestFsBasicMkdir(t *testing.T, undertest, expected FSTester) {
 
 	uErr := undertest.FS().Mkdir("foo", 0600)
 	assert.Equal(t, eErr, uErr)
+	undertest.Clean()
+}
+
+func TestFsBasicChmod(t *testing.T, undertest, expected FSTester) {
+	f, err := expected.FS().Create("foo")
+	require.NoError(t, err)
+	require.NoError(t, f.Close())
+
+	err = expected.FS().Chmod("foo", 755)
+	assert.NoError(t, err)
+	expected.Clean()
+
+	f, err = undertest.FS().Create("foo")
+	require.NoError(t, err)
+	require.NoError(t, f.Close())
+
+	err = undertest.FS().Chmod("foo", 755)
+	assert.NoError(t, err)
+	undertest.Clean()
+}
+
+func TestFsBasicChtimes(t *testing.T, undertest, expected FSTester) {
+	var (
+		accessTime = time.Now()
+		modifyTime = accessTime.Add(-10 * time.Second)
+	)
+
+	f, err := expected.FS().Create("foo")
+	require.NoError(t, err)
+	require.NoError(t, f.Close())
+
+	err = expected.FS().Chtimes("foo", accessTime, modifyTime)
+	assert.NoError(t, err)
+	expected.Clean()
+
+	f, err = undertest.FS().Create("foo")
+	require.NoError(t, err)
+	require.NoError(t, f.Close())
+
+	err = undertest.FS().Chtimes("foo", accessTime, modifyTime)
+	assert.NoError(t, err)
 	undertest.Clean()
 }
 
@@ -252,9 +295,118 @@ func TestFsStat(t *testing.T, undertest, expected FSTester) {
 //
 // fstest will only check permission bits
 func TestFsChmod(t *testing.T, undertest, expected FSTester) {
-	t.Skip()
+	t.Run("change permission bits", func(t *testing.T) {
+		f, err := expected.FS().Create("foo")
+		require.NoError(t, err)
+		require.NoError(t, f.Close())
+
+		err = expected.FS().Chmod("foo", 755)
+		assert.NoError(t, err)
+		eInfo, err := expected.FS().Stat("foo")
+		require.NoError(t, err)
+		expected.Clean()
+
+		f, err = undertest.FS().Create("foo")
+		require.NoError(t, err)
+		require.NoError(t, f.Close())
+
+		err = undertest.FS().Chmod("foo", 755)
+		assert.NoError(t, err)
+		uInfo, err := undertest.FS().Stat("foo")
+		require.NoError(t, err)
+		undertest.Clean()
+		assertEqualFileInfo(t, eInfo, uInfo)
+	})
+
+	uLinker, uOK := undertest.FS().(afero.Symlinker)
+	eLinker, eOK := expected.FS().(afero.Symlinker)
+	if !uOK {
+		t.Skip("Skipping symlink tests, 'undertest' does not support afero.Symlinker")
+	}
+	if !eOK {
+		t.Skip("Skipping symlink tests, 'expected' does not support afero.Symlinker")
+	}
+
+	t.Run("change symlink targets permission bits", func(t *testing.T) {
+		f, err := expected.FS().Create("foo")
+		require.NoError(t, err)
+		require.NoError(t, f.Close())
+		require.NoError(t, eLinker.SymlinkIfPossible("foo", "bar"))
+
+		err = expected.FS().Chmod("foo", 755)
+		assert.NoError(t, err)
+		eLinkInfo, err := expected.FS().Stat("foo")
+		require.NoError(t, err)
+		eInfo, err := expected.FS().Stat("bar")
+		require.NoError(t, err)
+		expected.Clean()
+
+		f, err = undertest.FS().Create("foo")
+		require.NoError(t, err)
+		require.NoError(t, f.Close())
+		require.NoError(t, uLinker.SymlinkIfPossible("foo", "bar"))
+
+		err = undertest.FS().Chmod("foo", 755)
+		assert.NoError(t, err)
+		uLinkInfo, err := undertest.FS().Stat("foo")
+		require.NoError(t, err)
+		uInfo, err := undertest.FS().Stat("bar")
+		require.NoError(t, err)
+		undertest.Clean()
+
+		assertEqualFileInfo(t, eLinkInfo, uLinkInfo)
+		assertEqualFileInfo(t, eInfo, uInfo)
+	})
 }
 
+// Chtimes changes the access and modification times of the named file, similar to the Unix utime() or utimes() functions.
+//
+// The underlying filesystem may truncate or round the values to a less precise time unit. If there is an error, it will be of type *PathError.
 func TestFsChtimes(t *testing.T, undertest, expected FSTester) {
-	t.Skip()
+	var (
+		accessTime = time.Now()
+		modifyTime = accessTime.Add(-1 * time.Minute)
+	)
+
+	t.Run("file does not exist", func(t *testing.T) {
+		eErr := expected.FS().Chtimes("foo", accessTime, modifyTime)
+		assert.Error(t, eErr)
+		expected.Clean()
+
+		uErr := undertest.FS().Chtimes("foo", accessTime, modifyTime)
+		assert.Error(t, uErr)
+		undertest.Clean()
+
+		assert.True(t, os.IsNotExist(uErr))
+		require.IsType(t, &os.PathError{}, uErr)
+		pathErr := uErr.(*os.PathError)
+		assert.Equal(t, "chtimes", pathErr.Op)
+		assert.Equal(t, "foo", strings.TrimPrefix(pathErr.Path, "/"))
+	})
+
+	t.Run("change access and modify times", func(t *testing.T) {
+		f, err := expected.FS().Create("foo")
+		require.NoError(t, err)
+		require.NoError(t, f.Close())
+
+		err = expected.FS().Chtimes("foo", accessTime, modifyTime)
+		assert.NoError(t, err)
+		eInfo, err := expected.FS().Stat("foo")
+		require.NoError(t, err)
+		expected.Clean()
+
+		f, err = undertest.FS().Create("foo")
+		require.NoError(t, err)
+		require.NoError(t, f.Close())
+
+		err = undertest.FS().Chtimes("foo", accessTime, modifyTime)
+		assert.NoError(t, err)
+		uInfo, err := undertest.FS().Stat("foo")
+		require.NoError(t, err)
+		undertest.Clean()
+
+		assertEqualFileInfo(t, eInfo, uInfo)
+	})
 }
+
+// TODO Symlink
