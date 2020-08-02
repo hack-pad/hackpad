@@ -2,6 +2,7 @@ package fstest
 
 import (
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -50,6 +51,7 @@ func TestFsMkdir(t *testing.T, undertest, expected FSTester) {
 		require.IsType(t, &os.PathError{}, uErr)
 		pathErr := uErr.(*os.PathError)
 		assert.Equal(t, "mkdir", pathErr.Op)
+		assert.Equal(t, "foo", strings.TrimPrefix(pathErr.Path, "/"))
 	})
 
 	t.Run("fail file exists", func(t *testing.T) {
@@ -73,6 +75,7 @@ func TestFsMkdir(t *testing.T, undertest, expected FSTester) {
 		require.IsType(t, &os.PathError{}, uErr)
 		pathErr := uErr.(*os.PathError)
 		assert.Equal(t, "mkdir", pathErr.Op)
+		assert.Equal(t, "foo", strings.TrimPrefix(pathErr.Path, "/"))
 	})
 
 	t.Run("create sub dir", func(t *testing.T) {
