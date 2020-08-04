@@ -579,7 +579,85 @@ func TestFsOpenFile(t *testing.T, undertest, expected FSTester) {
 
 // Remove removes the named file or (empty) directory. If there is an error, it will be of type *PathError.
 func TestFsRemove(t *testing.T, undertest, expected FSTester) {
-	t.Skip()
+	t.Run("remove file", func(t *testing.T) {
+		f, err := expected.FS().Create("foo")
+		require.NoError(t, err)
+		require.NoError(t, f.Close())
+		assert.NoError(t, expected.FS().Remove("foo"))
+		expectedStat := statFS(t, expected.FS())
+		expected.Clean()
+
+		f, err = undertest.FS().Create("foo")
+		require.NoError(t, err)
+		require.NoError(t, f.Close())
+		assert.NoError(t, undertest.FS().Remove("foo"))
+		undertestStat := statFS(t, expected.FS())
+		undertest.Clean()
+
+		assertEqualFS(t, expectedStat, undertestStat)
+	})
+
+	t.Run("remove empty dir", func(t *testing.T) {
+		err := expected.FS().Mkdir("foo", 0700)
+		require.NoError(t, err)
+		assert.NoError(t, expected.FS().Remove("foo"))
+		expectedStat := statFS(t, expected.FS())
+		expected.Clean()
+
+		err = undertest.FS().Mkdir("foo", 0700)
+		require.NoError(t, err)
+		assert.NoError(t, undertest.FS().Remove("foo"))
+		undertestStat := statFS(t, undertest.FS())
+		undertest.Clean()
+
+		assertEqualFS(t, expectedStat, undertestStat)
+	})
+
+	t.Run("remove non-existing file", func(t *testing.T) {
+		assert.Error(t, expected.FS().Remove("foo"))
+		expectedStat := statFS(t, expected.FS())
+		expected.Clean()
+
+		uErr := undertest.FS().Remove("foo")
+		assert.Error(t, uErr)
+		undertestStat := statFS(t, undertest.FS())
+		undertest.Clean()
+
+		assert.True(t, os.IsNotExist(uErr))
+		require.IsType(t, &os.PathError{}, uErr)
+		pathErr := uErr.(*os.PathError)
+		assert.Equal(t, "remove", pathErr.Op)
+		assert.Equal(t, "foo", strings.TrimPrefix(pathErr.Path, "/"))
+		assertEqualFS(t, expectedStat, undertestStat)
+	})
+
+	t.Run("remove non-empty dir", func(t *testing.T) {
+		err := expected.FS().Mkdir("foo", 0700)
+		require.NoError(t, err)
+		f, err := expected.FS().Create("foo/bar")
+		require.NoError(t, err)
+		require.NoError(t, f.Close())
+		assert.Error(t, expected.FS().Remove("foo"))
+		expectedStat := statFS(t, expected.FS())
+		expected.Clean()
+
+		err = undertest.FS().Mkdir("foo", 0700)
+		require.NoError(t, err)
+		f, err = undertest.FS().Create("foo/bar")
+		require.NoError(t, err)
+		require.NoError(t, f.Close())
+		uErr := undertest.FS().Remove("foo")
+		assert.Error(t, uErr)
+		undertestStat := statFS(t, undertest.FS())
+		undertest.Clean()
+
+		assert.True(t, os.IsExist(uErr))
+		require.IsType(t, &os.PathError{}, uErr)
+		pathErr := uErr.(*os.PathError)
+		assert.Equal(t, "remove", pathErr.Op)
+		assert.Equal(t, "foo", strings.TrimPrefix(pathErr.Path, "/"))
+		assertEqualFS(t, expectedStat, undertestStat)
+	})
 }
 
 // RemoveAll removes path and any children it contains.
@@ -587,7 +665,73 @@ func TestFsRemove(t *testing.T, undertest, expected FSTester) {
 // If the path does not exist, RemoveAll returns nil (no error).
 // If there is an error, it will be of type *PathError.
 func TestFsRemoveAll(t *testing.T, undertest, expected FSTester) {
-	t.Skip()
+	t.Run("remove file", func(t *testing.T) {
+		f, err := expected.FS().Create("foo")
+		require.NoError(t, err)
+		require.NoError(t, f.Close())
+		assert.NoError(t, expected.FS().RemoveAll("foo"))
+		expectedStat := statFS(t, expected.FS())
+		expected.Clean()
+
+		f, err = undertest.FS().Create("foo")
+		require.NoError(t, err)
+		require.NoError(t, f.Close())
+		assert.NoError(t, undertest.FS().RemoveAll("foo"))
+		undertestStat := statFS(t, expected.FS())
+		undertest.Clean()
+
+		assertEqualFS(t, expectedStat, undertestStat)
+	})
+
+	t.Run("remove empty dir", func(t *testing.T) {
+		err := expected.FS().Mkdir("foo", 0700)
+		require.NoError(t, err)
+		assert.NoError(t, expected.FS().RemoveAll("foo"))
+		expectedStat := statFS(t, expected.FS())
+		expected.Clean()
+
+		err = undertest.FS().Mkdir("foo", 0700)
+		require.NoError(t, err)
+		assert.NoError(t, undertest.FS().RemoveAll("foo"))
+		undertestStat := statFS(t, undertest.FS())
+		undertest.Clean()
+
+		assertEqualFS(t, expectedStat, undertestStat)
+	})
+
+	t.Run("remove non-existing file", func(t *testing.T) {
+		assert.NoError(t, expected.FS().RemoveAll("foo"))
+		expectedStat := statFS(t, expected.FS())
+		expected.Clean()
+
+		assert.NoError(t, undertest.FS().RemoveAll("foo"))
+		undertestStat := statFS(t, undertest.FS())
+		undertest.Clean()
+
+		assertEqualFS(t, expectedStat, undertestStat)
+	})
+
+	t.Run("remove non-empty dir", func(t *testing.T) {
+		err := expected.FS().Mkdir("foo", 0700)
+		require.NoError(t, err)
+		f, err := expected.FS().Create("foo/bar")
+		require.NoError(t, err)
+		require.NoError(t, f.Close())
+		assert.NoError(t, expected.FS().RemoveAll("foo"))
+		expectedStat := statFS(t, expected.FS())
+		expected.Clean()
+
+		err = undertest.FS().Mkdir("foo", 0700)
+		require.NoError(t, err)
+		f, err = undertest.FS().Create("foo/bar")
+		require.NoError(t, err)
+		require.NoError(t, f.Close())
+		assert.NoError(t, undertest.FS().RemoveAll("foo"))
+		undertestStat := statFS(t, undertest.FS())
+		undertest.Clean()
+
+		assertEqualFS(t, expectedStat, undertestStat)
+	})
 }
 
 // Rename renames (moves) oldpath to newpath.
