@@ -263,7 +263,81 @@ func TestFsMkdir(t *testing.T, undertest, expected FSTester) {
 // The permission bits perm (before umask) are used for all directories that MkdirAll creates.
 // If path is already a directory, MkdirAll does nothing and returns nil.
 func TestFsMkdirAll(t *testing.T, undertest, expected FSTester) {
-	t.Skip()
+	t.Run("create one directory", func(t *testing.T) {
+		assert.NoError(t, expected.FS().MkdirAll("foo", 0700))
+		expectedStat := statFS(t, expected.FS())
+		expected.Clean()
+
+		assert.NoError(t, undertest.FS().MkdirAll("foo", 0700))
+		undertestStat := statFS(t, undertest.FS())
+		undertest.Clean()
+
+		assertEqualFS(t, expectedStat, undertestStat)
+	})
+
+	t.Run("create multiple directories", func(t *testing.T) {
+		assert.NoError(t, expected.FS().MkdirAll("foo/bar", 0700))
+		expectedStat := statFS(t, expected.FS())
+		expected.Clean()
+
+		assert.NoError(t, undertest.FS().MkdirAll("foo/bar", 0700))
+		undertestStat := statFS(t, undertest.FS())
+		undertest.Clean()
+
+		assertEqualFS(t, expectedStat, undertestStat)
+	})
+
+	t.Run("all directories exist", func(t *testing.T) {
+		require.NoError(t, expected.FS().Mkdir("foo", 0700))
+		require.NoError(t, expected.FS().Mkdir("foo/bar", 0644))
+		assert.NoError(t, expected.FS().MkdirAll("foo/bar", 0600))
+		expectedStat := statFS(t, expected.FS())
+		expected.Clean()
+
+		require.NoError(t, undertest.FS().Mkdir("foo", 0700))
+		require.NoError(t, undertest.FS().Mkdir("foo/bar", 0644))
+		assert.NoError(t, undertest.FS().MkdirAll("foo/bar", 0600))
+		undertestStat := statFS(t, undertest.FS())
+		undertest.Clean()
+
+		assertEqualFS(t, expectedStat, undertestStat)
+	})
+
+	t.Run("file exists", func(t *testing.T) {
+		f, err := expected.FS().Create("foo")
+		require.NoError(t, err)
+		require.NoError(t, f.Close())
+		assert.Error(t, expected.FS().MkdirAll("foo/bar", 0700))
+		expectedStat := statFS(t, expected.FS())
+		expected.Clean()
+
+		f, err = undertest.FS().Create("foo")
+		require.NoError(t, err)
+		require.NoError(t, f.Close())
+		uErr := undertest.FS().MkdirAll("foo/bar", 0700)
+		assert.Error(t, uErr)
+		undertestStat := statFS(t, undertest.FS())
+		undertest.Clean()
+
+		assert.True(t, afero.IsNotDir(uErr))
+		require.IsType(t, &os.PathError{}, uErr)
+		pathErr := uErr.(*os.PathError)
+		assert.Equal(t, "mkdir", pathErr.Op)
+		assert.Equal(t, "foo", strings.TrimPrefix(pathErr.Path, "/"))
+		assertEqualFS(t, expectedStat, undertestStat)
+	})
+
+	t.Run("illegal permission bits", func(t *testing.T) {
+		assert.NoError(t, expected.FS().MkdirAll("foo/bar", os.ModeSocket|0777))
+		expectedStat := statFS(t, expected.FS())
+		expected.Clean()
+
+		assert.NoError(t, undertest.FS().MkdirAll("foo/bar", os.ModeSocket|0777))
+		undertestStat := statFS(t, undertest.FS())
+		undertest.Clean()
+
+		assertEqualFS(t, expectedStat, undertestStat)
+	})
 }
 
 // Open opens the named file for reading.

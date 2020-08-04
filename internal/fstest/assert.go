@@ -1,8 +1,10 @@
 package fstest
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -14,6 +16,7 @@ import (
 type fsStat interface {
 	Info() os.FileInfo
 	ReadDir() []fsStat
+	String() string
 }
 
 type fsStatFile struct {
@@ -27,6 +30,28 @@ func (f *fsStatFile) Info() os.FileInfo {
 
 func (f *fsStatFile) ReadDir() []fsStat {
 	return f.files
+}
+
+func (f *fsStatFile) stringIndent(indent int) string {
+	var s strings.Builder
+	s.WriteString(f.info.Name())
+	if f.info.IsDir() {
+		s.WriteRune('/')
+	} else {
+		s.WriteString(fmt.Sprintf(" (%d bytes)", f.info.Size()))
+	}
+	s.WriteRune('\n')
+	indentStr := fmt.Sprintf(fmt.Sprintf("\t%%%ds", indent*4), " ")
+	for _, file := range f.files {
+		s.WriteString(indentStr)
+		s.WriteString(file.(*fsStatFile).stringIndent(indent + 1))
+		s.WriteRune('\n')
+	}
+	return s.String()
+}
+
+func (f *fsStatFile) String() string {
+	return f.stringIndent(0)
 }
 
 func statFS(t *testing.T, fs afero.Fs) fsStat {
