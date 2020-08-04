@@ -81,8 +81,14 @@ func TestFsBasicChtimes(t *testing.T, undertest, expected FSTester) {
 // If successful, methods on the returned File can be used for I/O; the associated file descriptor has mode O_RDWR.
 // If there is an error, it will be of type *PathError.
 func TestFsCreate(t *testing.T, undertest, expected FSTester) {
+	testFsCreate(t, undertest, expected, func(fs afero.Fs, name string) (afero.File, error) {
+		return fs.Create(name)
+	})
+}
+
+func testFsCreate(t *testing.T, undertest, expected FSTester, createFn func(afero.Fs, string) (afero.File, error)) {
 	t.Run("new file", func(t *testing.T) {
-		file, err := expected.FS().Create("foo")
+		file, err := createFn(expected.FS(), "foo")
 		require.NoError(t, err)
 		assert.NotNil(t, file)
 		require.NoError(t, file.Close())
@@ -90,7 +96,7 @@ func TestFsCreate(t *testing.T, undertest, expected FSTester) {
 		require.NoError(t, err)
 		expected.Clean()
 
-		file, err = undertest.FS().Create("foo")
+		file, err = createFn(undertest.FS(), "foo")
 		require.NoError(t, err)
 		assert.NotNil(t, file)
 		require.NoError(t, file.Close())
@@ -105,28 +111,28 @@ func TestFsCreate(t *testing.T, undertest, expected FSTester) {
 	t.Run("existing file", func(t *testing.T) {
 		const fileContents = `hello world`
 
-		file, err := expected.FS().Create("foo")
+		file, err := createFn(expected.FS(), "foo")
 		require.NoError(t, err)
 		_, err = file.Write([]byte(fileContents))
 		assert.NoError(t, err)
 		require.NoError(t, file.Close())
 		require.NoError(t, expected.FS().Chmod("foo", 0755))
 
-		file, err = expected.FS().Create("foo")
+		file, err = createFn(expected.FS(), "foo")
 		require.NoError(t, err)
 		require.NoError(t, file.Close())
 		eInfo, err := expected.FS().Stat("foo")
 		require.NoError(t, err)
 		expected.Clean()
 
-		file, err = undertest.FS().Create("foo")
+		file, err = createFn(undertest.FS(), "foo")
 		require.NoError(t, err)
 		_, err = file.Write([]byte(fileContents))
 		assert.NoError(t, err)
 		require.NoError(t, file.Close())
 		require.NoError(t, undertest.FS().Chmod("foo", 0755))
 
-		file, err = undertest.FS().Create("foo")
+		file, err = createFn(undertest.FS(), "foo")
 		require.NoError(t, err)
 		require.NoError(t, file.Close())
 		uInfo, err := undertest.FS().Stat("foo")
@@ -138,12 +144,12 @@ func TestFsCreate(t *testing.T, undertest, expected FSTester) {
 
 	t.Run("existing directory", func(t *testing.T) {
 		require.NoError(t, expected.FS().Mkdir("foo", 0700))
-		_, eErr := expected.FS().Create("foo")
+		_, eErr := createFn(expected.FS(), "foo")
 		assert.Error(t, eErr)
 		expected.Clean()
 
 		require.NoError(t, undertest.FS().Mkdir("foo", 0700))
-		_, uErr := undertest.FS().Create("foo")
+		_, uErr := createFn(undertest.FS(), "foo")
 		assert.Error(t, uErr)
 		undertest.Clean()
 
@@ -155,11 +161,11 @@ func TestFsCreate(t *testing.T, undertest, expected FSTester) {
 	})
 
 	t.Run("parent directory must exist", func(t *testing.T) {
-		_, err := expected.FS().Create("foo/bar")
+		_, err := createFn(expected.FS(), "foo/bar")
 		assert.Error(t, err)
 		expected.Clean()
 
-		_, uErr := undertest.FS().Create("foo/bar")
+		_, uErr := createFn(undertest.FS(), "foo/bar")
 		assert.Error(t, uErr)
 		undertest.Clean()
 
@@ -344,10 +350,16 @@ func TestFsMkdirAll(t *testing.T, undertest, expected FSTester) {
 // If successful, methods on the returned file can be used for reading; the associated file descriptor has mode O_RDONLY.
 // If there is an error, it will be of type *PathError.
 func TestFsOpen(t *testing.T, undertest, expected FSTester) {
+	testFsOpen(t, undertest, expected, func(fs afero.Fs, name string) (afero.File, error) {
+		return fs.Open(name)
+	})
+}
+
+func testFsOpen(t *testing.T, undertest, expected FSTester, openFn func(afero.Fs, string) (afero.File, error)) {
 	t.Run("does not exist", func(t *testing.T) {
-		_, eErr := expected.FS().Open("foo")
+		_, eErr := openFn(expected.FS(), "foo")
 		assert.Error(t, eErr)
-		_, uErr := undertest.FS().Open("foo")
+		_, uErr := openFn(undertest.FS(), "foo")
 		assert.Error(t, uErr)
 
 		assert.True(t, os.IsNotExist(uErr))
@@ -362,7 +374,7 @@ func TestFsOpen(t *testing.T, undertest, expected FSTester) {
 		require.NoError(t, err)
 		require.NoError(t, f.Close())
 
-		f, err = expected.FS().Open("foo")
+		f, err = openFn(expected.FS(), "foo")
 		assert.NoError(t, err)
 		assert.NotNil(t, f)
 		require.NoError(t, f.Close())
@@ -372,7 +384,7 @@ func TestFsOpen(t *testing.T, undertest, expected FSTester) {
 		require.NoError(t, err)
 		require.NoError(t, f.Close())
 
-		f, err = undertest.FS().Open("foo")
+		f, err = openFn(undertest.FS(), "foo")
 		assert.NoError(t, err)
 		assert.NotNil(t, f)
 		require.NoError(t, f.Close())
@@ -387,7 +399,7 @@ func TestFsOpen(t *testing.T, undertest, expected FSTester) {
 		require.NoError(t, err)
 		require.NoError(t, f.Close())
 
-		f, err = expected.FS().Open("foo")
+		f, err = openFn(expected.FS(), "foo")
 		assert.NoError(t, err)
 		buf := make([]byte, n)
 		n2, err := io.ReadFull(f, buf)
@@ -402,7 +414,7 @@ func TestFsOpen(t *testing.T, undertest, expected FSTester) {
 		require.NoError(t, err)
 		require.NoError(t, f.Close())
 
-		f, err = undertest.FS().Open("foo")
+		f, err = openFn(undertest.FS(), "foo")
 		assert.NoError(t, err)
 		buf = make([]byte, n)
 		n2, err = io.ReadFull(f, buf)
@@ -417,7 +429,7 @@ func TestFsOpen(t *testing.T, undertest, expected FSTester) {
 		require.NoError(t, err)
 		require.NoError(t, f.Close())
 
-		f, err = expected.FS().Open("foo")
+		f, err = openFn(expected.FS(), "foo")
 		require.NoError(t, err)
 		_, err = f.Write([]byte(`bar`))
 		assert.Error(t, err)
@@ -427,7 +439,7 @@ func TestFsOpen(t *testing.T, undertest, expected FSTester) {
 		require.NoError(t, err)
 		require.NoError(t, f.Close())
 
-		f, err = undertest.FS().Open("foo")
+		f, err = openFn(undertest.FS(), "foo")
 		require.NoError(t, err)
 		_, err = f.Write([]byte(`bar`))
 		assert.Error(t, err)
@@ -441,7 +453,128 @@ func TestFsOpen(t *testing.T, undertest, expected FSTester) {
 // If successful, methods on the returned File can be used for I/O.
 // If there is an error, it will be of type *PathError.
 func TestFsOpenFile(t *testing.T, undertest, expected FSTester) {
-	t.Skip()
+	t.Run("read-only", func(t *testing.T) {
+		testFsOpen(t, undertest, expected, func(fs afero.Fs, name string) (afero.File, error) {
+			return fs.OpenFile(name, os.O_RDONLY, 0777)
+		})
+	})
+
+	t.Run("create", func(t *testing.T) {
+		testFsCreate(t, undertest, expected, func(fs afero.Fs, name string) (afero.File, error) {
+			return fs.OpenFile(name, os.O_RDWR|os.O_CREATE, 0666)
+		})
+	})
+
+	t.Run("create illegal perms", func(t *testing.T) {
+		f, err := expected.FS().OpenFile("foo", os.O_RDWR|os.O_CREATE, os.ModeSocket|0777)
+		require.NoError(t, err)
+		require.NoError(t, f.Close())
+		expectedStat := statFS(t, expected.FS())
+		expected.Clean()
+
+		f, err = undertest.FS().OpenFile("foo", os.O_RDWR|os.O_CREATE, os.ModeSocket|0777)
+		require.NoError(t, err)
+		require.NoError(t, f.Close())
+		undertestStat := statFS(t, undertest.FS())
+		undertest.Clean()
+
+		assertEqualFS(t, expectedStat, undertestStat)
+	})
+
+	t.Run("truncate on existing file", func(t *testing.T) {
+		const fileContents = "hello world"
+
+		f, err := expected.FS().Create("foo")
+		require.NoError(t, err)
+		_, err = f.Write([]byte(fileContents))
+		require.NoError(t, err)
+		require.NoError(t, f.Close())
+		_, err = expected.FS().OpenFile("foo", os.O_TRUNC, 0700)
+		assert.NoError(t, err)
+		expectedStat := statFS(t, expected.FS())
+		expected.Clean()
+
+		f, err = undertest.FS().Create("foo")
+		require.NoError(t, err)
+		_, err = f.Write([]byte(fileContents))
+		require.NoError(t, err)
+		require.NoError(t, f.Close())
+		_, err = undertest.FS().OpenFile("foo", os.O_TRUNC, 0700)
+		assert.NoError(t, err)
+		undertestStat := statFS(t, undertest.FS())
+		undertest.Clean()
+
+		assertEqualFS(t, expectedStat, undertestStat)
+	})
+
+	t.Run("truncate on non-existent file", func(t *testing.T) {
+		_, err := expected.FS().OpenFile("foo", os.O_TRUNC, 0700)
+		assert.Error(t, err)
+		expected.Clean()
+
+		_, uErr := undertest.FS().OpenFile("foo", os.O_TRUNC, 0700)
+		assert.Error(t, uErr)
+		undertest.Clean()
+
+		assert.True(t, os.IsNotExist(uErr))
+		require.IsType(t, &os.PathError{}, uErr)
+		pathErr := uErr.(*os.PathError)
+		assert.Equal(t, "open", pathErr.Op)
+		assert.Equal(t, "foo", strings.TrimPrefix(pathErr.Path, "/"))
+	})
+
+	t.Run("truncate on existing dir", func(t *testing.T) {
+		require.NoError(t, expected.FS().Mkdir("foo", 0700))
+		_, err := expected.FS().OpenFile("foo", os.O_TRUNC, 0700)
+		assert.Error(t, err)
+		expected.Clean()
+
+		require.NoError(t, undertest.FS().Mkdir("foo", 0700))
+		_, uErr := undertest.FS().OpenFile("foo", os.O_TRUNC, 0700)
+		assert.Error(t, err)
+		undertest.Clean()
+
+		assert.True(t, afero.IsDirErr(uErr))
+		require.IsType(t, &os.PathError{}, uErr)
+		pathErr := uErr.(*os.PathError)
+		assert.Equal(t, "open", pathErr.Op)
+		assert.Equal(t, "foo", strings.TrimPrefix(pathErr.Path, "/"))
+	})
+
+	t.Run("append flag writes to end", func(t *testing.T) {
+		const (
+			fileContents1 = "hello world"
+			fileContents2 = "sup "
+		)
+
+		f, err := expected.FS().Create("foo")
+		require.NoError(t, err)
+		_, err = f.Write([]byte(fileContents1))
+		require.NoError(t, err)
+		require.NoError(t, f.Close())
+		f, err = expected.FS().OpenFile("foo", os.O_RDWR|os.O_APPEND, 0700)
+		require.NoError(t, err)
+		_, err = f.Write([]byte(fileContents2))
+		require.NoError(t, err)
+		require.NoError(t, f.Close())
+		expectedStat := statFS(t, expected.FS())
+		expected.Clean()
+
+		f, err = undertest.FS().Create("foo")
+		require.NoError(t, err)
+		_, err = f.Write([]byte(fileContents1))
+		require.NoError(t, err)
+		require.NoError(t, f.Close())
+		f, err = undertest.FS().OpenFile("foo", os.O_RDWR|os.O_APPEND, 0700)
+		require.NoError(t, err)
+		_, err = f.Write([]byte(fileContents2))
+		require.NoError(t, err)
+		require.NoError(t, f.Close())
+		undertestStat := statFS(t, undertest.FS())
+		undertest.Clean()
+
+		assertEqualFS(t, expectedStat, undertestStat)
+	})
 }
 
 // Remove removes the named file or (empty) directory. If there is an error, it will be of type *PathError.
