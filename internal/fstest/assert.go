@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"testing"
 	"time"
@@ -69,6 +70,9 @@ func statFSPath(t *testing.T, fs afero.Fs, path string) fsStat {
 
 	file, err := fs.Open(path)
 	require.NoError(t, err)
+	defer func() {
+		assert.NoError(t, file.Close())
+	}()
 	names, err := file.Readdirnames(0)
 	require.NoError(t, err)
 	stat.files = make([]fsStat, len(names))
@@ -81,9 +85,27 @@ func statFSPath(t *testing.T, fs afero.Fs, path string) fsStat {
 
 func assertEqualFS(t *testing.T, expected, actual fsStat) {
 	t.Helper()
+	defer func() {
+		if t.Failed() {
+			t.Logf("\nExpected FS:\n%s\nActual FS:\n%s", expected, actual)
+		}
+	}()
+	assertEqualFSRecursive(t, expected, actual)
+}
+
+func fsStatSorter(fs []fsStat) func(int, int) bool {
+	return func(a, b int) bool {
+		return fs[a].Info().Name() < fs[b].Info().Name()
+	}
+}
+
+func assertEqualFSRecursive(t *testing.T, expected, actual fsStat) {
+	t.Helper()
 	assertEqualFileInfo(t, expected.Info(), actual.Info())
 	expectedDir := expected.ReadDir()
+	sort.SliceStable(expectedDir, fsStatSorter(expectedDir))
 	actualDir := actual.ReadDir()
+	sort.SliceStable(actualDir, fsStatSorter(actualDir))
 
 	if len(expectedDir) != len(actualDir) {
 		expectedNames := make([]string, len(expectedDir))

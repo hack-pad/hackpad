@@ -739,7 +739,167 @@ func TestFsRemoveAll(t *testing.T, undertest, expected FSTester) {
 // OS-specific restrictions may apply when oldpath and newpath are in different directories.
 // If there is an error, it will be of type *LinkError.
 func TestFsRename(t *testing.T, undertest, expected FSTester) {
-	t.Skip()
+	t.Run("inside same directory", func(t *testing.T) {
+		require.NoError(t, expected.FS().Mkdir("foo", 0700))
+		f, err := expected.FS().Create("foo/bar")
+		require.NoError(t, err)
+		require.NoError(t, f.Close())
+		assert.NoError(t, expected.FS().Rename("foo/bar", "foo/baz"))
+		expectedStat := statFS(t, expected.FS())
+		expected.Clean()
+
+		require.NoError(t, undertest.FS().Mkdir("foo", 0700))
+		f, err = undertest.FS().Create("foo/bar")
+		require.NoError(t, err)
+		require.NoError(t, f.Close())
+		assert.NoError(t, undertest.FS().Rename("foo/bar", "foo/baz"))
+		undertestStat := statFS(t, undertest.FS())
+		undertest.Clean()
+
+		assertEqualFS(t, expectedStat, undertestStat)
+	})
+
+	t.Run("inside same directory in root", func(t *testing.T) {
+		f, err := expected.FS().Create("bar")
+		require.NoError(t, err)
+		require.NoError(t, f.Close())
+		assert.NoError(t, expected.FS().Rename("bar", "baz"))
+		expectedStat := statFS(t, expected.FS())
+		expected.Clean()
+
+		f, err = undertest.FS().Create("bar")
+		require.NoError(t, err)
+		require.NoError(t, f.Close())
+		assert.NoError(t, undertest.FS().Rename("bar", "baz"))
+		undertestStat := statFS(t, undertest.FS())
+		undertest.Clean()
+
+		assertEqualFS(t, expectedStat, undertestStat)
+	})
+
+	t.Run("same file", func(t *testing.T) {
+		const fileContents = `hello world`
+		require.NoError(t, expected.FS().Mkdir("foo", 0700))
+		f, err := expected.FS().Create("foo/bar")
+		require.NoError(t, err)
+		_, err = f.Write([]byte(fileContents))
+		require.NoError(t, err)
+		require.NoError(t, f.Close())
+		assert.NoError(t, expected.FS().Rename("foo/bar", "foo/bar"))
+		expectedStat := statFS(t, expected.FS())
+		expected.Clean()
+
+		require.NoError(t, undertest.FS().Mkdir("foo", 0700))
+		f, err = undertest.FS().Create("foo/bar")
+		require.NoError(t, err)
+		_, err = f.Write([]byte(fileContents))
+		require.NoError(t, err)
+		require.NoError(t, f.Close())
+		assert.NoError(t, undertest.FS().Rename("foo/bar", "foo/bar"))
+		undertestStat := statFS(t, undertest.FS())
+		undertest.Clean()
+
+		assertEqualFS(t, expectedStat, undertestStat)
+	})
+
+	t.Run("same directory", func(t *testing.T) {
+		const fileContents = `hello world`
+		require.NoError(t, expected.FS().Mkdir("foo", 0700))
+		assert.Error(t, expected.FS().Rename("foo", "foo"))
+		expectedStat := statFS(t, expected.FS())
+		expected.Clean()
+
+		require.NoError(t, undertest.FS().Mkdir("foo", 0700))
+		uErr := undertest.FS().Rename("foo", "foo")
+		undertestStat := statFS(t, undertest.FS())
+		undertest.Clean()
+
+		assert.Error(t, uErr)
+		assert.True(t, os.IsExist(uErr))
+		require.IsType(t, &os.LinkError{}, uErr)
+		linkErr := uErr.(*os.LinkError)
+		assert.Equal(t, "rename", linkErr.Op)
+		assert.Equal(t, "foo", strings.TrimPrefix(linkErr.Old, "/"))
+		assert.Equal(t, "foo", strings.TrimPrefix(linkErr.New, "/"))
+
+		assertEqualFS(t, expectedStat, undertestStat)
+	})
+
+	t.Run("newpath is directory", func(t *testing.T) {
+		const fileContents = `hello world`
+		require.NoError(t, expected.FS().Mkdir("foo", 0700))
+		require.NoError(t, expected.FS().Mkdir("bar", 0700))
+		assert.Error(t, expected.FS().Rename("foo", "bar"))
+		expectedStat := statFS(t, expected.FS())
+		expected.Clean()
+
+		require.NoError(t, undertest.FS().Mkdir("foo", 0700))
+		require.NoError(t, undertest.FS().Mkdir("bar", 0700))
+		uErr := undertest.FS().Rename("foo", "bar")
+		assert.Error(t, uErr)
+		undertestStat := statFS(t, undertest.FS())
+		undertest.Clean()
+
+		assert.Error(t, uErr)
+		assert.True(t, os.IsExist(uErr))
+		require.IsType(t, &os.LinkError{}, uErr)
+		linkErr := uErr.(*os.LinkError)
+		assert.Equal(t, "rename", linkErr.Op)
+		assert.Equal(t, "foo", strings.TrimPrefix(linkErr.Old, "/"))
+		assert.Equal(t, "bar", strings.TrimPrefix(linkErr.New, "/"))
+
+		assertEqualFS(t, expectedStat, undertestStat)
+	})
+
+	t.Run("newpath in root", func(t *testing.T) {
+		const fileContents = `hello world`
+		require.NoError(t, expected.FS().Mkdir("foo", 0700))
+		f, err := expected.FS().Create("foo/bar")
+		require.NoError(t, err)
+		_, err = f.Write([]byte(fileContents))
+		require.NoError(t, err)
+		require.NoError(t, f.Close())
+		assert.NoError(t, expected.FS().Rename("foo/bar", "baz"))
+		expectedStat := statFS(t, expected.FS())
+		expected.Clean()
+
+		require.NoError(t, undertest.FS().Mkdir("foo", 0700))
+		f, err = undertest.FS().Create("foo/bar")
+		require.NoError(t, err)
+		_, err = f.Write([]byte(fileContents))
+		require.NoError(t, err)
+		require.NoError(t, f.Close())
+		assert.NoError(t, undertest.FS().Rename("foo/bar", "baz"))
+		undertestStat := statFS(t, undertest.FS())
+		undertest.Clean()
+
+		assertEqualFS(t, expectedStat, undertestStat)
+	})
+
+	t.Run("newpath in subdirectory", func(t *testing.T) {
+		const fileContents = `hello world`
+		require.NoError(t, expected.FS().Mkdir("foo", 0700))
+		f, err := expected.FS().Create("bar")
+		require.NoError(t, err)
+		_, err = f.Write([]byte(fileContents))
+		require.NoError(t, err)
+		require.NoError(t, f.Close())
+		assert.NoError(t, expected.FS().Rename("bar", "foo/baz"))
+		expectedStat := statFS(t, expected.FS())
+		expected.Clean()
+
+		require.NoError(t, undertest.FS().Mkdir("foo", 0700))
+		f, err = undertest.FS().Create("bar")
+		require.NoError(t, err)
+		_, err = f.Write([]byte(fileContents))
+		require.NoError(t, err)
+		require.NoError(t, f.Close())
+		assert.NoError(t, undertest.FS().Rename("bar", "foo/baz"))
+		undertestStat := statFS(t, undertest.FS())
+		undertest.Clean()
+
+		assertEqualFS(t, expectedStat, undertestStat)
+	})
 }
 
 // Stat returns a FileInfo describing the named file. If there is an error, it will be of type *PathError.
