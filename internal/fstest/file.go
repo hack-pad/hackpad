@@ -1,6 +1,7 @@
 package fstest
 
 import (
+	"io"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -8,11 +9,103 @@ import (
 )
 
 func TestFileClose(t *testing.T, undertest, expected FSTester) {
-	t.Skip()
+	f, err := expected.FS().Create("foo")
+	require.NoError(t, err)
+	assert.NoError(t, f.Close())
+	assert.Error(t, f.Close())
+	expected.Clean()
+
+	f, err = undertest.FS().Create("foo")
+	require.NoError(t, err)
+	assert.NoError(t, f.Close())
+	assert.Error(t, f.Close())
+	undertest.Clean()
 }
 
 func TestFileRead(t *testing.T, undertest, expected FSTester) {
-	t.Skip()
+	const fileContents = "hello world"
+	t.Run("read empty", func(t *testing.T) {
+		f, err := expected.FS().Create("foo")
+		require.NoError(t, err)
+		buf := make([]byte, 10)
+		n, err := f.Read(buf)
+		assert.Equal(t, 0, n)
+		assert.Equal(t, io.EOF, err)
+		require.NoError(t, f.Close())
+		expected.Clean()
+
+		f, err = undertest.FS().Create("foo")
+		require.NoError(t, err)
+		buf = make([]byte, 10)
+		n, err = f.Read(buf)
+		assert.Equal(t, 0, n)
+		assert.Equal(t, io.EOF, err)
+		require.NoError(t, f.Close())
+		undertest.Clean()
+	})
+
+	t.Run("read a few bytes at a time", func(t *testing.T) {
+		f, err := expected.FS().Create("foo")
+		require.NoError(t, err)
+		_, err = f.Write([]byte(fileContents))
+		require.NoError(t, err)
+		require.NoError(t, f.Close())
+		f, err = expected.FS().Open("foo")
+		require.NoError(t, err)
+
+		const firstBufLen = 2
+		buf := make([]byte, firstBufLen)
+		n, err := f.Read(buf)
+		assert.Equal(t, firstBufLen, n)
+		assert.NoError(t, err)
+		assert.Equal(t, "he", string(buf))
+
+		buf = make([]byte, len(fileContents)*2)
+		n, err = f.Read(buf)
+		assert.Equal(t, len(fileContents)-firstBufLen, n)
+		if err == nil {
+			// it's ok to return a nil error when finishing a read
+			// but the next read must return 0 and EOF
+			tmpBuf := make([]byte, len(buf))
+			var n int
+			n, err = f.Read(tmpBuf)
+			assert.Equal(t, 0, n)
+		}
+		assert.Equal(t, io.EOF, err)
+		assert.Equal(t, "llo world", string(buf[:n]))
+		require.NoError(t, f.Close())
+		expected.Clean()
+
+		f, err = undertest.FS().Create("foo")
+		require.NoError(t, err)
+		_, err = f.Write([]byte(fileContents))
+		require.NoError(t, err)
+		require.NoError(t, f.Close())
+		f, err = undertest.FS().Open("foo")
+		require.NoError(t, err)
+
+		buf = make([]byte, firstBufLen)
+		n, err = f.Read(buf)
+		assert.Equal(t, firstBufLen, n)
+		assert.NoError(t, err)
+		assert.Equal(t, "he", string(buf))
+
+		buf = make([]byte, len(fileContents)*2)
+		n, err = f.Read(buf)
+		assert.Equal(t, len(fileContents)-firstBufLen, n)
+		if err == nil {
+			// it's ok to return a nil error when finishing a read
+			// but the next read must return 0 and EOF
+			tmpBuf := make([]byte, len(buf))
+			var n int
+			n, err = f.Read(tmpBuf)
+			assert.Equal(t, 0, n)
+		}
+		assert.Equal(t, io.EOF, err)
+		assert.Equal(t, "llo world", string(buf[:n]))
+		require.NoError(t, f.Close())
+		undertest.Clean()
+	})
 }
 
 func TestFileReadAt(t *testing.T, undertest, expected FSTester) {

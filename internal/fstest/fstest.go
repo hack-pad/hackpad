@@ -64,6 +64,7 @@ func RunWith(
 		fsTest.Run("fs.Open", TestFsOpen),
 		fsTest.Run("fs.Stat", TestFsStat),
 		fsTest.Run("file.Readdirnames", TestFileReaddirnames),
+		fsTest.Run("file.Close", TestFileClose),
 	} {
 		if !result {
 			t.Skip("Cannot verify further tests without basic scenarios passing. (e.g. fs.Stat and file.Readdirnames)")
@@ -80,6 +81,17 @@ func RunWith(
 	fsTest.Run("fs.Chmod", TestFsChmod)
 	fsTest.Run("fs.Chtimes", TestFsChtimes)
 	// TODO fs.Symlink
+
+	fsTest.Run("file.Read", TestFileRead)
+	fsTest.Run("file.ReadAt", TestFileReadAt)
+	fsTest.Run("file.Seek", TestFileSeek)
+	fsTest.Run("file.Write", TestFileWrite)
+	fsTest.Run("file.WriteAt", TestFileWriteAt)
+	fsTest.Run("file.Readdir", TestFileReaddir)
+	fsTest.Run("file.Stat", TestFileStat)
+	fsTest.Run("file.Sync", TestFileSync)
+	fsTest.Run("file.Truncate", TestFileTruncate)
+	fsTest.Run("file.WriteString", TestFileWriteString)
 }
 
 // cleanUpOsFs runs basic cleanup for the current directory.

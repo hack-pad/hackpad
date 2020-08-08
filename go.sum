@@ -5,6 +5,8 @@ github.com/johnstarich/afero v1.3.2-0.20200804053610-e1ff5e350e7d h1:RLtRizRWD9P
 github.com/johnstarich/afero v1.3.2-0.20200804053610-e1ff5e350e7d/go.mod h1:5KUK8ByomD5Ti5Artl0RtHeI5pTF7MIDuXL3yY520V4=
 github.com/johnstarich/afero v1.3.2-0.20200806045008-5bda64a7cf59 h1:5iZaPQTo++PFq4Cki8HYMLwLchAc7CXl+1PhFnz1TYs=
 github.com/johnstarich/afero v1.3.2-0.20200806045008-5bda64a7cf59/go.mod h1:5KUK8ByomD5Ti5Artl0RtHeI5pTF7MIDuXL3yY520V4=
+github.com/johnstarich/afero v1.3.2-0.20200808210356-608d32185b7d h1:6C7QnGr4CG36MTFGKAMKXvwYg7PA+lCZZ5G0fH6QEw8=
+github.com/johnstarich/afero v1.3.2-0.20200808210356-608d32185b7d/go.mod h1:5KUK8ByomD5Ti5Artl0RtHeI5pTF7MIDuXL3yY520V4=
 github.com/kr/fs v0.1.0/go.mod h1:FFnZGqtBN9Gxj7eW1uZ42v5BccTP0vu6NEaFoC2HwRg=
 github.com/pkg/errors v0.8.1/go.mod h1:bwawxfHBFNV+L2hUp1rHADufV3IMtnDRdf1r5NINEl0=
 github.com/pkg/errors v0.9.1 h1:FEBLx1zS214owpjy7qsBeixbURkuhQAwrK5UwLGTwt4=
