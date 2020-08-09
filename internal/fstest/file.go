@@ -1,7 +1,10 @@
 package fstest
 
 import (
+	"errors"
 	"io"
+	"os"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -67,9 +70,9 @@ func TestFileRead(t *testing.T, undertest, expected FSTester) {
 			// it's ok to return a nil error when finishing a read
 			// but the next read must return 0 and EOF
 			tmpBuf := make([]byte, len(buf))
-			var n int
-			n, err = f.Read(tmpBuf)
-			assert.Equal(t, 0, n)
+			var zeroN int
+			zeroN, err = f.Read(tmpBuf)
+			assert.Equal(t, 0, zeroN)
 		}
 		assert.Equal(t, io.EOF, err)
 		assert.Equal(t, "llo world", string(buf[:n]))
@@ -97,9 +100,9 @@ func TestFileRead(t *testing.T, undertest, expected FSTester) {
 			// it's ok to return a nil error when finishing a read
 			// but the next read must return 0 and EOF
 			tmpBuf := make([]byte, len(buf))
-			var n int
-			n, err = f.Read(tmpBuf)
-			assert.Equal(t, 0, n)
+			var zeroN int
+			zeroN, err = f.Read(tmpBuf)
+			assert.Equal(t, 0, zeroN)
 		}
 		assert.Equal(t, io.EOF, err)
 		assert.Equal(t, "llo world", string(buf[:n]))
@@ -109,7 +112,82 @@ func TestFileRead(t *testing.T, undertest, expected FSTester) {
 }
 
 func TestFileReadAt(t *testing.T, undertest, expected FSTester) {
-	t.Skip()
+	for _, fsTest := range []FSTester{expected, undertest} {
+		const fileContents = "hello world"
+		f, err := fsTest.FS().Create("foo")
+		require.NoError(t, err)
+		_, err = f.Write([]byte(fileContents))
+		require.NoError(t, err)
+
+		for _, tc := range []struct {
+			description string
+			bufSize     int
+			off         int64
+			expectN     int
+			expectBuf   string
+			expectErr   error
+		}{
+			{
+				description: "at start",
+				bufSize:     len(fileContents),
+				off:         0,
+				expectN:     len(fileContents),
+				expectBuf:   "hello world",
+			},
+			{
+				description: "negative offset",
+				bufSize:     len(fileContents),
+				off:         -1,
+				expectErr:   errors.New("negative offset"),
+			},
+			{
+				description: "small byte offset",
+				bufSize:     len(fileContents),
+				off:         2,
+				expectN:     len(fileContents) - 2,
+				expectBuf:   "llo world",
+				expectErr:   io.EOF,
+			},
+			{
+				description: "small read at offset",
+				bufSize:     2,
+				off:         2,
+				expectN:     2,
+				expectBuf:   "ll",
+			},
+			{
+				description: "full read at offset",
+				bufSize:     len(fileContents),
+				off:         2,
+				expectN:     len(fileContents) - 2,
+				expectBuf:   "llo world",
+				expectErr:   io.EOF,
+			},
+		} {
+			t.Run(tc.description, func(t *testing.T) {
+				buf := make([]byte, tc.bufSize)
+				n, err := f.ReadAt(buf, tc.off)
+				if n == tc.bufSize && err == io.EOF {
+					err = nil
+				}
+				if tc.expectErr != nil {
+					if pathErr, ok := err.(*os.PathError); ok {
+						assert.Equal(t, "readat", pathErr.Op)
+						assert.Equal(t, "foo", strings.TrimPrefix(pathErr.Path, "/"))
+						err = pathErr.Err
+					}
+					assert.Equal(t, tc.expectErr, err)
+					return
+				}
+				require.NoError(t, err)
+				assert.Equal(t, tc.expectN, n)
+				assert.Equal(t, tc.expectBuf, string(buf[:n]))
+			})
+		}
+
+		require.NoError(t, f.Close())
+		fsTest.Clean()
+	}
 }
 
 func TestFileSeek(t *testing.T, undertest, expected FSTester) {
