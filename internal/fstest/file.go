@@ -686,7 +686,17 @@ func TestFileReaddirnames(t *testing.T, undertest, expected FSTester) {
 }
 
 func TestFileStat(t *testing.T, undertest, expected FSTester) {
-	t.Skip()
+	testStat(t, undertest, expected, func(tb testing.TB, fsTest FSTester, path string) (os.FileInfo, error) {
+		tb.Helper()
+		f, err := fsTest.FS().Open(path)
+		if err != nil {
+			return nil, err
+		}
+		tb.Cleanup(func() {
+			assert.NoError(t, f.Close())
+		})
+		return f.Stat()
+	})
 }
 
 func TestFileSync(t *testing.T, undertest, expected FSTester) {
