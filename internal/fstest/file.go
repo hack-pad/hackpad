@@ -293,11 +293,170 @@ func TestFileSeek(t *testing.T, undertest, expected FSTester) {
 }
 
 func TestFileWrite(t *testing.T, undertest, expected FSTester) {
-	t.Skip()
+	const fileContents = "hello world"
+	f, err := expected.FS().Create("foo")
+	require.NoError(t, err)
+	n, err := f.Write([]byte(fileContents))
+	assert.Equal(t, len(fileContents), n)
+	assert.NoError(t, err)
+	require.NoError(t, f.Close())
+	f, err = expected.FS().Open("foo")
+	require.NoError(t, err)
+	buf := make([]byte, len(fileContents))
+	_, _ = f.Read(buf)
+	assert.Equal(t, fileContents, string(buf))
+	expected.Clean()
+
+	f, err = undertest.FS().Create("foo")
+	require.NoError(t, err)
+	n, err = f.Write([]byte(fileContents))
+	assert.Equal(t, len(fileContents), n)
+	assert.NoError(t, err)
+	require.NoError(t, f.Close())
+	f, err = undertest.FS().Open("foo")
+	require.NoError(t, err)
+	buf = make([]byte, len(fileContents))
+	_, _ = f.Read(buf)
+	assert.Equal(t, fileContents, string(buf))
+	undertest.Clean()
 }
 
 func TestFileWriteAt(t *testing.T, undertest, expected FSTester) {
-	t.Skip()
+	t.Run("negative offset", func(t *testing.T) {
+		f, err := expected.FS().Create("foo")
+		require.NoError(t, err)
+		n, err := f.WriteAt([]byte("hello"), -1)
+		assert.Equal(t, 0, n)
+		assert.Error(t, err)
+		require.NoError(t, f.Close())
+
+		require.IsType(t, &os.PathError{}, err)
+		pathErr := err.(*os.PathError)
+		assert.Equal(t, "writeat", pathErr.Op)
+		assert.Equal(t, "foo", strings.TrimPrefix(pathErr.Path, "/"))
+		assert.EqualError(t, pathErr.Err, "negative offset")
+		expected.Clean()
+
+		f, err = undertest.FS().Create("foo")
+		require.NoError(t, err)
+		n, err = f.WriteAt([]byte("hello"), -1)
+		assert.Equal(t, 0, n)
+		assert.Error(t, err)
+		require.NoError(t, f.Close())
+
+		require.IsType(t, &os.PathError{}, err)
+		pathErr = err.(*os.PathError)
+		assert.Equal(t, "writeat", pathErr.Op)
+		assert.Equal(t, "foo", strings.TrimPrefix(pathErr.Path, "/"))
+		assert.EqualError(t, pathErr.Err, "negative offset")
+		undertest.Clean()
+	})
+
+	t.Run("no offset", func(t *testing.T) {
+		f, err := expected.FS().Create("foo")
+		require.NoError(t, err)
+		const fileContents = "hello world"
+		n, err := f.WriteAt([]byte(fileContents), 0)
+		assert.Equal(t, len(fileContents), n)
+		assert.NoError(t, err)
+		require.NoError(t, f.Close())
+
+		f, err = expected.FS().Open("foo")
+		require.NoError(t, err)
+		buf := make([]byte, len(fileContents))
+		_, _ = f.Read(buf)
+		assert.Equal(t, fileContents, string(buf))
+		require.NoError(t, f.Close())
+		expected.Clean()
+
+		f, err = undertest.FS().Create("foo")
+		require.NoError(t, err)
+		n, err = f.WriteAt([]byte(fileContents), 0)
+		assert.Equal(t, len(fileContents), n)
+		assert.NoError(t, err)
+		require.NoError(t, f.Close())
+
+		f, err = undertest.FS().Open("foo")
+		require.NoError(t, err)
+		buf = make([]byte, len(fileContents))
+		_, _ = f.Read(buf)
+		assert.Equal(t, fileContents, string(buf))
+		require.NoError(t, f.Close())
+		undertest.Clean()
+	})
+
+	t.Run("offset inside file", func(t *testing.T) {
+		f, err := expected.FS().Create("foo")
+		require.NoError(t, err)
+		const fileContents = "hello world"
+		const newContents = "hi"
+		const offset = 5
+		_, err = f.Write([]byte(fileContents))
+		require.NoError(t, err)
+		n, err := f.WriteAt([]byte(newContents), offset)
+		assert.Equal(t, len(newContents), n)
+		assert.NoError(t, err)
+		require.NoError(t, f.Close())
+
+		f, err = expected.FS().Open("foo")
+		require.NoError(t, err)
+		buf := make([]byte, len(fileContents))
+		_, _ = f.Read(buf)
+		assert.Equal(t, "hellohiorld", string(buf))
+		require.NoError(t, f.Close())
+		expected.Clean()
+
+		f, err = undertest.FS().Create("foo")
+		require.NoError(t, err)
+		_, err = f.Write([]byte(fileContents))
+		require.NoError(t, err)
+		n, err = f.WriteAt([]byte(newContents), offset)
+		assert.Equal(t, len(newContents), n)
+		assert.NoError(t, err)
+		require.NoError(t, f.Close())
+
+		f, err = undertest.FS().Open("foo")
+		require.NoError(t, err)
+		buf = make([]byte, len(fileContents))
+		_, _ = f.Read(buf)
+		assert.Equal(t, "hellohiorld", string(buf))
+		require.NoError(t, f.Close())
+		undertest.Clean()
+	})
+
+	t.Run("offset outside file", func(t *testing.T) {
+		f, err := expected.FS().Create("foo")
+		require.NoError(t, err)
+		const fileContents = "hello world"
+		const offset = 5
+		n, err := f.WriteAt([]byte(fileContents), offset)
+		assert.Equal(t, len(fileContents), n)
+		assert.NoError(t, err)
+		require.NoError(t, f.Close())
+
+		f, err = expected.FS().Open("foo")
+		require.NoError(t, err)
+		buf := make([]byte, offset+len(fileContents))
+		_, _ = f.Read(buf)
+		assert.Equal(t, append(make([]byte, offset), []byte(fileContents)...), buf)
+		require.NoError(t, f.Close())
+		expected.Clean()
+
+		f, err = undertest.FS().Create("foo")
+		require.NoError(t, err)
+		n, err = f.WriteAt([]byte(fileContents), offset)
+		assert.Equal(t, len(fileContents), n)
+		assert.NoError(t, err)
+		require.NoError(t, f.Close())
+
+		f, err = undertest.FS().Open("foo")
+		require.NoError(t, err)
+		buf = make([]byte, offset+len(fileContents))
+		_, _ = f.Read(buf)
+		assert.Equal(t, append(make([]byte, offset), []byte(fileContents)...), buf)
+		require.NoError(t, f.Close())
+		undertest.Clean()
+	})
 }
 
 func TestFileReaddir(t *testing.T, undertest, expected FSTester) {
