@@ -295,10 +295,16 @@ func TestFileSeek(t *testing.T, undertest, expected FSTester) {
 }
 
 func TestFileWrite(t *testing.T, undertest, expected FSTester) {
+	testFileWrite(t, undertest, expected, func(file afero.File, b []byte) (int, error) {
+		return file.Write(b)
+	})
+}
+
+func testFileWrite(t *testing.T, undertest, expected FSTester, writer func(afero.File, []byte) (int, error)) {
 	const fileContents = "hello world"
 	f, err := expected.FS().Create("foo")
 	require.NoError(t, err)
-	n, err := f.Write([]byte(fileContents))
+	n, err := writer(f, []byte(fileContents))
 	assert.Equal(t, len(fileContents), n)
 	assert.NoError(t, err)
 	require.NoError(t, f.Close())
@@ -311,7 +317,7 @@ func TestFileWrite(t *testing.T, undertest, expected FSTester) {
 
 	f, err = undertest.FS().Create("foo")
 	require.NoError(t, err)
-	n, err = f.Write([]byte(fileContents))
+	n, err = writer(f, []byte(fileContents))
 	assert.Equal(t, len(fileContents), n)
 	assert.NoError(t, err)
 	require.NoError(t, f.Close())
@@ -787,5 +793,7 @@ func TestFileTruncate(t *testing.T, undertest, expected FSTester) {
 }
 
 func TestFileWriteString(t *testing.T, undertest, expected FSTester) {
-	t.Skip()
+	testFileWrite(t, undertest, expected, func(file afero.File, b []byte) (int, error) {
+		return file.WriteString(string(b))
+	})
 }
