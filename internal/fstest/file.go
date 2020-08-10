@@ -4,6 +4,7 @@ import (
 	"errors"
 	"io"
 	"os"
+	"sort"
 	"strings"
 	"testing"
 
@@ -460,7 +461,171 @@ func TestFileWriteAt(t *testing.T, undertest, expected FSTester) {
 }
 
 func TestFileReaddir(t *testing.T, undertest, expected FSTester) {
-	t.Skip()
+	t.Run("list empty root", func(t *testing.T) {
+		f, err := expected.FS().Open(".")
+		require.NoError(t, err)
+		infos, err := f.Readdir(0)
+		assert.NoError(t, err)
+		assert.Empty(t, infos)
+		require.NoError(t, f.Close())
+		expected.Clean()
+
+		f, err = undertest.FS().Open(".")
+		require.NoError(t, err)
+		infos, err = f.Readdir(0)
+		assert.NoError(t, err)
+		assert.Empty(t, infos)
+		require.NoError(t, f.Close())
+		undertest.Clean()
+	})
+
+	t.Run("list root", func(t *testing.T) {
+		f, err := expected.FS().Create("foo")
+		require.NoError(t, err)
+		require.NoError(t, f.Close())
+		require.NoError(t, expected.FS().Mkdir("bar", 0700))
+
+		f, err = expected.FS().Open(".")
+		require.NoError(t, err)
+		eInfos, err := f.Readdir(0)
+		assert.NoError(t, err)
+		sort.SliceStable(eInfos, func(a, b int) bool {
+			return eInfos[a].Name() < eInfos[b].Name()
+		})
+		require.NoError(t, f.Close())
+		expected.Clean()
+
+		f, err = undertest.FS().Create("foo")
+		require.NoError(t, err)
+		require.NoError(t, f.Close())
+		require.NoError(t, undertest.FS().Mkdir("bar", 0700))
+
+		f, err = undertest.FS().Open(".")
+		require.NoError(t, err)
+		uInfos, err := f.Readdir(0)
+		assert.NoError(t, err)
+		sort.SliceStable(uInfos, func(a, b int) bool {
+			return uInfos[a].Name() < uInfos[b].Name()
+		})
+		require.NoError(t, f.Close())
+		undertest.Clean()
+
+		if assert.Len(t, uInfos, len(eInfos)) {
+			for i := range eInfos {
+				assertEqualFileInfo(t, eInfos[i], uInfos[i])
+			}
+		}
+	})
+
+	t.Run("readdir batches", func(t *testing.T) {
+		f, err := expected.FS().Create("foo")
+		require.NoError(t, err)
+		require.NoError(t, f.Close())
+		require.NoError(t, expected.FS().Mkdir("bar", 0700))
+
+		f, err = expected.FS().Open(".")
+		require.NoError(t, err)
+		eInfos1, err := f.Readdir(1)
+		assert.NoError(t, err)
+		eInfos2, err := f.Readdir(1)
+		assert.NoError(t, err)
+		require.NoError(t, f.Close())
+		expected.Clean()
+
+		f, err = undertest.FS().Create("foo")
+		require.NoError(t, err)
+		require.NoError(t, f.Close())
+		require.NoError(t, undertest.FS().Mkdir("bar", 0700))
+
+		f, err = undertest.FS().Open(".")
+		require.NoError(t, err)
+		uInfos1, err := f.Readdir(1)
+		assert.NoError(t, err)
+		uInfos2, err := f.Readdir(1)
+		assert.NoError(t, err)
+		require.NoError(t, f.Close())
+		undertest.Clean()
+
+		if assert.Len(t, uInfos1, len(eInfos1)) && assert.Len(t, uInfos2, len(eInfos2)) {
+			uInfos := append(uInfos1, uInfos2...)
+			sort.SliceStable(uInfos, func(a, b int) bool {
+				return uInfos[a].Name() < uInfos[b].Name()
+			})
+			eInfos := append(eInfos1, eInfos2...)
+			sort.SliceStable(eInfos, func(a, b int) bool {
+				return eInfos[a].Name() < eInfos[b].Name()
+			})
+			for i := range eInfos {
+				assertEqualFileInfo(t, eInfos[i], uInfos[i])
+			}
+		}
+	})
+
+	t.Run("list empty subdirectory", func(t *testing.T) {
+		require.NoError(t, expected.FS().Mkdir("foo", 0700))
+		f, err := expected.FS().Open("foo")
+		require.NoError(t, err)
+		eInfos, err := f.Readdir(0)
+		assert.NoError(t, err)
+		require.NoError(t, f.Close())
+		assert.Empty(t, eInfos)
+		expected.Clean()
+
+		require.NoError(t, undertest.FS().Mkdir("foo", 0700))
+		f, err = undertest.FS().Open("foo")
+		require.NoError(t, err)
+		uInfos, err := f.Readdir(0)
+		assert.NoError(t, err)
+		require.NoError(t, f.Close())
+		assert.Empty(t, uInfos)
+		undertest.Clean()
+	})
+
+	t.Run("list subdirectory", func(t *testing.T) {
+		require.NoError(t, expected.FS().Mkdir("foo", 0700))
+		f, err := expected.FS().Create("foo/bar")
+		require.NoError(t, err)
+		require.NoError(t, f.Close())
+		f, err = expected.FS().Create("foo/baz")
+		require.NoError(t, err)
+		require.NoError(t, f.Close())
+		require.NoError(t, expected.FS().Mkdir("foo/boo", 0700))
+
+		f, err = expected.FS().Open("foo")
+		require.NoError(t, err)
+		eInfos, err := f.Readdir(0)
+		assert.NoError(t, err)
+		sort.SliceStable(eInfos, func(a, b int) bool {
+			return eInfos[a].Name() < eInfos[b].Name()
+		})
+		require.NoError(t, f.Close())
+		expected.Clean()
+
+		require.NoError(t, undertest.FS().Mkdir("foo", 0700))
+		f, err = undertest.FS().Create("foo/bar")
+		require.NoError(t, err)
+		require.NoError(t, f.Close())
+		f, err = undertest.FS().Create("foo/baz")
+		require.NoError(t, err)
+		require.NoError(t, f.Close())
+		require.NoError(t, undertest.FS().Mkdir("foo/boo", 0700))
+
+		f, err = undertest.FS().Open("foo")
+		require.NoError(t, err)
+		uInfos, err := f.Readdir(0)
+		assert.NoError(t, err)
+		sort.SliceStable(uInfos, func(a, b int) bool {
+			return uInfos[a].Name() < uInfos[b].Name()
+		})
+		require.NoError(t, f.Close())
+		undertest.Clean()
+
+		if assert.Len(t, uInfos, len(eInfos)) {
+			for i := range eInfos {
+				assertEqualFileInfo(t, eInfos[i], uInfos[i])
+			}
+		}
+	})
 }
 
 func TestFileReaddirnames(t *testing.T, undertest, expected FSTester) {
