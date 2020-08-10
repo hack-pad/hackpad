@@ -191,7 +191,105 @@ func TestFileReadAt(t *testing.T, undertest, expected FSTester) {
 }
 
 func TestFileSeek(t *testing.T, undertest, expected FSTester) {
-	t.Skip()
+	const fileContents = "hello world"
+
+	t.Run("seek start", func(t *testing.T) {
+		f, err := expected.FS().Create("foo")
+		require.NoError(t, err)
+		_, err = f.Write([]byte(fileContents))
+		require.NoError(t, err)
+		const offset = 1
+		off, err := f.Seek(offset, io.SeekStart)
+		assert.NoError(t, err)
+		assert.EqualValues(t, offset, off)
+		buf := make([]byte, len(fileContents))
+		n, err := f.Read(buf)
+		require.True(t, err == nil || err == io.EOF)
+		assert.Equal(t, "ello world", string(buf[:n]))
+		require.NoError(t, f.Close())
+		expected.Clean()
+
+		f, err = undertest.FS().Create("foo")
+		require.NoError(t, err)
+		_, err = f.Write([]byte(fileContents))
+		require.NoError(t, err)
+		off, err = f.Seek(offset, io.SeekStart)
+		assert.NoError(t, err)
+		assert.EqualValues(t, offset, off)
+		buf = make([]byte, len(fileContents))
+		n, err = f.Read(buf)
+		require.True(t, err == nil || err == io.EOF)
+		assert.Equal(t, "ello world", string(buf[:n]))
+		require.NoError(t, f.Close())
+		undertest.Clean()
+	})
+
+	t.Run("seek current", func(t *testing.T) {
+		f, err := expected.FS().Create("foo")
+		require.NoError(t, err)
+		_, err = f.Write([]byte(fileContents))
+		require.NoError(t, err)
+		const firstSeekOff = 5
+		const offset = -1
+		_, err = f.Seek(firstSeekOff, io.SeekStart) // get close to middle
+		require.NoError(t, err)
+		off, err := f.Seek(offset, io.SeekCurrent)
+		assert.NoError(t, err)
+		assert.EqualValues(t, firstSeekOff+offset, off)
+		buf := make([]byte, len(fileContents))
+		n, err := f.Read(buf)
+		require.True(t, err == nil || err == io.EOF)
+		assert.Equal(t, "o world", string(buf[:n]))
+		require.NoError(t, f.Close())
+		expected.Clean()
+
+		f, err = undertest.FS().Create("foo")
+		require.NoError(t, err)
+		_, err = f.Write([]byte(fileContents))
+		require.NoError(t, err)
+		_, err = f.Seek(firstSeekOff, io.SeekStart) // get close to middle
+		require.NoError(t, err)
+		off, err = f.Seek(offset, io.SeekCurrent)
+		assert.NoError(t, err)
+		assert.EqualValues(t, firstSeekOff+offset, off)
+		buf = make([]byte, len(fileContents))
+		n, err = f.Read(buf)
+		require.True(t, err == nil || err == io.EOF)
+		assert.Equal(t, "o world", string(buf[:n]))
+		require.NoError(t, f.Close())
+		undertest.Clean()
+	})
+
+	t.Run("seek end", func(t *testing.T) {
+		f, err := expected.FS().Create("foo")
+		require.NoError(t, err)
+		_, err = f.Write([]byte(fileContents))
+		require.NoError(t, err)
+		const offset = -1
+		off, err := f.Seek(offset, io.SeekEnd)
+		assert.NoError(t, err)
+		assert.EqualValues(t, len(fileContents)+offset, off)
+		buf := make([]byte, len(fileContents))
+		n, err := f.Read(buf)
+		require.True(t, err == nil || err == io.EOF)
+		assert.Equal(t, "d", string(buf[:n]))
+		require.NoError(t, f.Close())
+		expected.Clean()
+
+		f, err = undertest.FS().Create("foo")
+		require.NoError(t, err)
+		_, err = f.Write([]byte(fileContents))
+		require.NoError(t, err)
+		off, err = f.Seek(offset, io.SeekEnd)
+		assert.NoError(t, err)
+		assert.EqualValues(t, len(fileContents)+offset, off)
+		buf = make([]byte, len(fileContents))
+		n, err = f.Read(buf)
+		require.True(t, err == nil || err == io.EOF)
+		assert.Equal(t, "d", string(buf[:n]))
+		require.NoError(t, f.Close())
+		undertest.Clean()
+	})
 }
 
 func TestFileWrite(t *testing.T, undertest, expected FSTester) {
