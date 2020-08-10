@@ -8,6 +8,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/spf13/afero"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -700,11 +701,89 @@ func TestFileStat(t *testing.T, undertest, expected FSTester) {
 }
 
 func TestFileSync(t *testing.T, undertest, expected FSTester) {
-	t.Skip()
+	const fileContents = "hello world"
+	f, err := expected.FS().Create("foo")
+	require.NoError(t, err)
+	_, err = f.Write([]byte(fileContents))
+	require.NoError(t, err)
+	assert.NoError(t, f.Sync())
+	require.NoError(t, f.Close())
+	expected.Clean()
+
+	f, err = undertest.FS().Create("foo")
+	require.NoError(t, err)
+	_, err = f.Write([]byte(fileContents))
+	require.NoError(t, err)
+	assert.NoError(t, f.Sync())
+	require.NoError(t, f.Close())
+	undertest.Clean()
 }
 
 func TestFileTruncate(t *testing.T, undertest, expected FSTester) {
-	t.Skip()
+	const fileContents = "hello world"
+	for _, tc := range []struct {
+		description   string
+		size          int64
+		expectErrKind func(error) bool
+	}{
+		{
+			description:   "negative size",
+			size:          -1,
+			expectErrKind: afero.IsInvalid,
+		},
+		{
+			description: "zero size",
+			size:        0,
+		},
+		{
+			description: "small size",
+			size:        1,
+		},
+		{
+			description: "too big",
+			size:        int64(len(fileContents)) * 2,
+		},
+	} {
+		t.Run(tc.description, func(t *testing.T) {
+			f, err := expected.FS().Create("foo")
+			require.NoError(t, err)
+			_, err = f.Write([]byte(fileContents))
+			require.NoError(t, err)
+
+			err = f.Truncate(tc.size)
+			if tc.expectErrKind != nil {
+				assert.Error(t, err)
+				assert.True(t, tc.expectErrKind(err))
+			} else {
+				assert.NoError(t, err)
+			}
+			require.NoError(t, f.Close())
+			expectedStat := statFS(t, expected.FS())
+			expected.Clean()
+
+			f, err = undertest.FS().Create("foo")
+			require.NoError(t, err)
+			_, err = f.Write([]byte(fileContents))
+			require.NoError(t, err)
+
+			err = f.Truncate(tc.size)
+			if tc.expectErrKind != nil {
+				assert.Error(t, err)
+				assert.True(t, tc.expectErrKind(err))
+				require.IsType(t, &os.PathError{}, err)
+				pathErr := err.(*os.PathError)
+				assert.Equal(t, "truncate", pathErr.Op)
+				assert.Equal(t, "foo", strings.TrimPrefix(pathErr.Path, "/"))
+			} else {
+				assert.NoError(t, err)
+			}
+			require.NoError(t, f.Close())
+			undertestStat := statFS(t, undertest.FS())
+			undertest.Clean()
+
+			assertEqualFS(t, expectedStat, undertestStat)
+		})
+	}
 }
 
 func TestFileWriteString(t *testing.T, undertest, expected FSTester) {
