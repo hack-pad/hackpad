@@ -20,7 +20,7 @@ func TestFileClose(t *testing.T, undertest, expected FSTester) {
 	assert.Error(t, f.Close())
 	expected.Clean()
 
-	f, err = undertest.FS().Create("foo")
+	f, err = undertest.WriteFS().Create("foo")
 	require.NoError(t, err)
 	assert.NoError(t, f.Close())
 	assert.Error(t, f.Close())
@@ -39,7 +39,7 @@ func TestFileRead(t *testing.T, undertest, expected FSTester) {
 		require.NoError(t, f.Close())
 		expected.Clean()
 
-		f, err = undertest.FS().Create("foo")
+		f, err = undertest.WriteFS().Create("foo")
 		require.NoError(t, err)
 		buf = make([]byte, 10)
 		n, err = f.Read(buf)
@@ -81,7 +81,7 @@ func TestFileRead(t *testing.T, undertest, expected FSTester) {
 		require.NoError(t, f.Close())
 		expected.Clean()
 
-		f, err = undertest.FS().Create("foo")
+		f, err = undertest.WriteFS().Create("foo")
 		require.NoError(t, err)
 		_, err = f.Write([]byte(fileContents))
 		require.NoError(t, err)
@@ -116,7 +116,7 @@ func TestFileRead(t *testing.T, undertest, expected FSTester) {
 func TestFileReadAt(t *testing.T, undertest, expected FSTester) {
 	for _, fsTest := range []FSTester{expected, undertest} {
 		const fileContents = "hello world"
-		f, err := fsTest.FS().Create("foo")
+		f, err := fsTest.WriteFS().Create("foo")
 		require.NoError(t, err)
 		_, err = f.Write([]byte(fileContents))
 		require.NoError(t, err)
@@ -211,7 +211,7 @@ func TestFileSeek(t *testing.T, undertest, expected FSTester) {
 		require.NoError(t, f.Close())
 		expected.Clean()
 
-		f, err = undertest.FS().Create("foo")
+		f, err = undertest.WriteFS().Create("foo")
 		require.NoError(t, err)
 		_, err = f.Write([]byte(fileContents))
 		require.NoError(t, err)
@@ -245,7 +245,7 @@ func TestFileSeek(t *testing.T, undertest, expected FSTester) {
 		require.NoError(t, f.Close())
 		expected.Clean()
 
-		f, err = undertest.FS().Create("foo")
+		f, err = undertest.WriteFS().Create("foo")
 		require.NoError(t, err)
 		_, err = f.Write([]byte(fileContents))
 		require.NoError(t, err)
@@ -263,7 +263,7 @@ func TestFileSeek(t *testing.T, undertest, expected FSTester) {
 	})
 
 	t.Run("seek end", func(t *testing.T) {
-		f, err := expected.FS().Create("foo")
+		f, err := expected.WriteFS().Create("foo")
 		require.NoError(t, err)
 		_, err = f.Write([]byte(fileContents))
 		require.NoError(t, err)
@@ -278,7 +278,7 @@ func TestFileSeek(t *testing.T, undertest, expected FSTester) {
 		require.NoError(t, f.Close())
 		expected.Clean()
 
-		f, err = undertest.FS().Create("foo")
+		f, err = undertest.WriteFS().Create("foo")
 		require.NoError(t, err)
 		_, err = f.Write([]byte(fileContents))
 		require.NoError(t, err)
@@ -502,10 +502,10 @@ func TestFileReaddir(t *testing.T, undertest, expected FSTester) {
 		require.NoError(t, f.Close())
 		expected.Clean()
 
-		f, err = undertest.FS().Create("foo")
+		f, err = undertest.WriteFS().Create("foo")
 		require.NoError(t, err)
 		require.NoError(t, f.Close())
-		require.NoError(t, undertest.FS().Mkdir("bar", 0700))
+		require.NoError(t, undertest.WriteFS().Mkdir("bar", 0700))
 
 		f, err = undertest.FS().Open(".")
 		require.NoError(t, err)
@@ -525,10 +525,10 @@ func TestFileReaddir(t *testing.T, undertest, expected FSTester) {
 	})
 
 	t.Run("readdir batches", func(t *testing.T) {
-		f, err := expected.FS().Create("foo")
+		f, err := expected.WriteFS().Create("foo")
 		require.NoError(t, err)
 		require.NoError(t, f.Close())
-		require.NoError(t, expected.FS().Mkdir("bar", 0700))
+		require.NoError(t, expected.WriteFS().Mkdir("bar", 0700))
 
 		f, err = expected.FS().Open(".")
 		require.NoError(t, err)
@@ -539,10 +539,10 @@ func TestFileReaddir(t *testing.T, undertest, expected FSTester) {
 		require.NoError(t, f.Close())
 		expected.Clean()
 
-		f, err = undertest.FS().Create("foo")
+		f, err = undertest.WriteFS().Create("foo")
 		require.NoError(t, err)
 		require.NoError(t, f.Close())
-		require.NoError(t, undertest.FS().Mkdir("bar", 0700))
+		require.NoError(t, undertest.WriteFS().Mkdir("bar", 0700))
 
 		f, err = undertest.FS().Open(".")
 		require.NoError(t, err)
@@ -569,7 +569,7 @@ func TestFileReaddir(t *testing.T, undertest, expected FSTester) {
 	})
 
 	t.Run("list empty subdirectory", func(t *testing.T) {
-		require.NoError(t, expected.FS().Mkdir("foo", 0700))
+		require.NoError(t, expected.WriteFS().Mkdir("foo", 0700))
 		f, err := expected.FS().Open("foo")
 		require.NoError(t, err)
 		eInfos, err := f.Readdir(0)
@@ -578,7 +578,7 @@ func TestFileReaddir(t *testing.T, undertest, expected FSTester) {
 		assert.Empty(t, eInfos)
 		expected.Clean()
 
-		require.NoError(t, undertest.FS().Mkdir("foo", 0700))
+		require.NoError(t, undertest.WriteFS().Mkdir("foo", 0700))
 		f, err = undertest.FS().Open("foo")
 		require.NoError(t, err)
 		uInfos, err := f.Readdir(0)
@@ -608,14 +608,14 @@ func TestFileReaddir(t *testing.T, undertest, expected FSTester) {
 		require.NoError(t, f.Close())
 		expected.Clean()
 
-		require.NoError(t, undertest.FS().Mkdir("foo", 0700))
-		f, err = undertest.FS().Create("foo/bar")
+		require.NoError(t, undertest.WriteFS().Mkdir("foo", 0700))
+		f, err = undertest.WriteFS().Create("foo/bar")
 		require.NoError(t, err)
 		require.NoError(t, f.Close())
-		f, err = undertest.FS().Create("foo/baz")
+		f, err = undertest.WriteFS().Create("foo/baz")
 		require.NoError(t, err)
 		require.NoError(t, f.Close())
-		require.NoError(t, undertest.FS().Mkdir("foo/boo", 0700))
+		require.NoError(t, undertest.WriteFS().Mkdir("foo/boo", 0700))
 
 		f, err = undertest.FS().Open("foo")
 		require.NoError(t, err)
@@ -636,12 +636,12 @@ func TestFileReaddir(t *testing.T, undertest, expected FSTester) {
 }
 
 func TestFileReaddirnames(t *testing.T, undertest, expected FSTester) {
-	require.NoError(t, expected.FS().Mkdir("foo", 0755))
-	require.NoError(t, expected.FS().Mkdir("foo/bar", 0755))
-	f, err := expected.FS().Create("foo/fizz")
+	require.NoError(t, expected.WriteFS().Mkdir("foo", 0755))
+	require.NoError(t, expected.WriteFS().Mkdir("foo/bar", 0755))
+	f, err := expected.WriteFS().Create("foo/fizz")
 	require.NoError(t, err)
 	require.NoError(t, f.Close())
-	f, err = expected.FS().Create("foo/bar/baz")
+	f, err = expected.WriteFS().Create("foo/bar/baz")
 	require.NoError(t, err)
 	require.NoError(t, f.Close())
 
@@ -661,12 +661,12 @@ func TestFileReaddirnames(t *testing.T, undertest, expected FSTester) {
 	require.NoError(t, f.Close())
 	expected.Clean()
 
-	require.NoError(t, undertest.FS().Mkdir("foo", 0755))
-	require.NoError(t, undertest.FS().Mkdir("foo/bar", 0755))
-	f, err = undertest.FS().Create("foo/fizz")
+	require.NoError(t, undertest.WriteFS().Mkdir("foo", 0755))
+	require.NoError(t, undertest.WriteFS().Mkdir("foo/bar", 0755))
+	f, err = undertest.WriteFS().Create("foo/fizz")
 	require.NoError(t, err)
 	require.NoError(t, f.Close())
-	f, err = undertest.FS().Create("foo/bar/baz")
+	f, err = undertest.WriteFS().Create("foo/bar/baz")
 	require.NoError(t, err)
 	require.NoError(t, f.Close())
 
@@ -708,7 +708,7 @@ func TestFileStat(t *testing.T, undertest, expected FSTester) {
 
 func TestFileSync(t *testing.T, undertest, expected FSTester) {
 	const fileContents = "hello world"
-	f, err := expected.FS().Create("foo")
+	f, err := expected.WriteFS().Create("foo")
 	require.NoError(t, err)
 	_, err = f.Write([]byte(fileContents))
 	require.NoError(t, err)
@@ -716,7 +716,7 @@ func TestFileSync(t *testing.T, undertest, expected FSTester) {
 	require.NoError(t, f.Close())
 	expected.Clean()
 
-	f, err = undertest.FS().Create("foo")
+	f, err = undertest.WriteFS().Create("foo")
 	require.NoError(t, err)
 	_, err = f.Write([]byte(fileContents))
 	require.NoError(t, err)

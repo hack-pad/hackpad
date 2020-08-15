@@ -12,7 +12,11 @@ func TestBaseline(t *testing.T) {
 
 func TestMemMapFs(t *testing.T) {
 	fs := afero.NewMemMapFs()
-	Run(t, fs, func() error {
+	Run(t, fs, cleanUpMemFs(fs))
+}
+
+func cleanUpMemFs(fs afero.Fs) func() error {
+	return func() error {
 		root, err := fs.Open("/")
 		if err != nil {
 			return err
@@ -28,5 +32,5 @@ func TestMemMapFs(t *testing.T) {
 			}
 		}
 		return nil
-	})
+	}
 }

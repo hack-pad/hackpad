@@ -370,7 +370,7 @@ func testFsOpen(t *testing.T, undertest, expected FSTester, openFn func(afero.Fs
 	})
 
 	t.Run("open file", func(t *testing.T) {
-		f, err := expected.FS().Create("foo")
+		f, err := expected.WriteFS().Create("foo")
 		require.NoError(t, err)
 		require.NoError(t, f.Close())
 
@@ -380,7 +380,7 @@ func testFsOpen(t *testing.T, undertest, expected FSTester, openFn func(afero.Fs
 		require.NoError(t, f.Close())
 		expected.Clean()
 
-		f, err = undertest.FS().Create("foo")
+		f, err = undertest.WriteFS().Create("foo")
 		require.NoError(t, err)
 		require.NoError(t, f.Close())
 
@@ -393,7 +393,7 @@ func testFsOpen(t *testing.T, undertest, expected FSTester, openFn func(afero.Fs
 
 	t.Run("supports reads", func(t *testing.T) {
 		const fileContents = `hello world`
-		f, err := expected.FS().Create("foo")
+		f, err := expected.WriteFS().Create("foo")
 		require.NoError(t, err)
 		n, err := f.Write([]byte(fileContents))
 		require.NoError(t, err)
@@ -408,7 +408,7 @@ func testFsOpen(t *testing.T, undertest, expected FSTester, openFn func(afero.Fs
 		assert.Equal(t, fileContents, string(buf))
 		expected.Clean()
 
-		f, err = undertest.FS().Create("foo")
+		f, err = undertest.WriteFS().Create("foo")
 		require.NoError(t, err)
 		n, err = f.Write([]byte(fileContents))
 		require.NoError(t, err)
@@ -425,7 +425,7 @@ func testFsOpen(t *testing.T, undertest, expected FSTester, openFn func(afero.Fs
 	})
 
 	t.Run("fails writes", func(t *testing.T) {
-		f, err := expected.FS().Create("foo")
+		f, err := expected.WriteFS().Create("foo")
 		require.NoError(t, err)
 		require.NoError(t, f.Close())
 
@@ -435,7 +435,7 @@ func testFsOpen(t *testing.T, undertest, expected FSTester, openFn func(afero.Fs
 		assert.Error(t, err)
 		expected.Clean()
 
-		f, err = undertest.FS().Create("foo")
+		f, err = undertest.WriteFS().Create("foo")
 		require.NoError(t, err)
 		require.NoError(t, f.Close())
 
@@ -911,7 +911,7 @@ func TestFsStat(t *testing.T, undertest, expected FSTester) {
 
 func testStat(t *testing.T, undertest, expected FSTester, stater func(testing.TB, FSTester, string) (os.FileInfo, error)) {
 	t.Run("stat a file", func(t *testing.T) {
-		f, err := expected.FS().Create("foo")
+		f, err := expected.WriteFS().Create("foo")
 		require.NoError(t, err)
 		require.NoError(t, f.Close())
 		require.NoError(t, expected.FS().Chmod("foo", 0755))
@@ -919,10 +919,10 @@ func testStat(t *testing.T, undertest, expected FSTester, stater func(testing.TB
 		assert.NoError(t, err)
 		expected.Clean()
 
-		f, err = undertest.FS().Create("foo")
+		f, err = undertest.WriteFS().Create("foo")
 		require.NoError(t, err)
 		require.NoError(t, f.Close())
-		require.NoError(t, undertest.FS().Chmod("foo", 0755))
+		require.NoError(t, undertest.WriteFS().Chmod("foo", 0755))
 		uInfo, err := stater(t, undertest, "foo")
 		assert.NoError(t, err)
 		undertest.Clean()
@@ -931,13 +931,13 @@ func testStat(t *testing.T, undertest, expected FSTester, stater func(testing.TB
 	})
 
 	t.Run("stat a directory", func(t *testing.T) {
-		err := expected.FS().Mkdir("foo", 0755)
+		err := expected.WriteFS().Mkdir("foo", 0755)
 		require.NoError(t, err)
 		eInfo, err := stater(t, expected, "foo")
 		assert.NoError(t, err)
 		expected.Clean()
 
-		err = undertest.FS().Mkdir("foo", 0755)
+		err = undertest.WriteFS().Mkdir("foo", 0755)
 		require.NoError(t, err)
 		uInfo, err := stater(t, undertest, "foo")
 		assert.NoError(t, err)
@@ -947,11 +947,11 @@ func testStat(t *testing.T, undertest, expected FSTester, stater func(testing.TB
 	})
 
 	t.Run("stat nested files", func(t *testing.T) {
-		err := expected.FS().Mkdir("foo", 0755)
+		err := expected.WriteFS().Mkdir("foo", 0755)
 		require.NoError(t, err)
-		err = expected.FS().Mkdir("foo/bar", 0755)
+		err = expected.WriteFS().Mkdir("foo/bar", 0755)
 		require.NoError(t, err)
-		f, err := expected.FS().Create("foo/bar/baz")
+		f, err := expected.WriteFS().Create("foo/bar/baz")
 		require.NoError(t, err)
 		require.NoError(t, f.Close())
 		eInfo1, err := stater(t, expected, "foo/bar")
@@ -960,11 +960,11 @@ func testStat(t *testing.T, undertest, expected FSTester, stater func(testing.TB
 		assert.NoError(t, err)
 		expected.Clean()
 
-		err = undertest.FS().Mkdir("foo", 0755)
+		err = undertest.WriteFS().Mkdir("foo", 0755)
 		require.NoError(t, err)
-		err = undertest.FS().Mkdir("foo/bar", 0755)
+		err = undertest.WriteFS().Mkdir("foo/bar", 0755)
 		require.NoError(t, err)
-		f, err = undertest.FS().Create("foo/bar/baz")
+		f, err = undertest.WriteFS().Create("foo/bar/baz")
 		require.NoError(t, err)
 		require.NoError(t, f.Close())
 		uInfo1, err := stater(t, undertest, "foo/bar")
