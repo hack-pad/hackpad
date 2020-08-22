@@ -13,8 +13,8 @@ func RunReadOnly(t *testing.T, fs, writeFs afero.Fs, cleanUp CleanFunc, commitWr
 
 	prepOsFsSuite(t) // It's the caller's responsibility to handle setup for fs.
 
-	undertest := NewTester(t, fs, cleanUp).(fsTester).withName("undertest").WithFSWriter(writeFs, commitWrites)
-	expected := NewTester(t, afero.NewOsFs(), cleanUpOsFs).(fsTester).withName("expected")
+	undertest := NewTester(t, fs, cleanUp).(*fsTester).withName("undertest").WithFSWriter(writeFs, commitWrites)
+	expected := NewTester(t, afero.NewOsFs(), cleanUpOsFs).(*fsTester).withName("expected")
 	fsTest := fsTest{
 		T:         t,
 		undertest: undertest,

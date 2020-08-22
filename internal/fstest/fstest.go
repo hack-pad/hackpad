@@ -57,10 +57,10 @@ func runWith(
 ) {
 	t.Helper()
 
-	if tester, ok := undertest.(fsTester); ok {
+	if tester, ok := undertest.(*fsTester); ok {
 		undertest = tester.withName("undertest")
 	}
-	if tester, ok := expected.(fsTester); ok {
+	if tester, ok := expected.(*fsTester); ok {
 		expected = tester.withName("expected")
 	}
 
