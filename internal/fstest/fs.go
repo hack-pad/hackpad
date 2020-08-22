@@ -386,7 +386,7 @@ func testFsOpen(t *testing.T, undertest, expected FSTester, openFn func(afero.Fs
 
 		f, err = openFn(undertest.FS(), "foo")
 		assert.NoError(t, err)
-		assert.NotNil(t, f)
+		require.NotNil(t, f)
 		require.NoError(t, f.Close())
 		undertest.Clean()
 	})
@@ -415,7 +415,7 @@ func testFsOpen(t *testing.T, undertest, expected FSTester, openFn func(afero.Fs
 		require.NoError(t, f.Close())
 
 		f, err = openFn(undertest.FS(), "foo")
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		buf = make([]byte, n)
 		n2, err = io.ReadFull(f, buf)
 		assert.NoError(t, err)
@@ -924,7 +924,7 @@ func testStat(t *testing.T, undertest, expected FSTester, stater func(testing.TB
 		require.NoError(t, f.Close())
 		require.NoError(t, undertest.WriteFS().Chmod("foo", 0755))
 		uInfo, err := stater(t, undertest, "foo")
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		undertest.Clean()
 
 		assertEqualFileInfo(t, eInfo, uInfo)
