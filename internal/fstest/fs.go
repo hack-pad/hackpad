@@ -803,7 +803,6 @@ func TestFsRename(t *testing.T, undertest, expected FSTester) {
 	})
 
 	t.Run("same directory", func(t *testing.T) {
-		const fileContents = `hello world`
 		require.NoError(t, expected.FS().Mkdir("foo", 0700))
 		assert.Error(t, expected.FS().Rename("foo", "foo"))
 		expectedStat := statFS(t, expected.FS())
@@ -826,7 +825,6 @@ func TestFsRename(t *testing.T, undertest, expected FSTester) {
 	})
 
 	t.Run("newpath is directory", func(t *testing.T) {
-		const fileContents = `hello world`
 		require.NoError(t, expected.FS().Mkdir("foo", 0700))
 		require.NoError(t, expected.FS().Mkdir("bar", 0700))
 		assert.Error(t, expected.FS().Rename("foo", "bar"))

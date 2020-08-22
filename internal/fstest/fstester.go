@@ -16,7 +16,7 @@ type CleanFunc func() error
 type CommitWritesFunc func() error
 
 type fsTester struct {
-	tb             testing.TB // only used for t.Helper()
+	tb             testing.TB
 	name           string
 	fs             afero.Fs
 	cleanUp        CleanFunc
@@ -46,10 +46,14 @@ func (f fsTester) WithFSWriter(fs afero.Fs, commitWrites CommitWritesFunc) fsTes
 }
 
 func (f fsTester) FS() afero.Fs {
+	f.tb.Helper()
 	if f.commitWrites != nil && f.fetchedWriteFs {
 		// if something was possibly written earlier, then commit those writes
 		f.fetchedWriteFs = false
-		f.commitWrites()
+		err := f.commitWrites()
+		if err != nil {
+			f.tb.Fatal("Failed to commit writes:", err)
+		}
 	}
 	return f.fs
 }
