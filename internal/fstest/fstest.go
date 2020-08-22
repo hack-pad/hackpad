@@ -13,16 +13,27 @@ import (
 func Run(t *testing.T, fs afero.Fs, cleanUp CleanFunc) {
 	t.Helper()
 
-	// Since expected is an OsFs, chdir to a temp dir sandbox and disable umask.
-	// It's the caller's responsibility to handle setup for undertest.
+	prepOsFsSuite(t) // It's the caller's responsibility to handle setup for fs.
+
+	undertest := NewTester(t, fs, cleanUp)
+	expected := NewTester(t, afero.NewOsFs(), cleanUpOsFs)
+	runWith(t, undertest, expected)
+}
+
+func prepOsFsSuite(t *testing.T) {
+	// To prepare an OsFs, chdir to a temp dir sandbox and disable umask.
 	oldmask := setUmask(0)
-	defer setUmask(oldmask)
+	t.Cleanup(func() {
+		setUmask(oldmask)
+	})
 
 	dir, err := ioutil.TempDir("", "")
 	if err != nil {
 		t.Fatal("Failed to setup temporary directory for an OsFs:", err)
 	}
-	defer os.RemoveAll(dir)
+	t.Cleanup(func() {
+		os.RemoveAll(dir)
+	})
 	if err := os.Chmod(dir, 0755); err != nil {
 		t.Fatal("Failed to chmod temporary directory:", err)
 	}
@@ -33,24 +44,30 @@ func Run(t *testing.T, fs afero.Fs, cleanUp CleanFunc) {
 	if err := os.Chdir(dir); err != nil {
 		t.Fatal("Failed to chdir to temporary directory for an OsFs:", err)
 	}
-	defer func() { _ = os.Chdir(wd) }()
-
-	RunWith(t, fs, afero.NewOsFs(), cleanUp, cleanUpOsFs)
+	t.Cleanup(func() {
+		_ = os.Chdir(wd)
+	})
 }
 
-// RunWith runs filesystem tests on 'undertest' and compares with the expected results of 'expected'.
+// runWith runs filesystem tests on 'undertest' and compares with the expected results of 'expected'.
 // The cleanFunc's are run after every subtest and once before the first test.
-func RunWith(
+func runWith(
 	t *testing.T,
-	undertest, expected afero.Fs,
-	cleanTest, cleanExpected CleanFunc,
+	undertest, expected FSTester,
 ) {
 	t.Helper()
 
+	if tester, ok := undertest.(fsTester); ok {
+		undertest = tester.withName("undertest")
+	}
+	if tester, ok := expected.(fsTester); ok {
+		expected = tester.withName("expected")
+	}
+
 	fsTest := fsTest{
 		T:         t,
-		undertest: newTester(t, "undertest", undertest, cleanTest),
-		expected:  newTester(t, "expected", expected, cleanExpected),
+		undertest: undertest,
+		expected:  expected,
 	}
 	fsTest.Clean()
 

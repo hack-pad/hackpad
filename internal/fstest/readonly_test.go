@@ -8,5 +8,6 @@ import (
 
 func TestReadOnly(t *testing.T) {
 	fs := afero.NewMemMapFs()
-	RunReadOnly(t, afero.NewReadOnlyFs(fs), fs, cleanUpMemFs(fs))
+	commitWrites := func() error { return nil }
+	RunReadOnly(t, afero.NewReadOnlyFs(fs), fs, cleanUpMemFs(fs), commitWrites)
 }

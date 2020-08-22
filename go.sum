@@ -3,6 +3,10 @@ github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/johnstarich/afero v1.3.2-0.20200810043327-7aab8648c43e h1:RFSxNtt9xOqYXQUEzS+E46/wT20svEhu376D57IC3yQ=
 github.com/johnstarich/afero v1.3.2-0.20200810043327-7aab8648c43e/go.mod h1:5KUK8ByomD5Ti5Artl0RtHeI5pTF7MIDuXL3yY520V4=
+github.com/johnstarich/afero v1.3.2-0.20200815201738-4eb135cb5cf5 h1:kcjbOiUKMTljTqGFbta87yJH2Z/9am37K3yibKnGMJo=
+github.com/johnstarich/afero v1.3.2-0.20200815201738-4eb135cb5cf5/go.mod h1:5KUK8ByomD5Ti5Artl0RtHeI5pTF7MIDuXL3yY520V4=
+github.com/johnstarich/afero v1.3.2-0.20200815205650-687582057da1 h1:2Lx350zkFIrwn5bMegIUU93A74Fak8Xtqxr5snOyKi8=
+github.com/johnstarich/afero v1.3.2-0.20200815205650-687582057da1/go.mod h1:5KUK8ByomD5Ti5Artl0RtHeI5pTF7MIDuXL3yY520V4=
 github.com/kr/fs v0.1.0/go.mod h1:FFnZGqtBN9Gxj7eW1uZ42v5BccTP0vu6NEaFoC2HwRg=
 github.com/pkg/errors v0.8.1/go.mod h1:bwawxfHBFNV+L2hUp1rHADufV3IMtnDRdf1r5NINEl0=
 github.com/pkg/errors v0.9.1 h1:FEBLx1zS214owpjy7qsBeixbURkuhQAwrK5UwLGTwt4=

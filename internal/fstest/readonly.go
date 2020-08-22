@@ -1,8 +1,6 @@
 package fstest
 
 import (
-	"io/ioutil"
-	"os"
 	"testing"
 
 	"github.com/spf13/afero"
@@ -10,39 +8,17 @@ import (
 
 // RunReadOnly runs read-only filesystem tests on 'fs' and compares with the expected results of an afero.OsFs.
 // The cleanUp is run after every subtest and once before the first test.
-func RunReadOnly(t *testing.T, fs, writeFs afero.Fs, cleanUp CleanFunc) {
+func RunReadOnly(t *testing.T, fs, writeFs afero.Fs, cleanUp CleanFunc, commitWrites CommitWritesFunc) {
 	t.Helper()
 
-	// Since expected is an OsFs, chdir to a temp dir sandbox and disable umask.
-	// It's the caller's responsibility to handle setup for undertest.
-	oldmask := setUmask(0)
-	defer setUmask(oldmask)
+	prepOsFsSuite(t) // It's the caller's responsibility to handle setup for fs.
 
-	dir, err := ioutil.TempDir("", "")
-	if err != nil {
-		t.Fatal("Failed to setup temporary directory for an OsFs:", err)
-	}
-	defer os.RemoveAll(dir)
-	if err := os.Chmod(dir, 0755); err != nil {
-		t.Fatal("Failed to chmod temporary directory:", err)
-	}
-	wd, err := os.Getwd()
-	if err != nil {
-		t.Fatal("Failed to get current working directory:", err)
-	}
-	if err := os.Chdir(dir); err != nil {
-		t.Fatal("Failed to chdir to temporary directory for an OsFs:", err)
-	}
-	defer func() { _ = os.Chdir(wd) }()
-
-	t.Helper()
-
-	undertest := newTester(t, "undertest", fs, cleanUp)
-	undertest.(*fsTester).setFsWriter(writeFs)
+	undertest := NewTester(t, fs, cleanUp).(fsTester).withName("undertest").WithFSWriter(writeFs, commitWrites)
+	expected := NewTester(t, afero.NewOsFs(), cleanUpOsFs).(fsTester).withName("expected")
 	fsTest := fsTest{
 		T:         t,
 		undertest: undertest,
-		expected:  newTester(t, "expected", afero.NewOsFs(), cleanUpOsFs),
+		expected:  expected,
 	}
 	fsTest.Clean()
 

@@ -13,29 +13,44 @@ type FSTester interface {
 }
 
 type CleanFunc func() error
+type CommitWritesFunc func() error
 
 type fsTester struct {
-	tb      testing.TB // only used for t.Helper()
-	name    string
-	fs      afero.Fs
-	writeFs afero.Fs
-	cleanUp CleanFunc
+	tb             testing.TB // only used for t.Helper()
+	name           string
+	fs             afero.Fs
+	cleanUp        CleanFunc
+	writeFs        afero.Fs
+	fetchedWriteFs bool
+	commitWrites   CommitWritesFunc
 }
 
-func newTester(tb testing.TB, name string, fs afero.Fs, cleanUp CleanFunc) FSTester {
-	return &fsTester{
+func NewTester(tb testing.TB, fs afero.Fs, cleanUp CleanFunc) FSTester {
+	return fsTester{
 		tb:      tb,
-		name:    name,
+		name:    fs.Name(),
 		fs:      fs,
 		cleanUp: cleanUp,
 	}
 }
 
-func (f *fsTester) setFsWriter(fs afero.Fs) {
+func (f fsTester) withName(name string) fsTester {
+	f.name = name
+	return f
+}
+
+func (f fsTester) WithFSWriter(fs afero.Fs, commitWrites CommitWritesFunc) fsTester {
 	f.writeFs = fs
+	f.commitWrites = commitWrites
+	return f
 }
 
 func (f fsTester) FS() afero.Fs {
+	if f.commitWrites != nil && f.fetchedWriteFs {
+		// if something was possibly written earlier, then commit those writes
+		f.fetchedWriteFs = false
+		f.commitWrites()
+	}
 	return f.fs
 }
 
@@ -49,6 +64,7 @@ func (f fsTester) Clean() {
 
 func (f fsTester) WriteFS() afero.Fs {
 	if f.writeFs != nil {
+		f.fetchedWriteFs = true // mark a possible write for later commit
 		return f.writeFs
 	}
 	return f.fs
