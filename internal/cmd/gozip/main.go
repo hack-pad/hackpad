@@ -30,12 +30,18 @@ func archiveGo(goRoot string, w io.Writer) error {
 	}
 	archive := tar.NewWriter(compressor)
 
+	goRoot, err = filepath.Abs(goRoot)
+	if err != nil {
+		return err
+	}
+	goRootPrefix := filepath.Dir(goRoot)
+
 	stats, err := walkGo(goRoot, func(path string, info os.FileInfo) error {
 		header, err := tar.FileInfoHeader(info, "")
 		if err != nil {
 			return err
 		}
-		header.Name = path
+		header.Name = strings.TrimPrefix(path, goRootPrefix)
 		err = archive.WriteHeader(header)
 		if err != nil {
 			return err
