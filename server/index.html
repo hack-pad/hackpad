@@ -32,7 +32,7 @@
 				console.debug(`go-wasm status: ${goWasm.ready ? 'ready' : 'not ready'}`)
 				fs.mkdirSync("/go", 0700)
 				await Promise.all([
-					goWasm.overlayZip('/go', '/go.zip'),
+					goWasm.overlayTarGzip('/go', '/go.tar.gz'),
 					goWasm.install('editor'),
 				])
 				spawn("editor")

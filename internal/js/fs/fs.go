@@ -74,6 +74,7 @@ func Init() {
 	interop.SetFunc(fs, "writeSync", writeSync)
 
 	global.Set("overlayZip", js.FuncOf(overlayZip))
+	global.Set("overlayTarGzip", js.FuncOf(overlayTarGzip))
 	global.Set("overlayStorage", js.FuncOf(overlayStorage))
 	global.Set("overlayIndexedDB", js.FuncOf(overlayIndexedDB))
 	global.Set("dumpZip", js.FuncOf(dumpZip))

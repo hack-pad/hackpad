@@ -104,3 +104,39 @@ func OverlayIndexedDB(args []js.Value) error {
 	}
 	return fs.OverlayStorage(mountPath, idb)
 }
+
+func overlayTarGzip(this js.Value, args []js.Value) interface{} {
+	resolve, reject, prom := promise.New()
+	log.Debug("Backgrounding overlay request")
+	go func() {
+		err := OverlayTarGzip(args)
+		if err != nil {
+			reject(interop.WrapAsJSError(err, "Failed overlaying .tar.gz FS"))
+		} else {
+			log.Debug("Successfully overlayed .tar.gz FS")
+			resolve(nil)
+		}
+	}()
+	return prom
+}
+
+func OverlayTarGzip(args []js.Value) error {
+	if len(args) != 2 {
+		return errors.New("overlayTarGzip: mount path and .tar.gz URL path is required")
+	}
+
+	mountPath := args[0].String()
+	downloadPath := args[1].String()
+	log.Debug("Downloading overlay .tar.gz FS: ", downloadPath)
+	u, err := url.Parse(downloadPath)
+	if err != nil {
+		return err
+	}
+	resp, err := http.Get(u.Path) // only download from current server, not just any URL
+	if err != nil {
+		return err
+	}
+	log.Debug("Download response received. Reading body...")
+
+	return fs.OverlayTarGzip(mountPath, resp.Body)
+}

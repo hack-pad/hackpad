@@ -41,6 +41,12 @@ func New(r io.Reader) (*Fs, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "tarfs: Failed to read from r")
 	}
+	if closer, ok := r.(io.Closer); ok {
+		err := closer.Close()
+		if err != nil {
+			return nil, err
+		}
+	}
 
 	fs := &Fs{
 		compressedData:  data,

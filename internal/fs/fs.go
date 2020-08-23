@@ -12,6 +12,7 @@ import (
 	"github.com/johnstarich/go-wasm/internal/interop"
 	"github.com/johnstarich/go-wasm/internal/mountfs"
 	"github.com/johnstarich/go-wasm/internal/storer"
+	"github.com/johnstarich/go-wasm/internal/tarfs"
 	"github.com/spf13/afero"
 	"github.com/spf13/afero/zipfs"
 )
@@ -26,6 +27,14 @@ func OverlayStorage(mountPath string, s storer.Storer) error {
 
 func OverlayZip(mountPath string, z *zip.Reader) error {
 	return filesystem.Mount(mountPath, zipfs.New(z))
+}
+
+func OverlayTarGzip(mountPath string, r io.Reader) error {
+	fs, err := tarfs.New(r)
+	if err != nil {
+		return err
+	}
+	return filesystem.Mount(mountPath, fs)
 }
 
 // Dump prints out file system statistics
