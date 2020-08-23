@@ -7,12 +7,13 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
-	"path/filepath"
+	goPath "path"
 	"strings"
 	"syscall"
 	"time"
 
 	"github.com/johnstarich/go-wasm/internal/fsutil"
+	"github.com/pkg/errors"
 	"github.com/spf13/afero"
 )
 
@@ -29,16 +30,16 @@ type Fs struct {
 }
 
 type compressedFile struct {
-	start  int64
 	header *tar.Header
 }
 
 var _ afero.Fs = &Fs{}
 
 func New(r io.Reader) (*Fs, error) {
+	// TODO Make readall & init async? If we did, then every FS call would need to check it.
 	data, err := ioutil.ReadAll(r)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "tarfs: Failed to read from r")
 	}
 
 	fs := &Fs{
@@ -46,14 +47,14 @@ func New(r io.Reader) (*Fs, error) {
 		compressedFiles: make(map[string]compressedFile),
 		directories:     make(map[string]map[string]bool),
 	}
-	return fs, fs.init()
+	return fs, errors.Wrap(fs.init(), "tarfs: Failed to initialize")
 }
 
 func (fs *Fs) init() error {
 	r := bytes.NewReader(fs.compressedData)
 	compressor, err := gzip.NewReader(r)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "gzip reader")
 	}
 	defer compressor.Close()
 
@@ -64,15 +65,11 @@ func (fs *Fs) init() error {
 			break
 		}
 		if err != nil {
-			return err
+			return errors.Wrap(err, "next tar file")
 		}
-		path := header.Name
-		pos := r.Size() - int64(r.Len())
-		fs.compressedFiles[path] = compressedFile{
-			start:  pos,
-			header: header,
-		}
-		for _, segment := range dirsFromPath(path) {
+		path := fsutil.NormalizePath(header.Name)
+		fs.compressedFiles[path] = compressedFile{header: header}
+		for _, segment := range dirsFromPath(header.Name) {
 			if fs.directories[segment] == nil {
 				fs.directories[segment] = make(map[string]bool, 1)
 			}
@@ -81,12 +78,16 @@ func (fs *Fs) init() error {
 
 	// register dirs and files with parent directories
 	for dir := range fs.directories {
-		base := filepath.Base(dir)
-		fs.directories[base][dir] = true
+		parent := goPath.Dir(dir)
+		if dir != pathSeparator {
+			fs.directories[parent][dir] = true
+		}
 	}
 	for path := range fs.compressedFiles {
-		base := filepath.Base(path)
-		fs.directories[base][path] = true
+		parent := goPath.Dir(path)
+		if path != pathSeparator {
+			fs.directories[parent][path] = true
+		}
 	}
 	return nil
 }
@@ -99,10 +100,15 @@ func dirsFromPath(path string) []string {
 		path = fsutil.NormalizePath(path)
 		dirs = append(dirs, path)
 	}
+	if path == pathSeparator {
+		return dirs
+	}
 	path = fsutil.NormalizePath(path) // make absolute + clean
-	path, _ = filepath.Split(path)    // pop normal files from the end
-	for ; path != pathSeparator; path, _ = filepath.Split(path) {
+	path = goPath.Dir(path)           // pop normal files from the end
+	var prevPath string
+	for ; path != prevPath; path = goPath.Dir(path) {
 		dirs = append(dirs, path)
+		prevPath = path
 	}
 	return dirs
 }
@@ -149,7 +155,7 @@ func (fs *Fs) Stat(path string) (os.FileInfo, error) {
 		return nil, &os.PathError{Op: "stat", Path: path, Err: os.ErrNotExist}
 	}
 
-	return &genericDirInfo{name: filepath.Base(path)}, nil
+	return &genericDirInfo{name: goPath.Base(path)}, nil
 }
 
 func (fs *Fs) Name() string {
