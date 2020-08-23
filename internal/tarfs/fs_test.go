@@ -57,8 +57,7 @@ func newTarFromFS(src afero.Fs) (*Fs, error) {
 	if err != nil {
 		return nil, err
 	}
-	tarFS, err := New(r)
-	return tarFS, errors.Wrap(err, "Failed building new tar from buffer")
+	return New(r), nil
 }
 
 func buildTarFromFS(src afero.Fs) (io.Reader, error) {

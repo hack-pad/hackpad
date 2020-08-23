@@ -30,10 +30,7 @@ func OverlayZip(mountPath string, z *zip.Reader) error {
 }
 
 func OverlayTarGzip(mountPath string, r io.Reader) error {
-	fs, err := tarfs.New(r)
-	if err != nil {
-		return err
-	}
+	fs := tarfs.New(r)
 	return filesystem.Mount(mountPath, fs)
 }
 

@@ -2,7 +2,6 @@ package tarfs
 
 import (
 	"archive/tar"
-	"bytes"
 	"compress/gzip"
 	"io"
 	"io/ioutil"
@@ -23,41 +22,44 @@ const (
 )
 
 type Fs struct {
-	compressedData []byte
-	// pathSegments holds directory paths and their children's base names. Non-nil means directory exists with no children.
-	directories     map[string]map[string]bool
-	compressedFiles map[string]compressedFile
+	// directories holds directory paths and their children's base names. Non-nil means directory exists with no children.
+	directories map[string]map[string]bool
+	done        <-chan struct{}
+	files       map[string]*uncompressedFile
+	initErr     error
 }
 
-type compressedFile struct {
-	header *tar.Header
+type uncompressedFile struct {
+	header   *tar.Header
+	contents []byte
 }
 
 var _ afero.Fs = &Fs{}
 
-func New(r io.Reader) (*Fs, error) {
-	// TODO Make readall & init async? If we did, then every FS call would need to check it.
-	data, err := ioutil.ReadAll(r)
-	if err != nil {
-		return nil, errors.Wrap(err, "tarfs: Failed to read from r")
-	}
-	if closer, ok := r.(io.Closer); ok {
-		err := closer.Close()
-		if err != nil {
-			return nil, err
-		}
-	}
-
+func New(r io.Reader) *Fs {
+	done := make(chan struct{})
 	fs := &Fs{
-		compressedData:  data,
-		compressedFiles: make(map[string]compressedFile),
-		directories:     make(map[string]map[string]bool),
+		directories: make(map[string]map[string]bool),
+		files:       make(map[string]*uncompressedFile),
+		done:        done,
 	}
-	return fs, errors.Wrap(fs.init(), "tarfs: Failed to initialize")
+	go fs.downloadGzip(r, done)
+	return fs
 }
 
-func (fs *Fs) init() error {
-	r := bytes.NewReader(fs.compressedData)
+func (fs *Fs) downloadGzip(r io.Reader, done chan<- struct{}) {
+	err := fs.downloadGzipErr(r)
+	if err != nil {
+		fs.initErr = err
+	}
+	close(done)
+
+	if closer, ok := r.(io.Closer); ok {
+		_ = closer.Close()
+	}
+}
+
+func (fs *Fs) downloadGzipErr(r io.Reader) error {
 	compressor, err := gzip.NewReader(r)
 	if err != nil {
 		return errors.Wrap(err, "gzip reader")
@@ -73,8 +75,17 @@ func (fs *Fs) init() error {
 		if err != nil {
 			return errors.Wrap(err, "next tar file")
 		}
+
 		path := fsutil.NormalizePath(header.Name)
-		fs.compressedFiles[path] = compressedFile{header: header}
+		contents, err := ioutil.ReadAll(archive)
+		if err != nil {
+			return err
+		}
+
+		fs.files[path] = &uncompressedFile{
+			header:   header,
+			contents: contents,
+		}
 		for _, segment := range dirsFromPath(header.Name) {
 			if fs.directories[segment] == nil {
 				fs.directories[segment] = make(map[string]bool, 1)
@@ -89,7 +100,7 @@ func (fs *Fs) init() error {
 			fs.directories[parent][dir] = true
 		}
 	}
-	for path := range fs.compressedFiles {
+	for path := range fs.files {
 		parent := goPath.Dir(path)
 		if path != pathSeparator {
 			fs.directories[parent][path] = true
@@ -119,27 +130,41 @@ func dirsFromPath(path string) []string {
 	return dirs
 }
 
+func (fs *Fs) ensurePath(path string) error {
+	if _, exists := fs.files[path]; exists {
+		return fs.initErr
+	}
+	if _, exists := fs.directories[path]; exists {
+		return fs.initErr
+	}
+	<-fs.done
+	return fs.initErr
+}
+
 func (fs *Fs) Open(path string) (afero.File, error) {
 	path = fsutil.NormalizePath(path)
+	if err := fs.ensurePath(path); err != nil {
+		return nil, err
+	}
 	_, isDir := fs.directories[path]
 	if isDir {
 		return &file{
-			compressedFile: compressedFile{
+			uncompressedFile: &uncompressedFile{
 				header: &tar.Header{Name: path}, // just enough to look up more dir info in fs
 			},
 			fs:    fs,
 			isDir: true,
 		}, nil
 	}
-	f, isCompressed := fs.compressedFiles[path]
-	if !isCompressed {
+	f, present := fs.files[path]
+	if !present {
 		return nil, &os.PathError{Op: "open", Path: path, Err: os.ErrNotExist}
 	}
 
 	return &file{
-		compressedFile: f,
-		fs:             fs,
-		isDir:          f.header.FileInfo().IsDir(),
+		uncompressedFile: f,
+		fs:               fs,
+		isDir:            f.header.FileInfo().IsDir(),
 	}, nil
 }
 
@@ -152,8 +177,11 @@ func (fs *Fs) OpenFile(name string, flag int, perm os.FileMode) (afero.File, err
 
 func (fs *Fs) Stat(path string) (os.FileInfo, error) {
 	path = fsutil.NormalizePath(path)
-	f, isCompressed := fs.compressedFiles[path]
-	if isCompressed {
+	if err := fs.ensurePath(path); err != nil {
+		return nil, err
+	}
+	f, present := fs.files[path]
+	if present {
 		return f.header.FileInfo(), nil
 	}
 	_, isDir := fs.directories[path]

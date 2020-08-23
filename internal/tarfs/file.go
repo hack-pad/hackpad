@@ -1,9 +1,6 @@
 package tarfs
 
 import (
-	"archive/tar"
-	"bytes"
-	"compress/gzip"
 	"io"
 	"os"
 	"path"
@@ -12,12 +9,11 @@ import (
 	"syscall"
 
 	"github.com/johnstarich/go-wasm/internal/fsutil"
-	"github.com/pkg/errors"
 	"github.com/spf13/afero"
 )
 
 type file struct {
-	compressedFile
+	*uncompressedFile
 
 	fs        *Fs
 	isDir     bool
@@ -46,44 +42,10 @@ func (f *file) ReadAt(p []byte, off int64) (n int, err error) {
 	if f.isDir {
 		return 0, syscall.EISDIR
 	}
-	if off >= f.header.Size {
+	if off >= int64(len(f.contents)) {
 		return 0, io.EOF
 	}
-
-	r := bytes.NewReader(f.fs.compressedData)
-	compressor, err := gzip.NewReader(r)
-	if err != nil {
-		return 0, err
-	}
-	defer compressor.Close()
-	archive := tar.NewReader(compressor)
-	var header *tar.Header
-	for {
-		header, err = archive.Next()
-		if err == io.EOF {
-			panic("Known file could not be found")
-		}
-		if err != nil {
-			return 0, err
-		}
-		if header.Name == f.header.Name {
-			break
-		}
-	}
-	if header == nil {
-		panic("Known file could not be found")
-	}
-	if header.Name != f.header.Name {
-		return 0, errors.Errorf("Unrecognized file at seek path. Expected %q, found %q.", f.header.Name, header.Name)
-	}
-
-	if off == 0 {
-		return archive.Read(p)
-	}
-
-	buf := make([]byte, f.header.Size)
-	_, err = archive.Read(buf)
-	return copy(p, buf[off:]), err
+	return copy(p, f.contents[off:]), err
 }
 
 func (f *file) Seek(offset int64, whence int) (newOffset int64, err error) {
