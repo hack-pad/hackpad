@@ -9,4 +9,4 @@ require (
 	go.uber.org/atomic v1.6.0
 )
 
-replace github.com/spf13/afero v1.3.0 => github.com/johnstarich/afero v1.3.2-0.20200815205650-687582057da1
+replace github.com/spf13/afero v1.3.0 => github.com/johnstarich/afero v1.3.2-0.20200824034706-e0c81fb79d7b
