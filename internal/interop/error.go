@@ -84,6 +84,8 @@ func mapToErrNo(err error) string {
 		return "ENOENT"
 	case os.IsExist(err):
 		return "EEXIST"
+	case afero.IsDirErr(err):
+		return "EISDIR"
 	default:
 		log.Errorf("Unknown error type: (%T) %+v", err, err)
 		return "EPERM"
