@@ -88,10 +88,18 @@ func walkGo(goRoot string, do func(string, os.FileInfo) error) (Stats, error) {
 		case path == ".":
 			return nil // "skip" top-level dir, don't record in stats
 		case matchPath(path, goRoot, ".git"),
+			matchPath(path, goRoot, "api"),
+			matchPath(path, goRoot, "doc"),
 			matchPath(path, goRoot, "src", "cmd"),
+			matchPath(path, goRoot, "src", "runtime", "cgo"),
+			matchPath(path, goRoot, "src", "runtime", "race"),
+			strings.HasSuffix(path, string(filepath.Separator)+"testdata"),
 			matchPath(path, goRoot, "test"):
 			stats.SkippedDirs++
 			return filepath.SkipDir // explicitly skip all of these contents
+		case matchPath(path, goRoot, "pkg", "tool", "js_wasm", "cgo"),
+			strings.HasSuffix(path, "_test.go"):
+			return nil // skip specific files
 		case matchPathPrefix(path, goRoot, "bin", "js_wasm"),
 			matchPathPrefix(path, goRoot, "pkg", "js_wasm"),
 			matchPathPrefix(path, goRoot, "pkg", "include"),
