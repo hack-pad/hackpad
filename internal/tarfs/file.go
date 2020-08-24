@@ -8,7 +8,6 @@ import (
 	"sync/atomic"
 	"syscall"
 
-	"github.com/johnstarich/go-wasm/internal/fsutil"
 	"github.com/spf13/afero"
 )
 
@@ -49,22 +48,28 @@ func (f *file) ReadAt(p []byte, off int64) (n int, err error) {
 }
 
 func (f *file) Seek(offset int64, whence int) (newOffset int64, err error) {
-	curOffset := atomic.LoadInt64(&f.offset)
+	offsetPtr := &f.offset
+	size := f.header.Size
+	if f.isDir {
+		offsetPtr = &f.dirOffset
+		size = int64(len(f.dirFiles()))
+	}
+	curOffset := atomic.LoadInt64(offsetPtr)
 	switch whence {
 	case io.SeekStart:
 		newOffset = curOffset
 	case io.SeekCurrent:
 		newOffset = curOffset + offset
 	case io.SeekEnd:
-		newOffset = f.header.Size + offset
+		newOffset = size + offset
 	}
 	if newOffset < 0 {
 		newOffset = 0
-	} else if newOffset >= f.header.Size {
-		newOffset = f.header.Size
+	} else if newOffset >= size {
+		newOffset = size
 		err = io.EOF
 	}
-	atomic.CompareAndSwapInt64(&f.offset, curOffset, newOffset)
+	atomic.CompareAndSwapInt64(offsetPtr, curOffset, newOffset)
 	return
 }
 
@@ -89,7 +94,7 @@ func (f *file) Readdirnames(n int) ([]string, error) {
 		return nil, syscall.ENOTDIR
 	}
 
-	files := f.fs.directories[fsutil.NormalizePath(f.header.Name)]
+	files := f.dirFiles()
 	var names []string
 	for name := range files {
 		names = append(names, path.Base(name))
@@ -115,6 +120,11 @@ func (f *file) Readdirnames(n int) ([]string, error) {
 	names = names[off : off+bigN]
 	atomic.CompareAndSwapInt64(&f.dirOffset, off, off+bigN)
 	return names, nil
+}
+
+// dirFiles returns the files in this directory (check f.isDir first)
+func (f *file) dirFiles() map[string]bool {
+	return f.fs.directories[f.header.Name]
 }
 
 func (f *file) Stat() (os.FileInfo, error) {
