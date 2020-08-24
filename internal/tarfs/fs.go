@@ -76,17 +76,22 @@ func (fs *Fs) downloadGzipErr(r io.Reader) error {
 			return errors.Wrap(err, "next tar file")
 		}
 
-		path := fsutil.NormalizePath(header.Name)
+		originalName := header.Name
+		path := fsutil.NormalizePath(originalName)
 		contents, err := ioutil.ReadAll(archive)
 		if err != nil {
 			return err
 		}
 
-		fs.files[path] = &uncompressedFile{
+		header.Name = path
+		header.Size = int64(len(contents))
+		file := &uncompressedFile{
 			header:   header,
 			contents: contents,
 		}
-		for _, segment := range dirsFromPath(header.Name) {
+
+		fs.files[path] = file
+		for _, segment := range dirsFromPath(originalName) {
 			if fs.directories[segment] == nil {
 				fs.directories[segment] = make(map[string]bool, 1)
 			}

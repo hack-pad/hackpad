@@ -41,7 +41,7 @@ func (f *file) ReadAt(p []byte, off int64) (n int, err error) {
 	if f.isDir {
 		return 0, syscall.EISDIR
 	}
-	if off >= int64(len(f.contents)) {
+	if off >= f.header.Size {
 		return 0, io.EOF
 	}
 	return copy(p, f.contents[off:]), err
