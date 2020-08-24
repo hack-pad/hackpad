@@ -139,9 +139,6 @@ func (fs *Fs) ensurePath(path string) error {
 	if _, exists := fs.files[path]; exists {
 		return fs.initErr
 	}
-	if _, exists := fs.directories[path]; exists {
-		return fs.initErr
-	}
 	<-fs.done
 	return fs.initErr
 }
