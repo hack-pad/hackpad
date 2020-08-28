@@ -74,6 +74,7 @@ textarea {
 }
 
 .console-output {
+    position: relative;
     max-height: 20vh;
     min-height: 8em;
     overflow: auto;
@@ -85,6 +86,16 @@ textarea {
 
 .console-output .stderr {
     color: #a00;
+}
+
+.console-output .note {
+    color: #00a;
+    position: absolute;
+    right: 0;
+    transform: translateY(calc(-100% + 0.1em));
+    padding: 0.1em;
+    background-color: rgba(80, 80, 80, 0.9);
+    border-radius: 0.5em;
 }
 
 @media screen and (prefers-color-scheme: dark) {
@@ -105,5 +116,9 @@ textarea {
     .console-output .stderr {
         color: #ff5050;
         font-weight: bolder;
+    }
+
+    .console-output .note {
+        color: #88f;
     }
 }

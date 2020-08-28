@@ -123,13 +123,14 @@ func main() {
 }
 
 func runProcess(name string, args ...string) promise.Promise {
-	start := time.Now()
 	resolve, reject, prom := promise.New()
 	go func() {
+		var success bool
+		var elapsed time.Duration
 		defer func() {
-			log.Printf("Process [%s %s] finished: %6.2fs", name, strings.Join(args, " "), time.Since(start).Seconds())
+			log.Printf("Process [%s %s] finished: %6.2fs", name, strings.Join(args, " "), elapsed.Seconds())
 		}()
-		success := startProcess(name, args...)
+		success, elapsed = startProcess(name, args...)
 		if success {
 			resolve(nil)
 		} else {
@@ -139,10 +140,11 @@ func runProcess(name string, args ...string) promise.Promise {
 	return prom
 }
 
-func startProcess(name string, args ...string) (success bool) {
+func startProcess(name string, args ...string) (success bool, elapsed time.Duration) {
 	if !showLoading.CAS(false, true) {
-		return false
+		return false, 0
 	}
+	startTime := time.Now()
 	loadingElem.Get("classList").Call("add", "loading")
 	defer func() {
 		showLoading.Store(false)
@@ -151,6 +153,7 @@ func startProcess(name string, args ...string) (success bool) {
 
 	stdout := newElementWriter(consoleElem, "")
 	stderr := newElementWriter(consoleElem, "stderr")
+	note := newElementWriter(consoleElem, "note")
 
 	_, _ = stdout.WriteString(fmt.Sprintf("$ %s %s\n", name, strings.Join(args, " ")))
 
@@ -161,13 +164,15 @@ func startProcess(name string, args ...string) (success bool) {
 	err := cmd.Start()
 	if err != nil {
 		_, _ = stderr.WriteString("Failed to start process: " + err.Error() + "\n")
-		return false
+		return false, 0
 	}
 	err = cmd.Wait()
 	if err != nil {
 		_, _ = stderr.WriteString(err.Error() + "\n")
 	}
-	return err == nil
+	elapsed = time.Since(startTime)
+	_, _ = note.WriteString(fmt.Sprintf("(%.2fs)\n", elapsed.Seconds()))
+	return err == nil, elapsed
 }
 
 func edited(newContents func() string) {
