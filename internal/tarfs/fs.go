@@ -4,7 +4,6 @@ import (
 	"archive/tar"
 	"compress/gzip"
 	"io"
-	"io/ioutil"
 	"os"
 	goPath "path"
 	"strings"
@@ -78,13 +77,13 @@ func (fs *Fs) downloadGzipErr(r io.Reader) error {
 
 		originalName := header.Name
 		path := fsutil.NormalizePath(originalName)
-		contents, err := ioutil.ReadAll(archive)
+		contents := make([]byte, header.Size)
+		_, err = io.ReadFull(archive, contents)
 		if err != nil {
 			return err
 		}
 
 		header.Name = path
-		header.Size = int64(len(contents))
 		file := &uncompressedFile{
 			header:   header,
 			contents: contents,
