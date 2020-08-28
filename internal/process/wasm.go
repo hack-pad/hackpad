@@ -33,7 +33,7 @@ func (p *process) startWasm() error {
 func (p *process) Done() {
 	log.Debug("PID ", p.pid, " is done.\n", p.fileDescriptors)
 	p.fileDescriptors.CloseAll()
-	close(p.done)
+	p.ctxDone()
 }
 
 func (p *process) handleErr(err error) {

@@ -1,6 +1,7 @@
 package process
 
 import (
+	"context"
 	"fmt"
 	"sort"
 	"strings"
@@ -55,7 +56,8 @@ type process struct {
 	args            []string
 	state           processState
 	attr            *ProcAttr
-	done            chan struct{}
+	ctx             context.Context
+	ctxDone         context.CancelFunc
 	exitCode        int
 	err             error
 	fileDescriptors *fs.FileDescriptors
@@ -72,13 +74,15 @@ func newWithCurrent(current Process, newPID PID, command string, args []string, 
 		wd = attr.Dir
 	}
 	files, setFilesWD, err := fs.NewFileDescriptors(newPID, wd, current.Files(), attr.Files)
+	ctx, cancel := context.WithCancel(context.Background())
 	return &process{
 		pid:             newPID,
 		command:         command,
 		args:            args,
 		state:           statePending,
 		attr:            attr,
-		done:            make(chan struct{}),
+		ctx:             ctx,
+		ctxDone:         cancel,
 		err:             err,
 		fileDescriptors: files,
 		setFilesWD:      setFilesWD,
@@ -106,7 +110,7 @@ func (p *process) Start() error {
 }
 
 func (p *process) Wait() (exitCode int, err error) {
-	<-p.done
+	<-p.ctx.Done()
 	return p.exitCode, p.err
 }
 
@@ -128,6 +132,10 @@ func (p *process) JSValue() js.Value {
 
 func (p *process) String() string {
 	return fmt.Sprintf("PID=%s, Command=%v, State=%s, WD=%s, Attr=%+v, Err=%+v, Files:\n%v", p.pid, p.args, p.state, p.WorkingDirectory(), p.attr, p.err, p.fileDescriptors)
+}
+
+func (p *process) StartCPUProfile() error {
+	return interop.StartCPUProfile(p.ctx)
 }
 
 func Dump() interface{} {
