@@ -74,10 +74,21 @@ func (p *process) loadWasmModule(path string) (js.Value, error) {
 }
 
 func (p *process) runWasm(path string) {
-	module, err := p.loadWasmModule(path)
+	exitChan := make(chan int, 1)
+	runPromise, err := p.startWasmPromise(path, exitChan)
 	if err != nil {
 		p.handleErr(err)
 		return
+	}
+	_, err = promise.Await(runPromise)
+	p.exitCode = <-exitChan
+	p.handleErr(err)
+}
+
+func (p *process) startWasmPromise(path string, exitChan chan<- int) (promise.Promise, error) {
+	module, err := p.loadWasmModule(path)
+	if err != nil {
+		return promise.Promise{}, err
 	}
 
 	p.state = stateCompiling
@@ -86,9 +97,14 @@ func (p *process) runWasm(path string) {
 	if p.attr.Env == nil {
 		p.attr.Env = splitEnvPairs(os.Environ())
 	}
-	exitChan := make(chan int, 1)
 	goInstance.Set("env", interop.StringMap(p.attr.Env))
-	goInstance.Set("exit", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+	var resumeFuncPtr *js.Func
+	goInstance.Set("exit", interop.SingleUseFunc(func(this js.Value, args []js.Value) interface{} {
+		defer func() {
+			if resumeFuncPtr != nil {
+				resumeFuncPtr.Release()
+			}
+		}()
 		if len(args) == 0 {
 			exitChan <- -1
 			return nil
@@ -105,27 +121,28 @@ func (p *process) runWasm(path string) {
 	instantiatePromise := promise.From(jsWasm.Call("instantiate", module, importObject))
 	instance, err := promise.Await(instantiatePromise)
 	if err != nil {
-		p.handleErr(err)
-		return
+		return promise.Promise{}, err
 	}
 
 	exports := instance.Get("exports")
 
+	resumeFunc := js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+		defer interop.PanicLogger()
+		prev := switchContext(p.pid)
+		ret := exports.Call("resume", interop.SliceFromJSValues(args)...)
+		switchContext(prev)
+		return ret
+	})
+	resumeFuncPtr = &resumeFunc
 	wrapperExports := map[string]interface{}{
-		"run": js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+		"run": interop.SingleUseFunc(func(this js.Value, args []js.Value) interface{} {
 			defer interop.PanicLogger()
 			prev := switchContext(p.pid)
 			ret := exports.Call("run", interop.SliceFromJSValues(args)...)
 			switchContext(prev)
 			return ret
 		}),
-		"resume": js.FuncOf(func(this js.Value, args []js.Value) interface{} {
-			defer interop.PanicLogger()
-			prev := switchContext(p.pid)
-			ret := exports.Call("resume", interop.SliceFromJSValues(args)...)
-			switchContext(prev)
-			return ret
-		}),
+		"resume": resumeFunc,
 	}
 	for export, value := range interop.Entries(exports) {
 		_, overridden := wrapperExports[export]
@@ -138,8 +155,5 @@ func (p *process) runWasm(path string) {
 	})
 
 	p.state = stateRunning
-	runPromise := promise.From(goInstance.Call("run", wrapperInstance))
-	_, err = promise.Await(runPromise)
-	p.exitCode = <-exitChan
-	p.handleErr(err)
+	return promise.From(goInstance.Call("run", wrapperInstance)), nil
 }

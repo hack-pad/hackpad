@@ -4,6 +4,7 @@ import (
 	"runtime/debug"
 	"syscall/js"
 
+	"github.com/johnstarich/go-wasm/internal/interop"
 	"github.com/johnstarich/go-wasm/log"
 )
 
@@ -22,7 +23,7 @@ func From(promiseValue js.Value) Promise {
 func New() (resolve, reject Resolver, promise Promise) {
 	resolvers := make(chan Resolver, 2)
 	promise = From(
-		jsPromise.New(singleUseFunc(func(this js.Value, args []js.Value) interface{} {
+		jsPromise.New(interop.SingleUseFunc(func(this js.Value, args []js.Value) interface{} {
 			resolve, reject := args[0], args[1]
 			resolvers <- func(result interface{}) { resolve.Invoke(result) }
 			resolvers <- func(result interface{}) { reject.Invoke(result) }
@@ -39,7 +40,7 @@ func (p Promise) Then(fn func(value js.Value) interface{}) Promise {
 
 func (p Promise) do(methodName string, fn func(value js.Value) interface{}) Promise {
 	return Promise{
-		value: p.value.Call(methodName, singleUseFunc(func(this js.Value, args []js.Value) interface{} {
+		value: p.value.Call(methodName, interop.SingleUseFunc(func(this js.Value, args []js.Value) interface{} {
 			var value js.Value
 			if len(args) > 0 {
 				value = args[0]
@@ -63,13 +64,4 @@ func (p Promise) Catch(fn func(rejectedReason js.Value) interface{}) Promise {
 
 func (p Promise) JSValue() js.Value {
 	return p.value
-}
-
-func singleUseFunc(fn func(this js.Value, args []js.Value) interface{}) js.Func {
-	var wrapperFn js.Func
-	wrapperFn = js.FuncOf(func(this js.Value, args []js.Value) interface{} {
-		wrapperFn.Release()
-		return fn(this, args)
-	})
-	return wrapperFn
 }
