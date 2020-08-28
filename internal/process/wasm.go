@@ -3,6 +3,7 @@ package process
 import (
 	"os"
 	"os/exec"
+	"strings"
 	"syscall/js"
 	"time"
 
@@ -45,14 +46,23 @@ func (p *process) handleErr(err error) {
 	p.Done()
 }
 
+func cacheAllowed(path string) bool {
+	return strings.HasPrefix(path, "/go/")
+}
+
 func (p *process) loadWasmModule(path string) (js.Value, error) {
-	info, err := p.Files().Stat(path)
-	if err != nil {
-		return js.Value{}, err
-	}
-	val, ok := wasmCache[path]
-	if ok && info.ModTime() == val.modTime {
-		return val.module, nil
+	allowCache := cacheAllowed(path)
+	var info os.FileInfo
+	if allowCache {
+		var err error
+		info, err = p.Files().Stat(path)
+		if err != nil {
+			return js.Value{}, err
+		}
+		val, ok := wasmCache[path]
+		if ok && info.ModTime() == val.modTime {
+			return val.module, nil
+		}
 	}
 
 	wasm, err := p.Files().ReadFile(path)
@@ -66,9 +76,11 @@ func (p *process) loadWasmModule(path string) (js.Value, error) {
 		return js.Value{}, err
 	}
 
-	wasmCache[path] = wasmCacheValue{
-		modTime: info.ModTime(),
-		module:  module,
+	if allowCache {
+		wasmCache[path] = wasmCacheValue{
+			modTime: info.ModTime(),
+			module:  module,
+		}
 	}
 	return module, nil
 }
