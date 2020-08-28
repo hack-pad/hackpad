@@ -9,6 +9,7 @@ import (
 	"syscall/js"
 	"time"
 
+	"github.com/johnstarich/go-wasm/internal/interop"
 	"github.com/johnstarich/go-wasm/internal/promise"
 	"github.com/johnstarich/go-wasm/log"
 	"go.uber.org/atomic"
@@ -23,6 +24,10 @@ var (
 )
 
 func main() {
+	js.Global().Set("editor", map[string]interface{}{
+		"profile": js.FuncOf(interop.MemoryProfile),
+	})
+
 	app := document.Call("createElement", "div")
 	app.Call("setAttribute", "id", "app")
 	document.Get("body").Call("insertBefore", app, nil)
