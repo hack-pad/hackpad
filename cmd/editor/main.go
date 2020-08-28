@@ -96,14 +96,7 @@ func main() {
 		log.Error("Failed to switch to playground dir", err)
 		return
 	}
-	cmd := exec.Command("go", "mod", "init", "playground")
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	err := cmd.Start()
-	if err != nil {
-		log.Error("Failed to run go mod init", err)
-		return
-	}
+	runProcess("go", "mod", "init", "playground")
 
 	mainGoContents := `package main
 
