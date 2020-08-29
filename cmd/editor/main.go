@@ -175,7 +175,10 @@ func startProcess(rawPath, name string, args ...string) (success bool, elapsed t
 		_, _ = stderr.WriteString(err.Error() + "\n")
 	}
 	elapsed = time.Since(startTime)
-	_, _ = note.WriteString(fmt.Sprintf("(%.2fs)\n", elapsed.Seconds()))
+	_, _ = note.WriteString(fmt.Sprintf("%s (%.2fs)\n",
+		exitStatus(cmd.ProcessState.ExitCode()),
+		elapsed.Seconds(),
+	))
 	return err == nil, elapsed
 }
 
@@ -191,4 +194,11 @@ func runPlayground() {
 	runGoProcess("build", "-v", ".").Then(func(_ js.Value) interface{} {
 		return runProcess("./playground")
 	})
+}
+
+func exitStatus(exitCode int) string {
+	if exitCode == 0 {
+		return "✔"
+	}
+	return "✘"
 }

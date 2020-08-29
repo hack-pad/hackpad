@@ -94,6 +94,7 @@ textarea {
     right: 0;
     transform: translateY(calc(-100% + 0.1em));
     padding: 0.1em;
+    padding-left: 0.5em;
     background-color: rgba(80, 80, 80, 0.9);
     border-radius: 0.5em;
 }
