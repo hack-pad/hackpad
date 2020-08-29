@@ -96,7 +96,6 @@ func main() {
 		log.Error("Failed to switch to playground dir", err)
 		return
 	}
-	runProcess("go", "mod", "init", "playground")
 
 	mainGoContents := `package main
 
@@ -112,6 +111,17 @@ func main() {
 `
 	editorElem.Set("value", mainGoContents)
 	go edited(func() string { return mainGoContents })
+
+	for {
+		_, err := exec.LookPath("go")
+		if err == nil {
+			break
+		}
+		time.Sleep(time.Second)
+	}
+	runProcess("go", "mod", "init", "playground").Then(func(value js.Value) interface{} {
+		return runProcess("go", "version")
+	})
 	select {}
 }
 
