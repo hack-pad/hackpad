@@ -31,9 +31,11 @@
 				console.debug(`go-wasm status: ${goWasm.ready ? 'ready' : 'not ready'}`)
 				fs.mkdirSync("/go", 0700)
 
-				goWasm.overlayTarGzip('/go', '/go.tar.gz')
-				goWasm.install('editor')
-					.then(() => spawn("editor"))
+				await Promise.all([
+					goWasm.overlayTarGzip('/go', '/go.tar.gz'),
+					goWasm.install('editor'),
+				])
+				spawn("editor")
 
 				console.debug("Startup took", (new Date().getTime() - startTime) / 1000, "seconds")
 			})

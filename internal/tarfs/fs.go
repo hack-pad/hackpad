@@ -3,6 +3,7 @@ package tarfs
 import (
 	"archive/tar"
 	"compress/gzip"
+	"context"
 	"io"
 	"os"
 	goPath "path"
@@ -11,6 +12,7 @@ import (
 	"time"
 
 	"github.com/johnstarich/go-wasm/internal/fsutil"
+	"github.com/johnstarich/go-wasm/internal/pubsub"
 	"github.com/pkg/errors"
 	"github.com/spf13/afero"
 )
@@ -23,7 +25,8 @@ const (
 type Fs struct {
 	// directories holds directory paths and their children's base names. Non-nil means directory exists with no children.
 	directories map[string]map[string]bool
-	done        <-chan struct{}
+	ps          pubsub.PubSub
+	done        context.CancelFunc
 	files       map[string]*uncompressedFile
 	initErr     error
 }
@@ -36,22 +39,23 @@ type uncompressedFile struct {
 var _ afero.Fs = &Fs{}
 
 func New(r io.Reader) *Fs {
-	done := make(chan struct{})
+	ctx, cancel := context.WithCancel(context.Background())
 	fs := &Fs{
 		directories: make(map[string]map[string]bool),
 		files:       make(map[string]*uncompressedFile),
-		done:        done,
+		ps:          pubsub.New(ctx),
+		done:        cancel,
 	}
-	go fs.downloadGzip(r, done)
+	go fs.downloadGzip(r)
 	return fs
 }
 
-func (fs *Fs) downloadGzip(r io.Reader, done chan<- struct{}) {
+func (fs *Fs) downloadGzip(r io.Reader) {
 	err := fs.downloadGzipErr(r)
 	if err != nil {
 		fs.initErr = err
 	}
-	close(done)
+	fs.done()
 
 	if closer, ok := r.(io.Closer); ok {
 		_ = closer.Close()
@@ -90,6 +94,7 @@ func (fs *Fs) downloadGzipErr(r io.Reader) error {
 		}
 
 		fs.files[path] = file
+		fs.ps.Emit(path)
 		for _, segment := range dirsFromPath(originalName) {
 			if fs.directories[segment] == nil {
 				fs.directories[segment] = make(map[string]bool, 1)
@@ -135,10 +140,7 @@ func dirsFromPath(path string) []string {
 }
 
 func (fs *Fs) ensurePath(path string) error {
-	if _, exists := fs.files[path]; exists {
-		return fs.initErr
-	}
-	<-fs.done
+	fs.ps.Wait(path)
 	return fs.initErr
 }
 

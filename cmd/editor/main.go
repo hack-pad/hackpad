@@ -60,7 +60,7 @@ func main() {
 		controlButtons[name] = button
 	}
 	controlButtons["build"].Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
-		runProcess("go", "build", "-v", ".")
+		runGoProcess("build", "-v", ".")
 		return nil
 	}))
 	controlButtons["run"].Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
@@ -68,7 +68,7 @@ func main() {
 		return nil
 	}))
 	controlButtons["fmt"].Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
-		runProcess("go", "fmt", ".").Then(func(_ js.Value) interface{} {
+		runGoProcess("fmt", ".").Then(func(_ js.Value) interface{} {
 			contents, err := ioutil.ReadFile("main.go")
 			if err != nil {
 				log.Error(err)
@@ -96,6 +96,9 @@ func main() {
 		log.Error("Failed to switch to playground dir", err)
 		return
 	}
+	runGoProcess("mod", "init", "playground").Then(func(value js.Value) interface{} {
+		return runGoProcess("version")
+	})
 
 	mainGoContents := `package main
 
@@ -111,21 +114,19 @@ func main() {
 `
 	editorElem.Set("value", mainGoContents)
 	go edited(func() string { return mainGoContents })
-
-	for {
-		_, err := exec.LookPath("go")
-		if err == nil {
-			break
-		}
-		time.Sleep(time.Second)
-	}
-	runProcess("go", "mod", "init", "playground").Then(func(value js.Value) interface{} {
-		return runProcess("go", "version")
-	})
 	select {}
 }
 
+// runGoProcess optimizes runProcess by skipping the wait time for listing PATH directories on startup
+func runGoProcess(args ...string) promise.Promise {
+	return runRawProcess("/go/bin/js_wasm/go", "go", args...)
+}
+
 func runProcess(name string, args ...string) promise.Promise {
+	return runRawProcess(name, name, args...)
+}
+
+func runRawProcess(fullPath, name string, args ...string) promise.Promise {
 	resolve, reject, prom := promise.New()
 	go func() {
 		var success bool
@@ -133,7 +134,7 @@ func runProcess(name string, args ...string) promise.Promise {
 		defer func() {
 			log.Printf("Process [%s %s] finished: %6.2fs", name, strings.Join(args, " "), elapsed.Seconds())
 		}()
-		success, elapsed = startProcess(name, args...)
+		success, elapsed = startProcess(fullPath, name, args...)
 		if success {
 			resolve(nil)
 		} else {
@@ -143,7 +144,7 @@ func runProcess(name string, args ...string) promise.Promise {
 	return prom
 }
 
-func startProcess(name string, args ...string) (success bool, elapsed time.Duration) {
+func startProcess(rawPath, name string, args ...string) (success bool, elapsed time.Duration) {
 	if !showLoading.CAS(false, true) {
 		return false, 0
 	}
@@ -160,7 +161,7 @@ func startProcess(name string, args ...string) (success bool, elapsed time.Durat
 
 	_, _ = stdout.WriteString(fmt.Sprintf("$ %s %s\n", name, strings.Join(args, " ")))
 
-	cmd := exec.Command(name, args...)
+	cmd := exec.Command(rawPath, args...)
 	cmd.Stdout = stdout
 	cmd.Stderr = stderr
 
@@ -187,7 +188,7 @@ func edited(newContents func() string) {
 }
 
 func runPlayground() {
-	runProcess("go", "build", "-v", ".").Then(func(_ js.Value) interface{} {
+	runGoProcess("build", "-v", ".").Then(func(_ js.Value) interface{} {
 		return runProcess("./playground")
 	})
 }
