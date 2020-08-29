@@ -130,6 +130,7 @@ func (p *process) startWasmPromise(path string, exitChan chan<- int) (promise.Pr
 	}))
 
 	importObject := goInstance.Get("importObject")
+	time.Sleep(1) // allow JS event loop to run
 	instantiatePromise := promise.From(jsWasm.Call("instantiate", module, importObject))
 	instance, err := promise.Await(instantiatePromise)
 	if err != nil {
@@ -166,6 +167,7 @@ func (p *process) startWasmPromise(path string, exitChan chan<- int) (promise.Pr
 		"exports": wrapperExports,
 	})
 
+	time.Sleep(1) // allow JS event loop to run
 	p.state = stateRunning
 	return promise.From(goInstance.Call("run", wrapperInstance)), nil
 }
