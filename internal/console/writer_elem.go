@@ -1,8 +1,12 @@
-package main
+package console
 
 import (
 	"io"
 	"syscall/js"
+)
+
+var (
+	document = js.Global().Get("document")
 )
 
 const (

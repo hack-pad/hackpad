@@ -16,8 +16,7 @@ func codeTyper(this js.Value, args []js.Value) interface{} {
 			return
 		}
 
-		stderr := newElementWriter(consoleElem, "stderr")
-		fmt.Fprintln(stderr, "Failed to handle keydown:", r, "\n"+string(debug.Stack()))
+		fmt.Fprintln(consoleOutput.Stderr(), "Failed to handle keydown:", r, "\n"+string(debug.Stack()))
 	}()
 
 	if len(args) > 0 {

@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"io"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -9,6 +10,7 @@ import (
 	"syscall/js"
 	"time"
 
+	"github.com/johnstarich/go-wasm/internal/console"
 	"github.com/johnstarich/go-wasm/internal/interop"
 	"github.com/johnstarich/go-wasm/internal/promise"
 	"github.com/johnstarich/go-wasm/log"
@@ -16,9 +18,9 @@ import (
 )
 
 var (
-	showLoading = atomic.NewBool(false)
-	loadingElem js.Value
-	consoleElem js.Value
+	showLoading   = atomic.NewBool(false)
+	loadingElem   js.Value
+	consoleOutput console.Console
 
 	document = js.Global().Get("document")
 )
@@ -43,15 +45,14 @@ func main() {
 	<button>fmt</button>
 	<div class="loading-indicator"></div>
 </div>
-<div class="console">
-	<h3>Console</h3>
-	<pre class="console-output"></pre>
-</div>
+<h3>Console</h3>
+<div class="console"></div>
 `)
 	loadingElem = app.Call("querySelector", ".controls .loading-indicator")
-	consoleElem = app.Call("querySelector", ".console-output")
 	editorElem := app.Call("querySelector", "textarea")
 	controlButtonElems := app.Call("querySelectorAll", ".controls button")
+	consoleElem := app.Call("querySelector", ".console")
+	consoleOutput = console.New(consoleElem)
 
 	controlButtons := make(map[string]js.Value)
 	for i := 0; i < controlButtonElems.Length(); i++ {
@@ -155,27 +156,23 @@ func startProcess(rawPath, name string, args ...string) (success bool, elapsed t
 		loadingElem.Get("classList").Call("remove", "loading")
 	}()
 
-	stdout := newElementWriter(consoleElem, "")
-	stderr := newElementWriter(consoleElem, "stderr")
-	note := newElementWriter(consoleElem, "note")
-
-	_, _ = stdout.WriteString(fmt.Sprintf("$ %s %s\n", name, strings.Join(args, " ")))
+	_, _ = io.WriteString(consoleOutput.Stdout(), fmt.Sprintf("$ %s %s\n", name, strings.Join(args, " ")))
 
 	cmd := exec.Command(rawPath, args...)
-	cmd.Stdout = stdout
-	cmd.Stderr = stderr
+	cmd.Stdout = consoleOutput.Stdout()
+	cmd.Stderr = consoleOutput.Stderr()
 
 	err := cmd.Start()
 	if err != nil {
-		_, _ = stderr.WriteString("Failed to start process: " + err.Error() + "\n")
+		_, _ = io.WriteString(consoleOutput.Stderr(), "Failed to start process: "+err.Error()+"\n")
 		return false, 0
 	}
 	err = cmd.Wait()
 	if err != nil {
-		_, _ = stderr.WriteString(err.Error() + "\n")
+		_, _ = io.WriteString(consoleOutput.Stderr(), err.Error()+"\n")
 	}
 	elapsed = time.Since(startTime)
-	_, _ = note.WriteString(fmt.Sprintf("%s (%.2fs)\n",
+	_, _ = io.WriteString(consoleOutput.Note(), fmt.Sprintf("%s (%.2fs)\n",
 		exitStatus(cmd.ProcessState.ExitCode()),
 		elapsed.Seconds(),
 	))
