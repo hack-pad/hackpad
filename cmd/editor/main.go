@@ -36,7 +36,7 @@ func main() {
 <h1>Go WASM Playground</h1>
 
 <h3><pre>main.go</pre></h3>
-<textarea></textarea>
+<textarea spellcheck=false></textarea>
 <div class="controls">
 	<button>build</button>
 	<button>run</button>
