@@ -79,14 +79,24 @@ func runCommand(term console.Console, line string) error {
 
 func runBuiltin(term console.Console, name string, args ...string) (ok bool, err error) {
 	switch name {
+	case "cat":
+		err = cat(term, args...)
 	case "cd":
 		err = cd(term, args...)
+	case "echo":
+		fmt.Fprintln(term.Stdout(), strings.Join(args, " "))
 	case "ls":
 		err = ls(term, args...)
 	case "mkdir":
 		err = mkdir(term, args...)
-	case "cat":
-		err = cat(term, args...)
+	case "mv":
+		err = mv(term, args...)
+	case "rm":
+		err = rm(term, args...)
+	case "rmdir":
+		err = rmdir(term, args...)
+	case "touch":
+		err = touch(term, args...)
 	default:
 		return false, errors.Errorf("Unknown builtin command: %s", name)
 	}
