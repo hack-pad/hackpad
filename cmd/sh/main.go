@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"os"
 	"os/exec"
@@ -20,13 +21,19 @@ const (
 )
 
 func main() {
+	flag.Parse()
+	var app js.Value
+	if flag.NArg() == 0 {
+		app = document.Call("createElement", "div")
+		document.Get("body").Call("insertBefore", app, nil)
+	} else {
+		app = document.Call("querySelector", "#"+flag.Arg(0))
+	}
+
 	if err := os.Chdir("playground"); err != nil {
 		panic(err)
 	}
 
-	app := document.Call("createElement", "div")
-	app.Call("setAttribute", "id", "command")
-	document.Get("body").Call("insertBefore", app, nil)
 	app.Set("innerHTML", `
 <input type="text" spellcheck="false" placeholder="go version" />
 <div class="console"></div>

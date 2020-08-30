@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -26,13 +27,18 @@ var (
 )
 
 func main() {
+	flag.Parse()
+	var app js.Value
+	if flag.NArg() == 0 {
+		app = document.Call("createElement", "div")
+		document.Get("body").Call("insertBefore", app, nil)
+	} else {
+		app = document.Call("querySelector", "#"+flag.Arg(0))
+	}
+
 	js.Global().Set("editor", map[string]interface{}{
 		"profile": js.FuncOf(interop.MemoryProfile),
 	})
-
-	app := document.Call("createElement", "div")
-	app.Call("setAttribute", "id", "app")
-	document.Get("body").Call("insertBefore", app, nil)
 
 	app.Set("innerHTML", `
 <h1>Go WASM Playground</h1>

@@ -26,33 +26,24 @@ lint-fix: lint-deps
 	golangci-lint run --fix
 
 .PHONY: static
-static: out/index.html out/go.tar.gz commands
+static: server/public/wasm/go.tar.gz commands
 
-out:
-	mkdir -p out
+server/public/wasm:
+	mkdir -p server/public/wasm
 
-out/static: out
-	mkdir -p ./out/static
-
-out/index.html: out/static ./server/index.html ./server/static/* ./out/static/fetch.js
-	cp -r server/index.html ./server/static ./out/
-
-out/static/fetch.js: out/static
-	curl -L https://github.com/github/fetch/releases/download/v3.0.0/fetch.umd.js > out/static/fetch.js
-
-out/go.tar.gz: out cache/go${GO_VERSION}
+server/public/wasm/go.tar.gz: server/public/wasm cache/go${GO_VERSION}
 	GOARCH=$$(go env GOHOSTARCH) GOOS=$$(go env GOHOSTOS) \
-		go run ./internal/cmd/gozip cache/go > out/go.tar.gz
+		go run ./internal/cmd/gozip cache/go > server/public/wasm/go.tar.gz
 
 .PHONY: clean
 clean:
-	rm -rf out
+	rm -rf ./server/public/wasm ./server/public/wasm/wasm_exec.js
 
 cache:
 	mkdir -p cache
 
 .PHONY: commands
-commands: out/static/wasm_exec.js out/main.wasm $(patsubst cmd/%,out/%.wasm,$(wildcard cmd/*))
+commands: server/public/wasm/wasm_exec.js server/public/wasm/main.wasm $(patsubst cmd/%,server/public/wasm/%.wasm,$(wildcard cmd/*))
 
 .PHONY: go
 go: cache/go${GO_VERSION}
@@ -83,14 +74,14 @@ cache/go${GO_VERSION}: cache
 	touch cache/go${GO_VERSION}
 	touch cache/go.mod  # Makes it so linters will ignore this dir
 
-out/%.wasm: out go
+server/public/wasm/%.wasm: server/public/wasm go
 	go build -o $@ ./cmd/$*
 
-out/main.wasm: out go
-	go build -o out/main.wasm .
+server/public/wasm/main.wasm: server/public/wasm go
+	go build -o server/public/wasm/main.wasm .
 
-out/static/wasm_exec.js: out go
-	cp cache/go/misc/wasm/wasm_exec.js out/static/wasm_exec.js
+server/public/wasm/wasm_exec.js: go
+	cp cache/go/misc/wasm/wasm_exec.js server/public/wasm/wasm_exec.js
 
 .PHONY: go-ext
 go-ext:
@@ -105,3 +96,8 @@ go-ext:
 	cp internal/testdata/filelock_* "${TMP_GO}"/src/cmd/go/internal/lockedfile/internal/filelock/
 	sed -i '' -e 's/+build\( [^j].*\)*$$/+build\1 js,wasm/' "${TMP_GO}"/src/os/exec/lp_unix.go
 	rm "${TMP_GO}"/src/os/exec/lp_js.go
+
+.PHONY: watch
+watch:
+	npm --prefix=server run start-go & \
+	npm --prefix=server start

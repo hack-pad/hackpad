@@ -1,0 +1,51 @@
+import WebAssembly from './WebAssembly';
+import 'whatwg-fetch';
+
+const Go = window.Go; // loaded from wasm_exec.js script in index.html
+
+async function init() {
+  const startTime = new Date().getTime()
+  const go = new Go();
+  const cmd = await WebAssembly.instantiateStreaming(fetch(`wasm/main.wasm`), go.importObject)
+  go.env = {
+    'GOPROXY': 'https://proxy.golang.org/',
+    'GOROOT': '/go',
+    'HOME': '/home/me',
+    'PATH': '/bin:/home/me/go/bin:/go/bin/js_wasm:/go/pkg/tool/js_wasm',
+  }
+  go.run(cmd.instance)
+  const { goWasm, fs } = window
+  console.debug(`go-wasm status: ${goWasm.ready ? 'ready' : 'not ready'}`)
+
+  fs.mkdirSync("/go", 0o700)
+
+  await goWasm.overlayTarGzip('/go', '/wasm/go.tar.gz')
+
+  console.debug("Startup took", (new Date().getTime() - startTime) / 1000, "seconds")
+}
+
+const initOnce = init(); // always wait on this to ensure goWasm window object is ready
+
+export async function install(name) {
+  await initOnce
+  return window.goWasm.install(name)
+}
+
+export async function spawn(name, ...args) {
+  await initOnce
+  const { child_process } = window
+  await new Promise((resolve, reject) => {
+    const subprocess = child_process.spawn(name, args)
+    if (subprocess.error) {
+      reject(new Error(`Failed to spawn command: ${name} ${args.join(" ")}: ${subprocess.error}`))
+      return
+    }
+    child_process.wait(subprocess.pid, (err, process) => {
+      if (err) {
+        reject(err)
+        return
+      }
+      resolve(process)
+    })
+  })
+}

@@ -1,17 +1,3 @@
-body {
-    font-family: "Helvetica Neue", Helvetica;
-    height: 100%;
-    padding: 1em;
-    margin: 0;
-    box-sizing: border-box;
-}
-
-h1, h2, h3, h4, h5, h6 {
-    font-weight: 400;
-    margin: 0;
-    padding: 0;
-}
-
 pre, textarea {
     letter-spacing: 0.04em;
     line-height: 1.25em;
@@ -23,6 +9,12 @@ h1 pre, h2 pre, h3 pre, h4 pre, h5 pre, h6 pre {
 }
 
 #app {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+#editor {
     display: flex;
     flex-direction: column;
     height: 100%;

@@ -37,11 +37,17 @@ func install(args []js.Value) error {
 		return err
 	}
 
-	resp, err := http.Get("/" + command + ".wasm")
+	resp, err := http.Get("/wasm/" + command + ".wasm")
 	if err != nil {
 		return err
 	}
 	defer resp.Body.Close()
+	if resp.StatusCode/100 != 2 { // not success
+		return errors.New(resp.Status)
+	}
+	if contentType := resp.Header.Get("Content-Type"); contentType != "application/wasm" {
+		return errors.New("Invalid content type for WASM: " + contentType)
+	}
 	f, err := os.Create("/bin/" + command)
 	if err != nil {
 		return err
