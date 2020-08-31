@@ -37,7 +37,7 @@ server/public/wasm/go.tar.gz: server/public/wasm cache/go${GO_VERSION}
 
 .PHONY: clean
 clean:
-	rm -rf ./server/public/wasm ./server/public/wasm/wasm_exec.js
+	rm -rf ./out ./server/public/wasm
 
 cache:
 	mkdir -p cache
@@ -99,5 +99,15 @@ go-ext:
 
 .PHONY: watch
 watch:
+	@if [[ ! -d server/node_modules ]]; then \
+		npm --prefix=server ci; \
+	fi
 	npm --prefix=server run start-go & \
 	npm --prefix=server start
+
+.PHONY: build
+build: static
+	npm --prefix=server ci
+	npm --prefix=server run build
+	mkdir -p out
+	cp -r server/build/* out/
