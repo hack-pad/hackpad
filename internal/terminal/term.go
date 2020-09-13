@@ -98,7 +98,7 @@ func readOutputPipes(term js.Value, files *fs.FileDescriptors, output fs.FID) {
 		if err != nil {
 			log.Error("Failed to write to terminal:", err)
 		} else {
-			term.Call("write", string(buf))
+			term.Call("write", interop.NewByteArray(buf))
 		}
 	}
 }
