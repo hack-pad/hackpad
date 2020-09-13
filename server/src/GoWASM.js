@@ -68,3 +68,9 @@ export async function spawnTerminal(term, options) {
   const { goWasm } = window
   return goWasm.spawnTerminal(term, options)
 }
+
+export async function mkdirAll(path) {
+  await initOnce
+  const { fs } = window
+  fs.mkdirSync(path, { recursive: true, mode: 0o755 })
+}

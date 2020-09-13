@@ -5,6 +5,7 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
+	"os/exec"
 	"runtime/debug"
 	"unicode"
 
@@ -21,13 +22,11 @@ const (
 	escapeLBracket    = '['
 )
 
-const (
-	prompt = "$ "
-)
-
 type terminal struct {
 	line   []rune
 	cursor int
+
+	lastExitCode int
 }
 
 func newTerminal() *terminal {
@@ -59,7 +58,7 @@ func (t *terminal) ErrPrint(args ...interface{}) {
 }
 
 func (t *terminal) ReadEvalPrintLoop(reader io.RuneReader) {
-	fmt.Fprint(t.Stdout(), prompt)
+	fmt.Fprint(t.Stdout(), prompt(t))
 	for {
 		t.ReadEvalPrint(reader)
 	}
@@ -74,7 +73,7 @@ func (t *terminal) ReadEvalPrint(reader io.RuneReader) {
 			// attempt to return to a recovered state
 			t.line = nil
 			t.cursor = 0
-			t.Print(prompt)
+			t.Print(prompt(t))
 		}
 	}()
 
@@ -106,10 +105,15 @@ func (t *terminal) ReadEvalPrint(reader io.RuneReader) {
 		t.line = nil
 		t.cursor = 0
 		err := runCommand(t, command)
+		t.lastExitCode = 0
 		if err != nil {
 			t.ErrPrint(color.RedString(err.Error()) + "\n")
+			t.lastExitCode = 1
+			if exitErr, ok := err.(*exec.ExitError); ok {
+				t.lastExitCode = exitErr.ExitCode()
+			}
 		}
-		t.Print(prompt)
+		t.Print(prompt(t))
 	case controlDeleteWord,
 		'\t': // ignore for now
 	default:
