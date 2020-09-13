@@ -69,7 +69,7 @@ func (t *terminal) ReadEvalPrint(reader io.RuneReader) {
 	defer func() {
 		if r := recover(); r != nil {
 			msg := fmt.Sprintf("\n\npanic: %s\n%s\n", r, string(debug.Stack()))
-			fmt.Fprintln(t.Stderr(), color.RedString(msg))
+			t.ErrPrint(color.RedString(msg))
 
 			// attempt to return to a recovered state
 			t.line = nil
@@ -107,7 +107,7 @@ func (t *terminal) ReadEvalPrint(reader io.RuneReader) {
 		t.cursor = 0
 		err := runCommand(t, command)
 		if err != nil {
-			t.ErrPrint(color.RedString(err.Error()) + "\r\n")
+			t.ErrPrint(color.RedString(err.Error()) + "\n")
 		}
 		t.Print(prompt)
 	case controlDeleteWord,
