@@ -15,6 +15,38 @@ import (
 	"github.com/johnstarich/go-wasm/internal/console"
 )
 
+type builtinFunc func(term console.Console, args ...string) error
+
+var (
+	builtins = map[string]builtinFunc{
+		"cat":   cat,
+		"cd":    cd,
+		"echo":  echo,
+		"ls":    ls,
+		"mkdir": mkdir,
+		"mv":    mv,
+		"pwd":   pwd,
+		"rm":    rm,
+		"rmdir": rmdir,
+		"touch": touch,
+		"which": which,
+	}
+)
+
+func echo(term console.Console, args ...string) error {
+	fmt.Fprintln(term.Stdout(), strings.Join(args, " "))
+	return nil
+}
+
+func pwd(term console.Console, args ...string) error {
+	path, err := os.Getwd()
+	if err != nil {
+		return err
+	}
+	fmt.Fprintln(term.Stdout(), path)
+	return nil
+}
+
 func ls(term console.Console, args ...string) error {
 	if len(args) == 0 {
 		args = []string{"."}
