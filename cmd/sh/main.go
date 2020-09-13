@@ -98,12 +98,18 @@ func runBuiltin(term console.Console, name string, args ...string) (ok bool, err
 		err = mkdir(term, args...)
 	case "mv":
 		err = mv(term, args...)
+	case "pwd":
+		path, pErr := os.Getwd()
+		fmt.Fprintln(term.Stdout(), path)
+		err = pErr
 	case "rm":
 		err = rm(term, args...)
 	case "rmdir":
 		err = rmdir(term, args...)
 	case "touch":
 		err = touch(term, args...)
+	case "which":
+		err = which(term, args...)
 	default:
 		return false, errors.Errorf("Unknown builtin command: %s", name)
 	}

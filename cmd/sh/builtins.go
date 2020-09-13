@@ -7,6 +7,7 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
+	"os/exec"
 	"path"
 	"strings"
 	"syscall"
@@ -51,9 +52,14 @@ func cd(term console.Console, args ...string) error {
 		if err != nil {
 			return err
 		}
-		return os.Chdir(dir)
+		args = []string{dir}
+		fallthrough
 	case 1:
-		return os.Chdir(args[0])
+		dir := args[0]
+		if _, err := os.Stat(dir); err != nil {
+			return err
+		}
+		return os.Chdir(dir)
 	default:
 		return errors.New("Too many args")
 	}
@@ -176,6 +182,20 @@ func touch(term console.Console, args ...string) error {
 				return err
 			}
 		}
+	}
+	return nil
+}
+
+func which(term console.Console, args ...string) error {
+	if len(args) == 0 {
+		return errors.New("Not enough args")
+	}
+	for _, arg := range args {
+		path, err := exec.LookPath(arg)
+		if err != nil {
+			return err
+		}
+		fmt.Fprintln(term.Stdout(), path)
 	}
 	return nil
 }
