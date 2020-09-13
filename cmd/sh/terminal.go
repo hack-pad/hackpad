@@ -119,7 +119,7 @@ func (t *terminal) ReadEvalPrint(reader io.RuneReader) {
 		t.Print(string(t.line[t.cursor-1:]))
 		t.CursorLeftN(len(t.line) - t.cursor)
 	}
-	log.Printf("Term = %q %d; Cursor = %q %d", string(t.line), len(t.line), string(t.line[t.cursor:]), t.cursor)
+	log.Debugf("Term = %q %d; Cursor = %q %d", string(t.line), len(t.line), string(t.line[t.cursor:]), t.cursor)
 }
 
 func splitRunes(runes []rune, i int) (a, b []rune) {
