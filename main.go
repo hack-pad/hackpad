@@ -9,12 +9,14 @@ import (
 	"github.com/johnstarich/go-wasm/internal/js/fs"
 	"github.com/johnstarich/go-wasm/internal/js/process"
 	libProcess "github.com/johnstarich/go-wasm/internal/process"
+	"github.com/johnstarich/go-wasm/internal/terminal"
 	"github.com/johnstarich/go-wasm/log"
 )
 
 func main() {
 	process.Init()
 	fs.Init()
+	global.Set("spawnTerminal", js.FuncOf(terminal.SpawnTerminal))
 	global.Set("dump", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
 		basePath := "/"
 		if len(args) >= 1 {

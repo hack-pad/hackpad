@@ -17,6 +17,9 @@ func spawn(args []js.Value) (interface{}, error) {
 	command := args[0].String()
 	argv := []string{command}
 	if len(args) >= 2 {
+		if args[1].Type() != js.TypeObject || args[1].Get("length").IsUndefined() {
+			return nil, errors.New("Second arg must be an array of arguments")
+		}
 		length := args[1].Length()
 		for i := 0; i < length; i++ {
 			argv = append(argv, args[1].Index(i).String())

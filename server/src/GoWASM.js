@@ -31,16 +31,16 @@ export async function install(name) {
   return window.goWasm.install(name)
 }
 
-export async function spawn(name, ...args) {
+export async function run(name, ...args) {
+  const process = await spawn({ name, args })
+  return await wait(process.pid)
+}
+
+export async function wait(pid) {
   await initOnce
   const { child_process } = window
-  await new Promise((resolve, reject) => {
-    const subprocess = child_process.spawn(name, args)
-    if (subprocess.error) {
-      reject(new Error(`Failed to spawn command: ${name} ${args.join(" ")}: ${subprocess.error}`))
-      return
-    }
-    child_process.wait(subprocess.pid, (err, process) => {
+  return await new Promise((resolve, reject) => {
+    child_process.wait(pid, (err, process) => {
       if (err) {
         reject(err)
         return
@@ -48,4 +48,23 @@ export async function spawn(name, ...args) {
       resolve(process)
     })
   })
+}
+
+export async function spawn({ name, args, ...options }) {
+  await initOnce
+  const { child_process } = window
+  return await new Promise((resolve, reject) => {
+    const subprocess = child_process.spawn(name, args, options)
+    if (subprocess.error) {
+      reject(new Error(`Failed to spawn command: ${name} ${args.join(" ")}: ${subprocess.error}`))
+      return
+    }
+    resolve(subprocess)
+  })
+}
+
+export async function spawnTerminal(term, args) {
+  await initOnce
+  const { goWasm } = window
+  return goWasm.spawnTerminal(term, args)
 }
