@@ -10,5 +10,8 @@ type carriageReturnWriter struct {
 }
 
 func (c *carriageReturnWriter) Write(p []byte) (n int, err error) {
-	return c.Writer.Write(bytes.ReplaceAll(p, []byte("\n"), []byte("\r\n")))
+	newP := bytes.ReplaceAll(p, []byte("\n"), []byte("\r\n"))
+	n, err = c.Writer.Write(newP)
+	n -= len(newP) - len(p)
+	return
 }
