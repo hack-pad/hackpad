@@ -87,7 +87,7 @@ textarea {
     transform: translateY(calc(-100% + 0.1em));
     padding: 0.1em;
     padding-left: 0.5em;
-    background-color: rgba(80, 80, 80, 0.9);
+    background-color: rgba(80, 80, 80, 0.1);
     border-radius: 0.5em;
 }
 
@@ -113,5 +113,6 @@ textarea {
 
     .console-output .note {
         color: #88f;
+        background-color: rgba(80, 80, 80, 0.9);
     }
 }
