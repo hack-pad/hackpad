@@ -14,7 +14,10 @@ import (
 )
 
 const (
-	minPID = 1
+	minPID    = 1
+	stdinFID  = 0 // TODO should these be in 'fs'?
+	stdoutFID = 1
+	stderrFID = 2
 )
 
 type PID = common.PID
@@ -123,10 +126,18 @@ func (p *process) SetWorkingDirectory(wd string) error {
 }
 
 func (p *process) JSValue() js.Value {
+	stdio := p.fileDescriptors.RawFIDs()
+	stdin := newWritableStream(p.ctx, stdio[stdinFID])
+	stdout := newReadableStream(p.ctx, stdio[stdoutFID], js.Null())
+	stderr := newReadableStream(p.ctx, stdio[stderrFID], js.Null())
 	return js.ValueOf(map[string]interface{}{
-		"pid":   p.pid,
-		"ppid":  p.parentPID,
-		"error": interop.WrapAsJSError(p.err, "spawn"),
+		"pid":    p.pid,
+		"ppid":   p.parentPID,
+		"error":  interop.WrapAsJSError(p.err, "spawn"),
+		"stdio":  []interface{}{stdin, stdout, stderr},
+		"stdin":  stdin,
+		"stdout": stdout,
+		"stderr": stderr,
 	})
 }
 
