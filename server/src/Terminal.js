@@ -4,7 +4,7 @@ import 'xterm/css/xterm.css';
 import { Terminal } from 'xterm';
 import { spawnTerminal } from './GoWASM';
 
-export default function({ args }) {
+export default function({ args, ...props }) {
   const [term] = React.useState(() => {
     const term = new Terminal()
     spawnTerminal(term, args)
@@ -14,9 +14,10 @@ export default function({ args }) {
   React.useEffect(() => {
     if (elem) {
       term.open(elem.current)
+      term.setOption('cursorBlink', true)
       term.focus()
     }
   }, [elem, term])
 
-  return <div ref={elem} />
+  return <div ref={elem} {...props} />
 }

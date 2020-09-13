@@ -19,22 +19,27 @@ import (
 )
 
 var (
-	showLoading   = atomic.NewBool(false)
-	loadingElem   js.Value
-	consoleOutput console.Console
+	showLoading    = atomic.NewBool(false)
+	loadingElem    js.Value
+	consoleTabElem js.Value
+	consoleOutput  console.Console
 
 	document = js.Global().Get("document")
 )
 
 func main() {
+	editorID := flag.String("editor", "", "Editor element ID to attach")
+	consoleID := flag.String("console", "", "Console element ID to attach")
+	consoleTabID := flag.String("console-tab", "", "Console element ID to attach")
 	flag.Parse()
-	var app js.Value
-	if flag.NArg() == 0 {
-		app = document.Call("createElement", "div")
-		document.Get("body").Call("insertBefore", app, nil)
-	} else {
-		app = document.Call("querySelector", "#"+flag.Arg(0))
+
+	if *editorID == "" || *consoleID == "" || *consoleTabID == "" {
+		flag.Usage()
+		os.Exit(2)
 	}
+
+	app := document.Call("querySelector", "#"+*editorID)
+	buildOutput := document.Call("querySelector", "#"+*consoleID)
 
 	js.Global().Set("editor", map[string]interface{}{
 		"profile": js.FuncOf(interop.MemoryProfile),
@@ -51,13 +56,15 @@ func main() {
 	<button>fmt</button>
 	<div class="loading-indicator"></div>
 </div>
-<h3>Console</h3>
+`)
+	buildOutput.Set("innerHTML", `
 <div class="console"></div>
 `)
 	loadingElem = app.Call("querySelector", ".controls .loading-indicator")
 	editorElem := app.Call("querySelector", "textarea")
 	controlButtonElems := app.Call("querySelectorAll", ".controls button")
-	consoleElem := app.Call("querySelector", ".console")
+	consoleElem := buildOutput.Call("querySelector", ".console")
+	consoleTabElem = document.Call("getElementById", *consoleTabID)
 	consoleOutput = console.New(consoleElem)
 
 	controlButtons := make(map[string]js.Value)
@@ -67,6 +74,7 @@ func main() {
 		controlButtons[name] = button
 	}
 	controlButtons["build"].Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+		consoleTabElem.Call("click")
 		runGoProcess("build", "-v", ".")
 		return nil
 	}))
@@ -75,6 +83,7 @@ func main() {
 		return nil
 	}))
 	controlButtons["fmt"].Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+		consoleTabElem.Call("click")
 		runGoProcess("fmt", ".").Then(func(_ js.Value) interface{} {
 			contents, err := ioutil.ReadFile("main.go")
 			if err != nil {
@@ -194,6 +203,7 @@ func edited(newContents func() string) {
 }
 
 func runPlayground() {
+	consoleTabElem.Call("click")
 	runGoProcess("build", "-v", ".").Then(func(_ js.Value) interface{} {
 		return runProcess("./playground")
 	})
