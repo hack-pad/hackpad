@@ -7,7 +7,7 @@ import { spawnTerminal } from './GoWASM';
 export default function({ args, ...props }) {
   const [term] = React.useState(() => {
     const term = new Terminal()
-    spawnTerminal(term, args)
+    spawnTerminal(term, { args, cwd: "/home/me/playground" })
     return term
   })
   const elem = React.useRef(null)

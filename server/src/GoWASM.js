@@ -63,8 +63,8 @@ export async function spawn({ name, args, ...options }) {
   })
 }
 
-export async function spawnTerminal(term, args) {
+export async function spawnTerminal(term, options) {
   await initOnce
   const { goWasm } = window
-  return goWasm.spawnTerminal(term, args)
+  return goWasm.spawnTerminal(term, options)
 }
