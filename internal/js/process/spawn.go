@@ -58,16 +58,15 @@ func parseProcAttr(defaultCommand string, value js.Value) (argv0 string, attr *p
 			switch file.Type() {
 			case js.TypeNumber:
 				fd := fs.FID(file.Int())
-				attr.Files = append(attr.Files, &fd)
+				attr.Files = append(attr.Files, fs.Attr{FID: fd})
 			case js.TypeString:
 				switch file.String() {
 				case "ignore":
-					attr.Files = append(attr.Files, nil)
+					attr.Files = append(attr.Files, fs.Attr{Ignore: true})
 				case "inherit":
-					fd := fs.FID(i)
-					attr.Files = append(attr.Files, &fd)
+					attr.Files = append(attr.Files, fs.Attr{FID: fs.FID(i)})
 				case "pipe":
-					panic("not implemented") // TODO
+					attr.Files = append(attr.Files, fs.Attr{Pipe: true})
 				}
 			}
 		}

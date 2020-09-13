@@ -1,6 +1,7 @@
 package fs
 
 import (
+	"io"
 	"os"
 	"sort"
 	"strings"
@@ -48,7 +49,7 @@ func NewStdFileDescriptors(parentPID common.PID, workingDirectory string) (*File
 	return f, err
 }
 
-func NewFileDescriptors(parentPID common.PID, workingDirectory string, parentFiles *FileDescriptors, inheritFDs []*FID) (*FileDescriptors, func(wd string) error, error) {
+func NewFileDescriptors(parentPID common.PID, workingDirectory string, parentFiles *FileDescriptors, inheritFDs []Attr) (*FileDescriptors, func(wd string) error, error) {
 	f := &FileDescriptors{
 		parentPID:        parentPID,
 		previousFID:      0,
@@ -56,19 +57,24 @@ func NewFileDescriptors(parentPID common.PID, workingDirectory string, parentFil
 		workingDirectory: atomic.NewString(workingDirectory),
 	}
 	if len(inheritFDs) == 0 {
-		inheritFDs = []*FID{ptr(0), ptr(1), ptr(2)}
+		inheritFDs = []Attr{{FID: 0}, {FID: 1}, {FID: 2}}
 	}
 	if len(inheritFDs) < 3 {
 		return nil, nil, errors.Errorf("Invalid number of inherited file descriptors, must be 0 or at least 3: %#v", inheritFDs)
 	}
-	for _, fidPtr := range inheritFDs {
-		if fidPtr == nil {
+	for _, attr := range inheritFDs {
+		var inheritFD FID
+		switch {
+		case attr.Ignore:
 			return nil, nil, errors.New("Ignored file descriptors are unsupported") // TODO be sure to align FDs properly when skipping iterations
+		case attr.Pipe:
+			return nil, nil, errors.New("Pipe file descriptors are unsupported") // TODO align FDs like Ignore, but child FIDs on stdio property must be different than the real FIDs (see node docs)
+		default:
+			inheritFD = attr.FID
 		}
-
-		parentFD := parentFiles.files[*fidPtr]
+		parentFD := parentFiles.files[inheritFD]
 		if parentFD == nil {
-			return nil, nil, errors.Errorf("Invalid parent FID %d", *fidPtr)
+			return nil, nil, errors.Errorf("Invalid parent FID %d", attr.FID)
 		}
 		fid := f.newFID()
 		fd := parentFD.Dup(fid)
@@ -309,4 +315,19 @@ func (f *FileDescriptors) Flock(fd FID, action LockAction) error {
 		return interop.ErrNotImplemented
 	}
 	return nil
+}
+
+func (f *FileDescriptors) RawFID(fid FID) (io.ReadWriter, error) {
+	if _, ok := f.files[fid]; !ok {
+		return nil, interop.BadFileNumber(fid)
+	}
+	return f.files[fid].file, nil
+}
+
+func (f *FileDescriptors) RawFIDs() []io.ReadWriter {
+	results := make([]io.ReadWriter, 0, len(f.files))
+	for _, f := range f.files {
+		results = append(results, f.file)
+	}
+	return results
 }

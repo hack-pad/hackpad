@@ -9,5 +9,5 @@ import (
 type ProcAttr struct {
 	Dir   string
 	Env   map[string]string
-	Files []*fs.FID
+	Files []fs.Attr
 }
