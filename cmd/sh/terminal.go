@@ -16,6 +16,7 @@ import (
 
 const (
 	controlBackspace  = '\x7F'
+	controlClear      = '\f'
 	controlDeleteWord = '\x17'
 	controlEnter      = '\r'
 	escapeCSI         = '\x1B'
@@ -99,6 +100,9 @@ func (t *terminal) ReadEvalPrint(reader io.RuneReader) {
 			t.Print(string(t.line[t.cursor:]))
 			t.CursorLeftN(len(t.line) - t.cursor)
 		}
+	case controlClear:
+		t.Clear()
+		t.Print(prompt(t))
 	case controlEnter:
 		t.Print("\r\n")
 		command := string(t.line)
@@ -209,4 +213,10 @@ func (t *terminal) CursorLeftN(n int) {
 		return
 	}
 	t.Printf("%c%c%dD", escapeCSI, escapeLBracket, n)
+}
+
+func (t *terminal) Clear() {
+	// TODO this wipes out some scrollback, need to figure out how to preserve it
+	t.Print(string(escapeCSI) + "[2J")   // clear viewport
+	t.Print(string(escapeCSI) + "[1;1H") // set cursor to top left
 }

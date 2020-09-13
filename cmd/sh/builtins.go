@@ -9,9 +9,11 @@ import (
 	"os"
 	"os/exec"
 	"path"
+	"strconv"
 	"strings"
 	"syscall"
 
+	"github.com/fatih/color"
 	"github.com/johnstarich/go-wasm/internal/console"
 )
 
@@ -30,6 +32,8 @@ var (
 		"rmdir": rmdir,
 		"touch": touch,
 		"which": which,
+		"clear": clear,
+		"exit":  exit,
 	}
 )
 
@@ -229,5 +233,24 @@ func which(term console.Console, args ...string) error {
 		}
 		fmt.Fprintln(term.Stdout(), path)
 	}
+	return nil
+}
+
+func clear(term console.Console, args ...string) error {
+	term.(*terminal).Clear()
+	return nil
+}
+
+func exit(term console.Console, args ...string) error {
+	if len(args) == 0 {
+		os.Exit(0)
+	}
+
+	exitCode, err := strconv.ParseInt(args[0], 10, 64)
+	if err != nil {
+		return err
+	}
+	fmt.Fprintf(term.Stderr(), color.RedString("Exited with code %d\n"), exitCode)
+	os.Exit(int(exitCode))
 	return nil
 }
