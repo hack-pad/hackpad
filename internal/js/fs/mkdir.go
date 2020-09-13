@@ -18,7 +18,23 @@ func mkdirSync(args []js.Value) (interface{}, error) {
 		return nil, errors.Errorf("Invalid number of args, expected 2: %v", args)
 	}
 	path := args[0].String()
-	mode := os.FileMode(args[1].Int())
+	options := args[1]
+	var mode os.FileMode
+	if options.Type() == js.TypeNumber {
+		mode = os.FileMode(options.Int())
+	} else if options.Type() == js.TypeObject && options.Get("mode").Truthy() {
+		mode = os.FileMode(options.Get("mode").Int())
+	} else {
+		mode = 0777
+	}
+	recursive := false
+	if options.Type() == js.TypeObject && options.Get("recursive").Truthy() {
+		recursive = true
+	}
+
 	p := process.Current()
+	if recursive {
+		return nil, p.Files().MkdirAll(path, mode)
+	}
 	return nil, p.Files().Mkdir(path, mode)
 }

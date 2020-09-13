@@ -104,7 +104,7 @@ func main() {
 		return nil
 	}))
 
-	if err := os.Mkdir("playground", 0700); err != nil {
+	if err := os.MkdirAll("playground", 0700); err != nil {
 		log.Error("Failed to make playground dir", err)
 		return
 	}
