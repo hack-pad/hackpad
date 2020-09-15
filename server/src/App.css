@@ -95,6 +95,10 @@ textarea {
     border-radius: 0.5em;
 }
 
+.terminal {
+    padding: 0.4em;
+}
+
 @media screen and (prefers-color-scheme: dark) {
     body, textarea, button {
         background-color: #333;
