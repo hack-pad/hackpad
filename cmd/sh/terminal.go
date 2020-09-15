@@ -24,10 +24,13 @@ const (
 )
 
 type terminal struct {
+	// reader state
 	line   []rune
 	cursor int
-
-	lastExitCode int
+	// command state
+	lastExitCode     int
+	lastHistoryIndex int
+	history          []string
 }
 
 func newTerminal() *terminal {
@@ -108,6 +111,8 @@ func (t *terminal) ReadEvalPrint(reader io.RuneReader) {
 		command := string(t.line)
 		t.line = nil
 		t.cursor = 0
+		t.lastHistoryIndex = 0
+		t.history = append(t.history, command)
 		err := runCommand(t, command)
 		t.lastExitCode = 0
 		if err != nil {
@@ -166,8 +171,32 @@ func (t *terminal) ReadEvalEscape(firstRune rune, r io.RuneReader) error {
 	log.Printf("Got escape sequence: %q", escape)
 	switch controlRune {
 	case 'A': // cursor up
+		if t.lastHistoryIndex < len(t.history) {
+			t.lastHistoryIndex++
+			t.CursorLeftN(t.cursor)
+			t.ClearRightN(len(t.line))
+			historyLine := t.history[len(t.history)-t.lastHistoryIndex]
+			t.line = []rune(historyLine)
+			t.cursor = len(t.line)
+			t.Print(historyLine)
+		}
 		return nil
 	case 'B': // cursor down
+		if t.lastHistoryIndex == 1 {
+			t.lastHistoryIndex = 0
+			t.CursorLeftN(t.cursor)
+			t.ClearRightN(len(t.line))
+			t.line = nil
+			t.cursor = 0
+		} else if t.lastHistoryIndex > 1 {
+			t.lastHistoryIndex--
+			t.CursorLeftN(t.cursor)
+			t.ClearRightN(len(t.line))
+			historyLine := t.history[len(t.history)-t.lastHistoryIndex]
+			t.line = []rune(historyLine)
+			t.cursor = len(t.line)
+			t.Print(historyLine)
+		}
 		return nil
 	case 'C': // cursor forward
 		if t.cursor >= len(t.line) {
