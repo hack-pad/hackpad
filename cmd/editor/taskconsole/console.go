@@ -22,6 +22,7 @@ type console struct {
 	stdout, stderr, note io.Writer
 	commands             chan *exec.Cmd
 	runningCommands      sync.WaitGroup
+	titleChan            chan string
 }
 
 func (b *builder) New(element js.Value) ide.TaskConsole {
@@ -31,10 +32,11 @@ func (b *builder) New(element js.Value) ide.TaskConsole {
 	element.Get("classList").Call("add", "console")
 	outputElem := element.Call("querySelector", ".console-output")
 	c := &console{
-		stdout:   newElementWriter(outputElem, ""),
-		stderr:   newElementWriter(outputElem, "stderr"),
-		note:     newElementWriter(outputElem, "note"),
-		commands: make(chan *exec.Cmd, 10),
+		stdout:    newElementWriter(outputElem, ""),
+		stderr:    newElementWriter(outputElem, "stderr"),
+		note:      newElementWriter(outputElem, "note"),
+		commands:  make(chan *exec.Cmd, 10),
+		titleChan: make(chan string, 1),
 	}
 	go c.runLoop()
 	return c
@@ -57,6 +59,7 @@ func (c *console) Start(rawName, name string, args ...string) error {
 }
 
 func (c *console) runLoop() {
+	c.titleChan <- "Build"
 	for {
 		cmd := <-c.commands
 		c.runningCommands.Add(1)
@@ -102,4 +105,8 @@ func exitStatus(exitCode int) string {
 		return "✔"
 	}
 	return "✘"
+}
+
+func (c *console) Titles() <-chan string {
+	return c.titleChan
 }

@@ -18,7 +18,8 @@ type editorJSFunc js.Value
 func (e editorJSFunc) New(elem js.Value) ide.Editor {
 	editorElem := js.Value(e).Invoke(elem)
 	return &jsEditor{
-		elem: editorElem,
+		elem:      editorElem,
+		titleChan: make(chan string, 1),
 	}
 }
 
@@ -34,8 +35,9 @@ func setEditorFunc(this js.Value, args []js.Value) interface{} {
 }
 
 type jsEditor struct {
-	elem     js.Value
-	filePath string
+	elem      js.Value
+	filePath  string
+	titleChan chan string
 }
 
 func (j *jsEditor) onEdit(js.Value, []js.Value) interface{} {
@@ -49,6 +51,7 @@ func (j *jsEditor) onEdit(js.Value, []js.Value) interface{} {
 
 func (j *jsEditor) OpenFile(path string) error {
 	j.filePath = path
+	j.titleChan <- path
 	return j.ReloadFile()
 }
 
@@ -68,4 +71,8 @@ func (j *jsEditor) GetCursor() int {
 func (j *jsEditor) SetCursor(i int) error {
 	j.elem.Call("setCursorIndex", i)
 	return nil
+}
+
+func (j *jsEditor) Titles() <-chan string {
+	return j.titleChan
 }

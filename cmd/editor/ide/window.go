@@ -116,9 +116,9 @@ func (w *window) NewPane() Editor {
 	index := len(w.editors) - 1
 
 	tabButton := document.Call("createElement", "li")
-	tabButton.Set("innerHTML", `<button class="tab-button"></button>`)
+	tabButton.Set("innerHTML", `<button class="tab-button">New file</button>`)
 	button := tabButton.Call("querySelector", "button")
-	button.Set("innerText", "New file")
+	go watchTitles(editor.Titles(), button)
 	button.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
 		w.activateEditor(index)
 		return nil
@@ -127,6 +127,16 @@ func (w *window) NewPane() Editor {
 	w.editorTabButtons = append(w.editorTabButtons, button)
 	w.activateEditor(index)
 	return editor
+}
+
+func watchTitles(titles <-chan string, elem js.Value) {
+	for {
+		title, ok := <-titles
+		if !ok {
+			return
+		}
+		elem.Set("innerText", title)
+	}
 }
 
 func (w *window) NewConsole(rawName, name string, args ...string) (Console, error) {
@@ -157,6 +167,7 @@ func (w *window) newConsole(makeConsole func(elem js.Value) (Console, error)) (C
 	tabButton := document.Call("createElement", "li")
 	tabButton.Set("innerHTML", `<button class="tab-button">Terminal</button>`)
 	button := tabButton.Call("querySelector", "button")
+	go watchTitles(console.Titles(), button)
 	button.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
 		w.activateConsole(index)
 		return nil

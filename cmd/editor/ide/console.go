@@ -10,6 +10,7 @@ type ConsoleBuilder interface {
 
 type Console interface {
 	Wait() error
+	Titles() <-chan string
 }
 
 type TaskConsoleBuilder interface {

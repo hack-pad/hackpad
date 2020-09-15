@@ -16,16 +16,18 @@ func New() ide.EditorBuilder {
 }
 
 type textAreaEditor struct {
-	elem     js.Value
-	textarea js.Value
-	filePath string
+	elem      js.Value
+	textarea  js.Value
+	filePath  string
+	titleChan chan string
 }
 
 func (b *textAreaBuilder) New(elem js.Value) ide.Editor {
 	elem.Set("innerHTML", `<textarea spellcheck=false></textarea>`)
 	e := &textAreaEditor{
-		elem:     elem,
-		textarea: elem.Call("querySelector", "textarea"),
+		elem:      elem,
+		textarea:  elem.Call("querySelector", "textarea"),
+		titleChan: make(chan string, 1),
 	}
 	e.textarea.Call("addEventListener", "keydown", js.FuncOf(codeTyper))
 	e.textarea.Call("addEventListener", "input", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
@@ -39,6 +41,7 @@ func (b *textAreaBuilder) New(elem js.Value) ide.Editor {
 
 func (e *textAreaEditor) OpenFile(path string) error {
 	e.filePath = path
+	e.titleChan <- path
 	return e.ReloadFile()
 }
 
@@ -67,4 +70,8 @@ func (e *textAreaEditor) SetCursor(i int) error {
 	e.textarea.Set("selectionStart", i)
 	e.textarea.Set("selectionEnd", i)
 	return nil
+}
+
+func (e *textAreaEditor) Titles() <-chan string {
+	return e.titleChan
 }

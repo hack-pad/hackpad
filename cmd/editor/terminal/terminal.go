@@ -21,18 +21,22 @@ func New(xtermFunc js.Value) ide.ConsoleBuilder {
 }
 
 type terminal struct {
-	xterm js.Value
-	cmd   *exec.Cmd
+	xterm     js.Value
+	cmd       *exec.Cmd
+	titleChan chan string
 }
 
 func (b *terminalBuilder) New(elem js.Value, rawName, name string, args ...string) (ide.Console, error) {
 	term := &terminal{
-		xterm: b.newXTermFunc.Invoke(elem),
+		xterm:     b.newXTermFunc.Invoke(elem),
+		titleChan: make(chan string, 1),
 	}
 	return term, term.start(rawName, name, args...)
 }
 
 func (t *terminal) start(rawName, name string, args ...string) error {
+	t.titleChan <- "Terminal"
+
 	if rawName == "" {
 		rawName = name
 	}
@@ -88,4 +92,8 @@ func readOutputPipes(term js.Value, r io.Reader) {
 			term.Call("write", interop.NewByteArray(buf))
 		}
 	}
+}
+
+func (t *terminal) Titles() <-chan string {
+	return t.titleChan
 }

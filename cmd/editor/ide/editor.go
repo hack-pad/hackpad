@@ -11,4 +11,5 @@ type Editor interface {
 	ReloadFile() error
 	GetCursor() int
 	SetCursor(i int) error
+	Titles() <-chan string
 }
