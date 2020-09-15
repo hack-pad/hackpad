@@ -5,33 +5,24 @@ import (
 	"syscall/js"
 
 	"github.com/johnstarich/go-wasm/cmd/editor/ide"
-	"github.com/johnstarich/go-wasm/cmd/editor/plaineditor"
 	"github.com/johnstarich/go-wasm/log"
 )
 
-var (
-	editorBuilder ide.EditorBuilder = plaineditor.New()
-)
-
+// editorJSFunc is a JS function that opens on a JS element and returns a JS object with the following spec:
+// {
+//   getContents() string
+//   setContents(string)
+//   getCursorIndex() int
+//   setCursorIndex(int)
+// }
 type editorJSFunc js.Value
 
 func (e editorJSFunc) New(elem js.Value) ide.Editor {
-	editorElem := js.Value(e).Invoke(elem)
-	return &jsEditor{
-		elem:      editorElem,
+	editor := &jsEditor{
 		titleChan: make(chan string, 1),
 	}
-}
-
-func setEditorFunc(this js.Value, args []js.Value) interface{} {
-	if len(args) < 1 {
-		log.Error("Invalid number of args. Expected function to attach to a DOM element.")
-		return nil
-	}
-
-	editorBuilder = editorJSFunc(args[0])
-	// TODO re-init existing editors?
-	return nil
+	editor.elem = js.Value(e).Invoke(elem, js.FuncOf(editor.onEdit))
+	return editor
 }
 
 type jsEditor struct {

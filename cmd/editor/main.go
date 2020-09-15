@@ -7,6 +7,7 @@ import (
 	"syscall/js"
 
 	"github.com/johnstarich/go-wasm/cmd/editor/ide"
+	"github.com/johnstarich/go-wasm/cmd/editor/plaineditor"
 	"github.com/johnstarich/go-wasm/cmd/editor/taskconsole"
 	"github.com/johnstarich/go-wasm/cmd/editor/terminal"
 	"github.com/johnstarich/go-wasm/internal/interop"
@@ -34,7 +35,11 @@ func main() {
 	app.Set("className", "ide")
 	globalEditorProps := js.Global().Get("editor")
 	globalEditorProps.Set("profile", js.FuncOf(interop.MemoryProfile))
-	globalEditorProps.Set("setEditorFunc", js.FuncOf(setEditorFunc))
+	newEditor := globalEditorProps.Get("newEditor")
+	var editorBuilder ide.EditorBuilder = editorJSFunc(newEditor)
+	if !newEditor.Truthy() {
+		editorBuilder = plaineditor.New()
+	}
 	newXTermFunc := globalEditorProps.Get("newTerminal")
 	if !newXTermFunc.Truthy() {
 		panic("window.editor.newTerminal must be set")

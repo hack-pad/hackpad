@@ -36,6 +36,10 @@ textarea {
     margin: 0.75em 0.5em;
 }
 
+.controls button {
+    cursor: pointer;
+}
+
 .controls .loading-indicator {
     height: 1em;
     width: 1em;
@@ -60,7 +64,6 @@ textarea {
 }
 
 .console {
-    padding: 0.5em 0.25em;
     display: flex;
     flex-direction: column;
 }
@@ -68,12 +71,13 @@ textarea {
 .console-output {
     position: relative;
     max-height: 20vh;
-    min-height: 8em;
+    min-height: 30em;
     overflow: auto;
     border-radius: 0.25em;
     background-color: rgba(255, 255, 255, 0.1);
     border-color: #000;
     padding: 0.5em 0.75em;
+    margin: 0;
 }
 
 .console-output .stderr {
