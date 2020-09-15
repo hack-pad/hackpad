@@ -24,6 +24,11 @@ export function newTerminal(elem) {
   term.setOption('cursorBlink', true)
   term.focus()
   fitAddon.fit()
-  window.addEventListener('resize', () => fitAddon.fit())
+  if (window.ResizeObserver) {
+    const observer = new ResizeObserver(() => fitAddon.fit())
+    observer.observe(elem)
+  } else {
+    window.addEventListener('resize', () => fitAddon.fit())
+  }
   return term
 }
