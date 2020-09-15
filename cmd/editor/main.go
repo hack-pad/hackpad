@@ -53,12 +53,12 @@ func main() {
 		return
 	}
 
-	if err := tasks.Start(goBinaryPath, "go", "mod", "init", "playground"); err != nil {
+	if _, err := tasks.Start(goBinaryPath, "go", "mod", "init", "playground"); err != nil {
 		log.Error("Failed to start module init: ", err)
 		return
 	}
 
-	if err := tasks.Start(goBinaryPath, "go", "version"); err != nil {
+	if _, err := tasks.Start(goBinaryPath, "go", "version"); err != nil {
 		log.Error("Failed to start go version: ", err)
 		return
 	}

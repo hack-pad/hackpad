@@ -52,12 +52,13 @@ func (w *window) startProcess(console TaskConsole, rawPath, name string, args ..
 		w.loadingElem.Get("classList").Call("remove", "loading")
 	}()
 
-	err := console.Start(rawPath, name, args...)
+	ctx, err := console.Start(rawPath, name, args...)
 	if err != nil {
 		log.Error("Failed to start process: " + err.Error() + "\n")
 		return false, 0
 	}
-	commandErr := console.Wait()
+	<-ctx.Done()
+	commandErr := ctx.Err()
 	if commandErr != nil {
 		log.Error(commandErr.Error())
 	}
