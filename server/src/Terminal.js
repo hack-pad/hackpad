@@ -25,7 +25,10 @@ export function newTerminal(elem) {
   term.focus()
   fitAddon.fit()
   if (window.ResizeObserver) {
-    const observer = new ResizeObserver(() => fitAddon.fit())
+    const observer = new ResizeObserver(() => {
+      // only resize after re-rendering visible terminal
+      window.setTimeout(() => fitAddon.fit(), 50)
+    })
     observer.observe(elem)
   } else {
     window.addEventListener('resize', () => fitAddon.fit())
