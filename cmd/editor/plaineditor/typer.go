@@ -1,11 +1,16 @@
-package main
+package plaineditor
 
 import (
-	"fmt"
 	"runtime/debug"
 	"strings"
 	"syscall/js"
 	"unicode"
+
+	"github.com/johnstarich/go-wasm/log"
+)
+
+var (
+	document = js.Global().Get("document")
 )
 
 // codeTyper is fired on keydown event
@@ -16,7 +21,7 @@ func codeTyper(this js.Value, args []js.Value) interface{} {
 			return
 		}
 
-		fmt.Fprintln(consoleOutput.Stderr(), "Failed to handle keydown:", r, "\n"+string(debug.Stack()))
+		log.Error("Failed to handle keydown:", r, "\n"+string(debug.Stack()))
 	}()
 
 	if len(args) > 0 {
@@ -39,7 +44,7 @@ func handleKeydown(event js.Value) {
 	selectionEnd := target.Get("selectionEnd").Int()
 	key := event.Get("key").String()
 	code := event.Get("code").String()
-	metaKey := event.Get("metaKey").Bool()
+	//metaKey := event.Get("metaKey").Bool()
 
 	preventDefault := func() {
 		event.Call("preventDefault")
@@ -55,11 +60,12 @@ func handleKeydown(event js.Value) {
 	}
 
 	if code == KeyEnter {
-		if metaKey {
-			preventDefault()
-			runPlayground()
-			return
-		}
+		// TODO restore cmd+enter triggering run button
+		//if metaKey {
+		//preventDefault()
+		//runPlayground()
+		//return
+		//}
 
 		lastNewLine := strings.LastIndexByte(slice(text, 0, selectionStart), '\n')
 		if lastNewLine != -1 {

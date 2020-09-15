@@ -12,17 +12,17 @@ h1, h2, h3, h4, h5, h6 {
     padding: 0;
 }
 
-.tabs > nav ul {
+nav ul {
     list-style: none;
     padding: 0;
     margin: 0.25em;
 }
 
-.tabs > nav li {
+nav li {
     display: inline-block;
 }
 
-.tabs > nav button {
+nav button {
     font-size: 1em;
     padding: 0.5em 1.5em;
     margin: 0;
@@ -33,29 +33,29 @@ h1, h2, h3, h4, h5, h6 {
     cursor: pointer;
 }
 
-.tabs > nav button:hover {
+nav button:hover {
     background-color: rgba(0, 0, 0, 0.2);
     transition: background-color 0.2s;
     border-color: rgba(255, 255, 255, 0.5)
 }
 
-.tabs > nav button.active {
+nav button.active {
     border-bottom: 1px solid white;
 }
 
-.tabs > nav button.active:not(:hover) {
+nav button.active:not(:hover) {
     background-color: rgba(0, 0, 0, 0.1);
 }
 
-.tabs > nav .tab-title {
+nav .tab-button {
     display: inline-block;
 }
 
-.tabs > .tab.active .tab-contents {
+.tab.active {
     visibility: visible;
 }
 
-.tabs > .tab:not(.active) .tab-contents {
+.tab:not(.active) {
     visibility: hidden;
     position: absolute;
 }

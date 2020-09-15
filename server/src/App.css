@@ -14,7 +14,7 @@ h1 pre, h2 pre, h3 pre, h4 pre, h5 pre, h6 pre {
     height: 100%;
 }
 
-#editor {
+.editor {
     display: flex;
     flex-direction: column;
     height: 100%;
