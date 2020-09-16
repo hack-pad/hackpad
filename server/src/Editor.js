@@ -8,6 +8,8 @@ export function newEditor(elem, onEdit) {
     mode: "go",
     theme: "default",
     lineNumbers: true,
+    indentUnit: 4,
+    indentWithTabs: true,
   })
   if (window.matchMedia) {
     const setTheme = mq => {
