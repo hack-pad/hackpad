@@ -1,6 +1,7 @@
 package ide
 
 import (
+	"strings"
 	"syscall/js"
 
 	"github.com/johnstarich/go-wasm/log"
@@ -80,20 +81,47 @@ func New(elem js.Value, editorBuilder EditorBuilder, consoleBuilder ConsoleBuild
 		filePickerTab := document.Call("createElement", "li")
 		filePickerTab.Set("innerHTML", `<input type="text" placeholder="file_name.go" spellcheck=false />`)
 		inputElem := filePickerTab.Call("querySelector", "input")
-		filePickerTab.Call("addEventListener", "keydown", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
-			if args[0].Get("key").String() != "Enter" {
+
+		removed := false
+		var funcs []js.Func
+		remove := func() {
+			if removed {
+				return
+			}
+			removed = true
+			filePickerTab.Call("remove")
+			for _, f := range funcs {
+				f.Release()
+			}
+		}
+		addListener := func(elem js.Value, event string, fn func([]js.Value)) {
+			f := js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+				fn(args)
 				return nil
+			})
+			funcs = append(funcs, f)
+			elem.Call("addEventListener", event, f)
+		}
+		addListener(filePickerTab, "keydown", func(args []js.Value) {
+			if args[0].Get("key").String() != "Enter" {
+				return
 			}
 
 			fileName := inputElem.Get("value").String()
+			fileName = strings.TrimSpace(fileName)
+			if fileName == "" {
+				return
+			}
 			editor := w.NewPane()
 			err := editor.OpenFile(fileName)
 			if err != nil {
 				log.Error(err)
 			}
-			filePickerTab.Call("remove")
-			return nil
-		}))
+			remove()
+		})
+		addListener(inputElem, "blur", func([]js.Value) {
+			remove()
+		})
 		w.editorTabsElem.Call("appendChild", filePickerTab)
 		inputElem.Call("focus")
 		return nil
