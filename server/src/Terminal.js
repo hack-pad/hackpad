@@ -26,10 +26,9 @@ export function newTerminal(elem) {
   fitAddon.fit()
   if (window.ResizeObserver) {
     const observer = new ResizeObserver(entries => {
-      if (entries.length === 0 || entries[0].target.offsetParent === document.body) {
-        return
+      if (entries.length !== 0 && entries[0].target.classList.contains("active")) {
+        fitAddon.fit()
       }
-      fitAddon.fit()
     })
     observer.observe(elem)
   } else {
