@@ -64,11 +64,18 @@ func (t *terminal) ErrPrint(args ...interface{}) {
 func (t *terminal) ReadEvalPrintLoop(reader io.RuneReader) {
 	fmt.Fprint(t.Stdout(), prompt(t))
 	for {
-		t.ReadEvalPrint(reader)
+		err := t.ReadEvalPrint(reader)
+		if err == io.EOF {
+			return
+		}
+		if err != nil {
+			log.Error("Critical error during REPL: ", err)
+			return
+		}
 	}
 }
 
-func (t *terminal) ReadEvalPrint(reader io.RuneReader) {
+func (t *terminal) ReadEvalPrint(reader io.RuneReader) error {
 	defer func() {
 		if r := recover(); r != nil {
 			msg := fmt.Sprintf("\n\npanic: %s\n%s\n", r, string(debug.Stack()))
@@ -82,8 +89,12 @@ func (t *terminal) ReadEvalPrint(reader io.RuneReader) {
 	}()
 
 	r, _, err := reader.ReadRune()
+	if err == io.EOF {
+		return io.EOF
+	}
 	if err != nil {
 		log.Error("Error reading from stdin:", err)
+		return err
 	}
 
 	switch r {
@@ -133,6 +144,7 @@ func (t *terminal) ReadEvalPrint(reader io.RuneReader) {
 		t.CursorLeftN(len(t.line) - t.cursor)
 	}
 	log.Debugf("Term = %q %d; Cursor = %q %d", string(t.line), len(t.line), string(t.line[t.cursor:]), t.cursor)
+	return nil
 }
 
 func splitRunes(runes []rune, i int) (a, b []rune) {
