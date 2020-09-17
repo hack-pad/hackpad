@@ -81,6 +81,10 @@ func (w *window) activateEditor(tab int) {
 			contents.Get("classList").Call("remove", "active")
 		}
 	}
+	firstInput := w.editorTabs[tab].Call("querySelector", "input, select, textarea")
+	if firstInput.Truthy() {
+		firstInput.Call("focus")
+	}
 	w.currentEditorTab = tab
 }
 
@@ -102,6 +106,10 @@ func (w *window) activateConsole(tab int) {
 		} else {
 			contents.Get("classList").Call("remove", "active")
 		}
+	}
+	firstInput := w.consoleTabs[tab].Call("querySelector", "input, select, textarea")
+	if firstInput.Truthy() {
+		firstInput.Call("focus")
 	}
 	w.currentConsoleTab = tab
 }

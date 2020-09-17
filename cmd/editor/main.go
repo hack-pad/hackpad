@@ -85,14 +85,15 @@ func main() {
 		log.Error("Failed to write to main.go: ", err)
 		return
 	}
-	editor := win.NewPane()
-	editor.OpenFile("main.go")
 
 	_, err = win.NewConsole("", "sh")
 	if err != nil {
 		log.Error("Failed to create shell tab: ", err)
 		return
 	}
+
+	editor := win.NewPane()
+	editor.OpenFile("main.go")
 
 	select {}
 }
