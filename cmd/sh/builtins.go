@@ -20,10 +20,15 @@ import (
 type builtinFunc func(term console.Console, args ...string) error
 
 var (
+	builtins = map[string]builtinFunc{}
+)
+
+func init() {
 	builtins = map[string]builtinFunc{
 		"cat":   cat,
 		"cd":    cd,
 		"echo":  echo,
+		"env":   env,
 		"ls":    ls,
 		"mkdir": mkdir,
 		"mv":    mv,
@@ -35,7 +40,7 @@ var (
 		"clear": clear,
 		"exit":  exit,
 	}
-)
+}
 
 func echo(term console.Console, args ...string) error {
 	fmt.Fprintln(term.Stdout(), strings.Join(args, " "))
@@ -253,4 +258,65 @@ func exit(term console.Console, args ...string) error {
 	fmt.Fprintf(term.Stderr(), color.RedString("Exited with code %d\n"), exitCode)
 	os.Exit(int(exitCode))
 	return nil
+}
+
+func env(term console.Console, args ...string) error {
+	var kv []string
+	const equals = '='
+	for i, arg := range args {
+		if !strings.ContainsRune(arg, equals) {
+			args = args[i:]
+			break
+		}
+		kv = append(kv, arg)
+	}
+
+	if len(args) == 0 {
+		for _, e := range os.Environ() {
+			fmt.Fprintln(term.Stdout(), e)
+		}
+		return nil
+	}
+
+	return runWithEnv(term, kv, args...)
+}
+
+func splitKeyValue(kv string) (key, value string) {
+	const equals = "="
+	tokens := strings.SplitN(kv, equals, 2)
+	if len(tokens) < 2 {
+		return strings.Join(tokens, equals), ""
+	}
+	return tokens[0], strings.Join(tokens[1:], equals)
+}
+
+func runWithEnv(term console.Console, env []string, args ...string) error {
+	builtin, ok := builtins[args[0]]
+	if ok {
+		var oldKV, unsetKV []string
+		// override env for builtin
+		for _, pair := range env {
+			key, value := splitKeyValue(pair)
+			if oldValue, isSet := os.LookupEnv(key); isSet {
+				oldKV = append(oldKV, key+"="+oldValue)
+			} else {
+				unsetKV = append(unsetKV, key)
+			}
+			os.Setenv(key, value)
+		}
+		err := builtin(term, args[1:]...)
+		// restore env
+		for _, pair := range oldKV {
+			key, value := splitKeyValue(pair)
+			os.Setenv(key, value)
+		}
+		for _, key := range unsetKV {
+			os.Unsetenv(key)
+		}
+		return err
+	}
+
+	cmd := exec.Command(args[0], args[1:]...)
+	cmd.Env = append(os.Environ(), env...)
+	return cmd.Run()
 }
