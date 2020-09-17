@@ -168,7 +168,7 @@ func (t *terminal) ReadEvalEscape(firstRune rune, r io.RuneReader) error {
 	}
 
 	escape := append(append([]rune{escapeCSI, escapeLBracket}, controlParams...), controlRune)
-	log.Printf("Got escape sequence: %q", escape)
+	log.Debugf("Got escape sequence: %q", escape)
 	switch controlRune {
 	case 'A': // cursor up
 		if t.lastHistoryIndex < len(t.history) {
