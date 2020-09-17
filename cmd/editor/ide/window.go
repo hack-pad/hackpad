@@ -58,6 +58,7 @@ func New(elem js.Value, editorBuilder EditorBuilder, consoleBuilder ConsoleBuild
 <div class="consoles">
 	<nav>
 		<ul class="tab-buttons"></ul>
+		<button class="tab-new"></button>
 	</nav>
 	<div class="tabs"></div>
 </div>
@@ -124,6 +125,15 @@ func New(elem js.Value, editorBuilder EditorBuilder, consoleBuilder ConsoleBuild
 		})
 		w.editorTabsElem.Call("appendChild", filePickerTab)
 		inputElem.Call("focus")
+		return nil
+	}))
+
+	newTerminalElem := w.elem.Call("querySelector", ".consoles .tab-new")
+	newTerminalElem.Call("addEventListener", "click", js.FuncOf(func(js.Value, []js.Value) interface{} {
+		_, err := w.NewConsole("", "sh")
+		if err != nil {
+			log.Error(err)
+		}
 		return nil
 	}))
 
