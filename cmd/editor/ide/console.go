@@ -10,8 +10,11 @@ type ConsoleBuilder interface {
 }
 
 type Console interface {
+	Tabber
+}
+
+type ConsoleWaiter interface {
 	Wait() error
-	Titles() <-chan string
 }
 
 type TaskConsoleBuilder interface {
@@ -19,6 +22,6 @@ type TaskConsoleBuilder interface {
 }
 
 type TaskConsole interface {
-	Console
+	Tabber
 	Start(rawName, name string, args ...string) (context.Context, error)
 }

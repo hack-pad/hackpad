@@ -102,10 +102,6 @@ func (c *console) runCmd(cmd *exec.Cmd) error {
 	return cmd.Run()
 }
 
-func (c *console) Wait() error {
-	panic("not implemented")
-}
-
 func exitStatus(exitCode int) string {
 	if exitCode == 0 {
 		return "✔"
