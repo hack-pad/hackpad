@@ -56,7 +56,7 @@ cache/go${GO_VERSION}: cache
 			--depth 1 \
 			--single-branch \
 			--branch go${GO_VERSION} \
-			git@github.com:golang/go.git \
+			https://github.com/golang/go.git \
 			"$$TMP"; \
 		$(MAKE) -e TMP_GO="$$TMP" go-ext; \
 		pushd "$$TMP/src"; \
@@ -86,15 +86,15 @@ server/public/wasm/wasm_exec.js: go
 .PHONY: go-ext
 go-ext:
 	[[ -d "${TMP_GO}" ]]
-	sed -i '' -e '/^func Pipe(/,/^}/d' "${TMP_GO}"/src/syscall/fs_js.go
-	sed -i '' -e '/^func StartProcess(/,/^}/d' "${TMP_GO}"/src/syscall/syscall_js.go
-	sed -i '' -e '/^func Wait4(/,/^}/d' "${TMP_GO}"/src/syscall/syscall_js.go
-	sed -i '' -e '/^func (w WaitStatus) ExitStatus() int/d' "${TMP_GO}"/src/syscall/syscall_js.go
-	sed -i '' -e '/^func (w WaitStatus) Exited() bool/d' "${TMP_GO}"/src/syscall/syscall_js.go
+	sed -i'' -e '/^func Pipe(/,/^}/d' "${TMP_GO}"/src/syscall/fs_js.go
+	sed -i'' -e '/^func StartProcess(/,/^}/d' "${TMP_GO}"/src/syscall/syscall_js.go
+	sed -i'' -e '/^func Wait4(/,/^}/d' "${TMP_GO}"/src/syscall/syscall_js.go
+	sed -i'' -e '/^func (w WaitStatus) ExitStatus() int/d' "${TMP_GO}"/src/syscall/syscall_js.go
+	sed -i'' -e '/^func (w WaitStatus) Exited() bool/d' "${TMP_GO}"/src/syscall/syscall_js.go
 	cp internal/testdata/fs_* "${TMP_GO}"/src/syscall/
 	cp internal/testdata/syscall_* "${TMP_GO}"/src/syscall/
 	cp internal/testdata/filelock_* "${TMP_GO}"/src/cmd/go/internal/lockedfile/internal/filelock/
-	sed -i '' -e 's/+build\( [^j].*\)*$$/+build\1 js,wasm/' "${TMP_GO}"/src/os/exec/lp_unix.go
+	sed -i'' -e 's/+build\( [^j].*\)*$$/+build\1 js,wasm/' "${TMP_GO}"/src/os/exec/lp_unix.go
 	rm "${TMP_GO}"/src/os/exec/lp_js.go
 
 .PHONY: watch
@@ -111,3 +111,14 @@ build: static
 	npm --prefix=server run build
 	mkdir -p out
 	cp -r server/build/* out/
+
+.PHONY: docker
+docker:
+	docker build -t go-wasm .
+
+.PHONY: docker-run
+docker-run: docker
+	docker run -it --rm \
+		--name go-wasm \
+		-p 8080:80 \
+		go-wasm:latest

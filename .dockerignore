@@ -1,0 +1,8 @@
+cache
+server/node_modules
+server/build
+server/public/wasm
+.git
+out
+Dockerfile
+.dockerignore
