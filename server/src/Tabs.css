@@ -16,11 +16,11 @@ nav button:hover {
 }
 
 nav button.active {
-    background-color: rgb(33, 33, 33);
+    background-color: #fff;
 }
 
 nav button.active:hover {
-    background-color: rgb(40, 40, 40);
+    background-color: #ccc;
 }
 
 nav .tab-button {
@@ -56,4 +56,14 @@ nav .tab-button {
 .tab-new:hover {
     background-color: rgba(0, 0, 0, 0.4);
     border: 1px solid #aaa;
+}
+
+@media screen and (prefers-color-scheme: dark) {
+    nav button.active {
+        background-color: rgb(33, 33, 33);
+    }
+
+    nav button.active:hover {
+        background-color: rgb(40, 40, 40);
+    }
 }

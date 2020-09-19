@@ -3,6 +3,7 @@ import 'codemirror/lib/codemirror.css';
 import 'codemirror/theme/material-darker.css';
 import 'codemirror/mode/go/go';
 
+import { listenColorScheme } from './ColorScheme';
 import './Editor.css';
 
 export function newEditor(elem, onEdit) {
@@ -13,14 +14,10 @@ export function newEditor(elem, onEdit) {
     indentUnit: 4,
     indentWithTabs: true,
   })
-  if (window.matchMedia) {
-    const setTheme = mq => {
-      editor.setOption("theme", mq.matches ? "material-darker" : "default")
-    }
-    const media = window.matchMedia("(prefers-color-scheme: dark)")
-    setTheme(media)
-    media.addListener(setTheme)
-  }
+  listenColorScheme({
+    light: () => editor.setOption("theme", "default"),
+    dark: () => editor.setOption("theme", "material-darker"),
+  })
   editor.on('change', onEdit)
   return {
     getContents() {
