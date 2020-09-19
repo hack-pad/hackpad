@@ -40,19 +40,19 @@ type window struct {
 
 func New(elem js.Value, editorBuilder EditorBuilder, consoleBuilder ConsoleBuilder, taskConsoleBuilder TaskConsoleBuilder) (Window, TaskConsole) {
 	elem.Set("innerHTML", `
+<div class="controls">
+	<button>build</button>
+	<button>run</button>
+	<button>fmt</button>
+	<div class="loading-indicator"></div>
+</div>
+
 <div class="editors">
 	<nav>
 		<ul class="tab-buttons"></ul>
 		<button class="tab-new"></button>
 	</nav>
 	<div class="tabs"></div>
-</div>
-
-<div class="controls">
-	<button>build</button>
-	<button>run</button>
-	<button>fmt</button>
-	<div class="loading-indicator"></div>
 </div>
 
 <div class="consoles">
