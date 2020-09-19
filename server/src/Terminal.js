@@ -17,7 +17,11 @@ export default function({ args, ...props }) {
 
 export function newTerminal(elem) {
   const fitAddon = new FitAddon()
-  const term = new Terminal()
+  const term = new Terminal({
+    theme: {
+      background: "rgb(33, 33, 33)",
+    },
+  })
   term.loadAddon(fitAddon)
 
   term.open(elem)

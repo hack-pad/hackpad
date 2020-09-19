@@ -3,6 +3,8 @@ import 'codemirror/lib/codemirror.css';
 import 'codemirror/theme/material-darker.css';
 import 'codemirror/mode/go/go';
 
+import './Editor.css';
+
 export function newEditor(elem, onEdit) {
   const editor = CodeMirror(elem, {
     mode: "go",

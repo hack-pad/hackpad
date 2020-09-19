@@ -1,0 +1,14 @@
+.editor {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+.editor .CodeMirror-lines {
+  padding: 0.5em 0; /* Vertical padding around content */
+}
+
+.editor .CodeMirror pre.CodeMirror-line,
+.editor .CodeMirror pre.CodeMirror-line-like {
+  padding: 0 0.5em; /* Horizontal padding of content */
+}

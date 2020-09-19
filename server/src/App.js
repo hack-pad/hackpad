@@ -1,6 +1,8 @@
 import React from 'react';
 import './App.css';
 
+import './Tabs.css';
+
 import { install, run } from './GoWASM';
 import { newTerminal } from './Terminal';
 import { newEditor } from './Editor';

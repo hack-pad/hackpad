@@ -1,0 +1,59 @@
+nav button {
+    font-size: 1em;
+    padding: 0.5em 1.5em;
+    margin: 0;
+    border: none;
+    border-bottom: 1px solid transparent;
+    border-radius: 0;
+    outline: none;
+    cursor: pointer;
+}
+
+nav button:hover {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.8);
+    background-color: rgba(0, 0, 0, 0.2);
+    transition: background-color 0.2s;
+}
+
+nav button.active {
+    background-color: rgb(33, 33, 33);
+}
+
+nav button.active:hover {
+    background-color: rgb(40, 40, 40);
+}
+
+nav .tab-button {
+    display: inline-block;
+}
+
+.tab.active {
+    visibility: visible;
+}
+
+.tab:not(.active) {
+    visibility: hidden;
+    position: absolute;
+}
+
+.tab-new {
+    display: inline-block;
+    background-color: rgba(0, 0, 0, 0.15);
+    border: 1px solid transparent;
+    border-radius: 0.25em;
+    padding: 0 0.3em;
+    text-align: center;
+    font-weight: 800;
+    font-family: sans-serif;
+    font-size: 1em;
+    margin: 0;
+}
+
+.tab-new:before {
+    content: "\FF0B"; /* full-width plus */
+}
+
+.tab-new:hover {
+    background-color: rgba(0, 0, 0, 0.4);
+    border: 1px solid #aaa;
+}

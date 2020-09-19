@@ -1,7 +1,7 @@
 body {
     font-family: "Helvetica Neue", Helvetica;
     height: 100%;
-    padding: 1em;
+    padding: 0;
     margin: 0;
     box-sizing: border-box;
 }
@@ -21,64 +21,4 @@ nav ul {
 
 nav li {
     display: inline-block;
-}
-
-nav button {
-    font-size: 1em;
-    padding: 0.5em 1.5em;
-    margin: 0;
-    border: none;
-    border-bottom: 1px solid transparent;
-    border-radius: 0;
-    outline: none;
-    cursor: pointer;
-}
-
-nav button:hover {
-    background-color: rgba(0, 0, 0, 0.2);
-    transition: background-color 0.2s;
-    border-color: rgba(255, 255, 255, 0.5)
-}
-
-nav button.active {
-    border-bottom: 1px solid white;
-}
-
-nav button.active:not(:hover) {
-    background-color: rgba(0, 0, 0, 0.1);
-}
-
-nav .tab-button {
-    display: inline-block;
-}
-
-.tab.active {
-    visibility: visible;
-}
-
-.tab:not(.active) {
-    visibility: hidden;
-    position: absolute;
-}
-
-.tab-new {
-    display: inline-block;
-    background-color: rgba(0, 0, 0, 0.15);
-    border: 1px solid transparent;
-    border-radius: 0.25em;
-    padding: 0 0.3em;
-    text-align: center;
-    font-weight: 800;
-    font-family: sans-serif;
-    font-size: 1em;
-    margin: 0;
-}
-
-.tab-new:before {
-    content: "\FF0B"; /* full-width plus */
-}
-
-.tab-new:hover {
-    background-color: rgba(0, 0, 0, 0.4);
-    border: 1px solid #aaa;
 }
