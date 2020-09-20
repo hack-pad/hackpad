@@ -19,6 +19,7 @@ const (
 	controlBackspace      = '\x7F'
 	controlClear          = '\f'
 	controlCloseStdin     = '\x04'
+	controlSigTStop       = '\x03'
 	controlCursorBackward = 'D'
 	controlCursorDown     = 'B'
 	controlCursorForward  = 'C'
@@ -168,6 +169,13 @@ func (t *terminal) ReadEvalPrint(reader io.RuneReader) error {
 		t.moveCursorToStart()
 	case controlCloseStdin:
 		os.Stdin.Close()
+	case controlSigTStop:
+		t.line = nil
+		t.cursor = 0
+		t.lastHistoryIndex = 0
+		t.lastExitCode = 1
+		t.Print("^C\n\r")
+		t.Print(prompt(t))
 	case '\t': // ignore for now
 	default:
 		prefix, suffix := splitRunes(t.line, t.cursor)
