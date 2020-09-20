@@ -16,14 +16,16 @@ import (
 )
 
 const (
-	controlBackspace  = '\x7F'
-	controlClear      = '\f'
-	controlDeleteWord = '\x17'
-	controlEnd        = '\x05'
-	controlEnter      = '\r'
-	controlHome       = '\x01'
-	escapeCSI         = '\x1B'
-	escapeLBracket    = '['
+	controlBackspace    = '\x7F'
+	controlClear        = '\f'
+	controlDeleteWord   = '\x17'
+	controlEnd          = '\x05'
+	controlEnter        = '\r'
+	controlHome         = '\x01'
+	controlNextWord     = '\x66'
+	controlPreviousWord = '\x62'
+	escapeCSI           = '\x1B'
+	escapeLBracket      = '['
 )
 
 type terminal struct {
@@ -138,16 +140,7 @@ func (t *terminal) ReadEvalPrint(reader io.RuneReader) error {
 		}
 		t.Print(prompt(t))
 	case controlDeleteWord:
-		originalLen := len(t.line)
-		var trimmed []rune
-		t.line, trimmed = deleteWord(t.line, t.cursor)
-		trimmedLen := len(trimmed)
-		t.cursor -= trimmedLen
-		t.CursorLeftN(trimmedLen)
-		t.ClearRightN(originalLen - t.cursor)
-		remaining := t.line[t.cursor:]
-		t.Print(string(remaining))
-		t.CursorLeftN(len(remaining))
+		t.deleteWord()
 	case controlEnd:
 		t.moveCursorToEnd()
 	case controlHome:
@@ -176,7 +169,25 @@ func (t *terminal) ReadEvalEscape(firstRune rune, r io.RuneReader) error {
 		return err
 	}
 	switch controlRune {
-	case controlBackspace: // ignore for now
+	case controlBackspace:
+		t.deleteWord()
+		return nil
+	case controlPreviousWord:
+		beforeCursor := string(t.line[:t.cursor])
+		beforeCursor = strings.TrimRightFunc(beforeCursor, unicode.IsSpace)
+		prevWord := strings.LastIndexFunc(beforeCursor, unicode.IsSpace) + 1
+		t.CursorLeftN(t.cursor - prevWord)
+		t.cursor = prevWord
+		return nil
+	case controlNextWord:
+		afterCursor := string(t.line[t.cursor:])
+		afterCursor = strings.TrimLeftFunc(afterCursor, func(r rune) bool {
+			return !unicode.IsSpace(r)
+		})
+		afterCursor = strings.TrimLeftFunc(afterCursor, unicode.IsSpace)
+		nextWord := len(t.line) - len(afterCursor)
+		t.CursorRightN(nextWord - t.cursor)
+		t.cursor = nextWord
 		return nil
 	case escapeLBracket:
 	default:
@@ -288,6 +299,19 @@ func (t *terminal) Clear() {
 	// TODO this wipes out some scrollback, need to figure out how to preserve it
 	t.Print(string(escapeCSI) + "[2J")   // clear viewport
 	t.Print(string(escapeCSI) + "[1;1H") // set cursor to top left
+}
+
+func (t *terminal) deleteWord() {
+	originalLen := len(t.line)
+	var trimmed []rune
+	t.line, trimmed = deleteWord(t.line, t.cursor)
+	trimmedLen := len(trimmed)
+	t.cursor -= trimmedLen
+	t.CursorLeftN(trimmedLen)
+	t.ClearRightN(originalLen - t.cursor)
+	remaining := t.line[t.cursor:]
+	t.Print(string(remaining))
+	t.CursorLeftN(len(remaining))
 }
 
 func deleteWord(s []rune, cursor int) (newLine, trimmed []rune) {
