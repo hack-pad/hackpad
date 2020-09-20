@@ -288,7 +288,9 @@ func (t *terminal) ReadEvalEscape(firstRune rune, r io.RuneReader) error {
 		// ignore by default
 		return nil
 	}
-	t.Print(string(escape))
+	str := string(escape)
+	t.Print(str)
+	t.cursor += len(str)
 	return nil
 }
 
