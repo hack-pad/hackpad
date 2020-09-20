@@ -299,27 +299,7 @@ func splitKeyValue(kv string) (key, value string) {
 func runWithEnv(term console.Console, env []string, args ...string) error {
 	builtin, ok := builtins[args[0]]
 	if ok {
-		var oldKV, unsetKV []string
-		// override env for builtin
-		for _, pair := range env {
-			key, value := splitKeyValue(pair)
-			if oldValue, isSet := os.LookupEnv(key); isSet {
-				oldKV = append(oldKV, key+"="+oldValue)
-			} else {
-				unsetKV = append(unsetKV, key)
-			}
-			os.Setenv(key, value)
-		}
-		err := builtin(term, args[1:]...)
-		// restore env
-		for _, pair := range oldKV {
-			key, value := splitKeyValue(pair)
-			os.Setenv(key, value)
-		}
-		for _, key := range unsetKV {
-			os.Unsetenv(key)
-		}
-		return err
+		return runBuiltin(term, builtin, args[1:], env)
 	}
 
 	cmd := exec.Command(args[0], args[1:]...)

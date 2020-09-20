@@ -8,6 +8,7 @@ require (
 	github.com/spf13/afero v1.3.0
 	github.com/stretchr/testify v1.4.0
 	go.uber.org/atomic v1.6.0
+	mvdan.cc/sh/v3 v3.1.2
 )
 
 replace github.com/spf13/afero v1.3.0 => github.com/johnstarich/afero v1.3.2-0.20200824034706-e0c81fb79d7b

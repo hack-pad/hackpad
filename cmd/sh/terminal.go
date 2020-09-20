@@ -129,7 +129,7 @@ func (t *terminal) ReadEvalPrint(reader io.RuneReader) error {
 		t.cursor = 0
 		t.lastHistoryIndex = 0
 		t.history = append(t.history, command)
-		err := runCommand(t, command)
+		err := runLine(t, command)
 		t.lastExitCode = 0
 		if err != nil {
 			t.ErrPrint(color.RedString(err.Error()) + "\n")
