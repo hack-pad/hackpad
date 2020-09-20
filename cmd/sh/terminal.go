@@ -149,11 +149,9 @@ func (t *terminal) ReadEvalPrint(reader io.RuneReader) error {
 		t.Print(string(remaining))
 		t.CursorLeftN(len(remaining))
 	case controlEnd:
-		t.CursorRightN(len(t.line) - t.cursor)
-		t.cursor = len(t.line)
+		t.moveCursorToEnd()
 	case controlHome:
-		t.CursorLeftN(t.cursor)
-		t.cursor = 0
+		t.moveCursorToStart()
 	case '\t': // ignore for now
 	default:
 		prefix, suffix := splitRunes(t.line, t.cursor)
@@ -241,7 +239,11 @@ func (t *terminal) ReadEvalEscape(firstRune rune, r io.RuneReader) error {
 		t.cursor--
 	case 'E': // cursor next line
 		return nil
-	case 'F': // cursor backward
+	case 'F': // end key (also cursor backward?)
+		t.moveCursorToEnd()
+		return nil
+	case 'H': // home key
+		t.moveCursorToStart()
 		return nil
 	case '~': // forward delete
 		if t.cursor != len(t.line) {
@@ -301,4 +303,14 @@ func deleteWord(s []rune, cursor int) (newLine, trimmed []rune) {
 
 	newS := string(s[:previousWord]) + string(s[cursor:])
 	return []rune(newS), s[previousWord:cursor]
+}
+
+func (t *terminal) moveCursorToStart() {
+	t.CursorLeftN(t.cursor)
+	t.cursor = 0
+}
+
+func (t *terminal) moveCursorToEnd() {
+	t.CursorRightN(len(t.line) - t.cursor)
+	t.cursor = len(t.line)
 }
