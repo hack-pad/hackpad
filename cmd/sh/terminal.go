@@ -16,17 +16,22 @@ import (
 )
 
 const (
-	controlBackspace    = '\x7F'
-	controlClear        = '\f'
-	controlCloseStdin   = '\x04'
-	controlDeleteWord   = '\x17'
-	controlEnd          = '\x05'
-	controlEnter        = '\r'
-	controlHome         = '\x01'
-	controlNextWord     = '\x66'
-	controlPreviousWord = '\x62'
-	escapeCSI           = '\x1B'
-	escapeLBracket      = '['
+	controlBackspace      = '\x7F'
+	controlClear          = '\f'
+	controlCloseStdin     = '\x04'
+	controlCursorBackward = 'D'
+	controlCursorDown     = 'B'
+	controlCursorForward  = 'C'
+	controlCursorUp       = 'A'
+	controlDeleteWord     = '\x17'
+	controlEnd            = '\x05'
+	controlEnter          = '\r'
+	controlHome           = '\x01'
+	controlNextWord       = '\x66'
+	controlPreviousWord   = '\x62'
+	controlScroll         = '\x4f'
+	escapeCSI             = '\x1B'
+	escapeLBracket        = '['
 )
 
 type terminal struct {
@@ -122,7 +127,7 @@ func (t *terminal) ReadEvalPrint(reader io.RuneReader) error {
 	case escapeCSI:
 		err := t.ReadEvalEscape(r, reader)
 		if err != nil {
-			log.Error("Error reading from stdin:", err)
+			log.Error("Error reading from stdin: ", err)
 		}
 	case controlBackspace:
 		if t.cursor > 0 {
@@ -207,6 +212,7 @@ func (t *terminal) ReadEvalEscape(firstRune rune, r io.RuneReader) error {
 		t.CursorRightN(nextWord - t.cursor)
 		t.cursor = nextWord
 		return nil
+	case controlScroll: // ignore: this is a pre-cursor to a scroll event, but unsure if it should have a special action
 	case escapeLBracket:
 	default:
 		t.Print(string(controlRune))
@@ -228,7 +234,7 @@ func (t *terminal) ReadEvalEscape(firstRune rune, r io.RuneReader) error {
 	escape := append(append([]rune{escapeCSI, escapeLBracket}, controlParams...), controlRune)
 	log.Printf("Got escape sequence: %q", escape)
 	switch controlRune {
-	case 'A': // cursor up
+	case controlCursorUp:
 		if t.lastHistoryIndex < len(t.history) {
 			t.lastHistoryIndex++
 			t.CursorLeftN(t.cursor)
@@ -239,7 +245,7 @@ func (t *terminal) ReadEvalEscape(firstRune rune, r io.RuneReader) error {
 			t.Print(historyLine)
 		}
 		return nil
-	case 'B': // cursor down
+	case controlCursorDown:
 		if t.lastHistoryIndex == 1 {
 			t.lastHistoryIndex = 0
 			t.CursorLeftN(t.cursor)
@@ -256,12 +262,12 @@ func (t *terminal) ReadEvalEscape(firstRune rune, r io.RuneReader) error {
 			t.Print(historyLine)
 		}
 		return nil
-	case 'C': // cursor forward
+	case controlCursorForward:
 		if t.cursor >= len(t.line) {
 			return nil
 		}
 		t.cursor++
-	case 'D': // cursor backward
+	case controlCursorBackward:
 		if t.cursor <= 0 {
 			return nil
 		}
@@ -305,14 +311,14 @@ func (t *terminal) CursorLeftN(n int) {
 	if n <= 0 {
 		return
 	}
-	t.Printf("%c%c%dD", escapeCSI, escapeLBracket, n)
+	t.Printf("%c%c%d%c", escapeCSI, escapeLBracket, n, controlCursorBackward)
 }
 
 func (t *terminal) CursorRightN(n int) {
 	if n <= 0 {
 		return
 	}
-	t.Printf("%c%c%dC", escapeCSI, escapeLBracket, n)
+	t.Printf("%c%c%d%c", escapeCSI, escapeLBracket, n, controlCursorForward)
 }
 
 func (t *terminal) Clear() {
