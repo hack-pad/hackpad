@@ -2,6 +2,8 @@ package main
 
 import (
 	"fmt"
+	"io"
+	"io/ioutil"
 	"os"
 	"os/exec"
 	"strings"
@@ -113,20 +115,15 @@ func runCommand(term console.Console, line string, stmt *syntax.Stmt) error {
 		}
 
 		commandName, args := args[0], args[1:]
-		builtin, ok := builtins[commandName]
-		if ok {
-			err := runBuiltin(term, builtin, args, env)
-			return errors.Wrap(err, commandName)
-		}
 		cmd := exec.Command(commandName, args...)
 		cmd.Env = append(os.Environ(), env...)
 		cmd.Stdin = os.Stdin
 		cmd.Stdout = term.Stdout()
 		cmd.Stderr = term.Stderr()
-		if stmt.Background {
-			return cmd.Start()
-		}
-		return cmd.Run()
+		return runCmd(cmd, cmdOptions{
+			Background: stmt.Background,
+			Pipe:       false,
+		})
 
 	case *syntax.IfClause, *syntax.WhileClause, *syntax.ForClause, *syntax.CaseClause, *syntax.Block, *syntax.Subshell, *syntax.FuncDecl, *syntax.ArithmCmd, *syntax.TestClause, *syntax.DeclClause, *syntax.LetClause, *syntax.TimeClause, *syntax.CoprocClause, *syntax.BinaryCmd:
 		return errors.Errorf("Unknown statement type: %T %v", stmt.Cmd, stmt.Cmd)
@@ -135,10 +132,30 @@ func runCommand(term console.Console, line string, stmt *syntax.Stmt) error {
 	}
 }
 
-func runBuiltin(term console.Console, builtin builtinFunc, args []string, env []string) error {
+type cmdOptions struct {
+	Background bool
+	Pipe       bool
+}
+
+func runCmd(cmd *exec.Cmd, options cmdOptions) error {
+	args := []string{cmd.Path}
+	if len(cmd.Args) > 0 {
+		args = cmd.Args
+	}
+	commandName, args := args[0], args[1:]
+
+	builtin, isBuiltin := builtins[commandName]
+	if options.Pipe || !isBuiltin {
+		if options.Background {
+			return cmd.Start()
+		} else {
+			return cmd.Run()
+		}
+	}
+
 	var oldKV, unsetKV []string
 	// override env for builtin
-	for _, pair := range env {
+	for _, pair := range cmd.Env {
 		key, value := splitKeyValue(pair)
 		if oldValue, isSet := os.LookupEnv(key); isSet {
 			oldKV = append(oldKV, key+"="+oldValue)
@@ -147,7 +164,7 @@ func runBuiltin(term console.Console, builtin builtinFunc, args []string, env []
 		}
 		os.Setenv(key, value)
 	}
-	err := builtin(term, args...)
+	err := builtin(&writerConsole{stdout: cmd.Stdout, stderr: cmd.Stderr}, args...)
 	// restore env
 	for _, pair := range oldKV {
 		key, value := splitKeyValue(pair)
@@ -156,5 +173,21 @@ func runBuiltin(term console.Console, builtin builtinFunc, args []string, env []
 	for _, key := range unsetKV {
 		os.Unsetenv(key)
 	}
-	return err
+	return errors.Wrap(err, commandName)
+}
+
+type writerConsole struct {
+	stdout, stderr io.Writer
+}
+
+func (c *writerConsole) Stdout() io.Writer {
+	return &carriageReturnWriter{c.stdout}
+}
+
+func (c *writerConsole) Stderr() io.Writer {
+	return &carriageReturnWriter{c.stderr}
+}
+
+func (c *writerConsole) Note() io.Writer {
+	return ioutil.Discard
 }

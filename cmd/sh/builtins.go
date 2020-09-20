@@ -293,12 +293,9 @@ func splitKeyValue(kv string) (key, value string) {
 }
 
 func runWithEnv(term console.Console, env []string, args ...string) error {
-	builtin, ok := builtins[args[0]]
-	if ok {
-		return runBuiltin(term, builtin, args[1:], env)
-	}
-
 	cmd := exec.Command(args[0], args[1:]...)
+	cmd.Stdout = term.Stdout()
+	cmd.Stderr = term.Stderr()
 	cmd.Env = append(os.Environ(), env...)
-	return cmd.Run()
+	return runCmd(cmd, cmdOptions{})
 }
