@@ -7,6 +7,7 @@ import (
 	"strings"
 	"syscall/js"
 
+	"github.com/fatih/color"
 	"github.com/johnstarich/go-wasm/internal/console"
 	"github.com/johnstarich/go-wasm/internal/promise"
 	"github.com/pkg/errors"
@@ -20,6 +21,7 @@ var (
 func init() {
 	builtins["jseval"] = jseval
 	builtins["wpk"] = wpk
+	color.NoColor = false // override, since wasm isn't considered a "tty"
 }
 
 func jsEval(funcStr string, args ...interface{}) js.Value {

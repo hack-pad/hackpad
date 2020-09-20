@@ -9,6 +9,6 @@ import (
 
 func writeLog(c consoleType, s string) {
 	if os.Getenv("DEBUG") == "true" {
-		fmt.Printf("%s: %s\n", c.String(), s)
+		fmt.Fprintf(os.Stderr, "%s: %s\n", c.String(), s)
 	}
 }
