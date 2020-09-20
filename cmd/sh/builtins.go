@@ -12,6 +12,7 @@ import (
 	"strconv"
 	"strings"
 	"syscall"
+	"syscall/js"
 
 	"github.com/fatih/color"
 	"github.com/johnstarich/go-wasm/internal/console"
@@ -20,25 +21,27 @@ import (
 type builtinFunc func(term console.Console, args ...string) error
 
 var (
-	builtins = map[string]builtinFunc{}
+	builtins   = map[string]builtinFunc{}
+	jsFunction = js.Global().Get("Function")
 )
 
 func init() {
 	builtins = map[string]builtinFunc{
-		"cat":   cat,
-		"cd":    cd,
-		"echo":  echo,
-		"env":   env,
-		"ls":    ls,
-		"mkdir": mkdir,
-		"mv":    mv,
-		"pwd":   pwd,
-		"rm":    rm,
-		"rmdir": rmdir,
-		"touch": touch,
-		"which": which,
-		"clear": clear,
-		"exit":  exit,
+		"cat":    cat,
+		"cd":     cd,
+		"clear":  clear,
+		"echo":   echo,
+		"env":    env,
+		"exit":   exit,
+		"jseval": jseval,
+		"ls":     ls,
+		"mkdir":  mkdir,
+		"mv":     mv,
+		"pwd":    pwd,
+		"rm":     rm,
+		"rmdir":  rmdir,
+		"touch":  touch,
+		"which":  which,
 	}
 }
 
@@ -319,4 +322,18 @@ func runWithEnv(term console.Console, env []string, args ...string) error {
 	cmd := exec.Command(args[0], args[1:]...)
 	cmd.Env = append(os.Environ(), env...)
 	return cmd.Run()
+}
+
+func jsEval(funcStr string, args ...interface{}) js.Value {
+	f := jsFunction.Invoke(`"use strict";` + funcStr)
+	return f.Invoke(args...)
+}
+
+func jseval(term console.Console, args ...string) error {
+	if len(args) < 1 {
+		return errors.New("Must provide a string to run as a function")
+	}
+	result := jsEval(args[0], strings.Join(args[1:], " "))
+	fmt.Fprintln(term.Stdout(), result)
+	return nil
 }
