@@ -18,6 +18,7 @@ import (
 const (
 	controlBackspace    = '\x7F'
 	controlClear        = '\f'
+	controlCloseStdin   = '\x04'
 	controlDeleteWord   = '\x17'
 	controlEnd          = '\x05'
 	controlEnter        = '\r'
@@ -73,9 +74,25 @@ func (t *terminal) ReadEvalPrintLoop(reader io.RuneReader) {
 		if err == io.EOF {
 			return
 		}
+		if unwrapErr(err) == os.ErrClosed {
+			return
+		}
 		if err != nil {
 			log.Error("Critical error during REPL: ", err)
 			return
+		}
+	}
+}
+
+func unwrapErr(err error) error {
+	for {
+		unwrapper, ok := err.(interface{ Unwrap() error })
+		if !ok {
+			return err
+		}
+		newErr := unwrapper.Unwrap()
+		if newErr != nil {
+			err = newErr
 		}
 	}
 }
@@ -98,7 +115,6 @@ func (t *terminal) ReadEvalPrint(reader io.RuneReader) error {
 		return io.EOF
 	}
 	if err != nil {
-		log.Error("Error reading from stdin:", err)
 		return err
 	}
 
@@ -145,6 +161,8 @@ func (t *terminal) ReadEvalPrint(reader io.RuneReader) error {
 		t.moveCursorToEnd()
 	case controlHome:
 		t.moveCursorToStart()
+	case controlCloseStdin:
+		os.Stdin.Close()
 	case '\t': // ignore for now
 	default:
 		prefix, suffix := splitRunes(t.line, t.cursor)
