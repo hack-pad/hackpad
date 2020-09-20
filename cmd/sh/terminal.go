@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"runtime/debug"
+	"strings"
 	"unicode"
 
 	"github.com/fatih/color"
@@ -134,8 +135,18 @@ func (t *terminal) ReadEvalPrint(reader io.RuneReader) error {
 			}
 		}
 		t.Print(prompt(t))
-	case controlDeleteWord,
-		'\t': // ignore for now
+	case controlDeleteWord:
+		originalLen := len(t.line)
+		var trimmed []rune
+		t.line, trimmed = deleteWord(t.line, t.cursor)
+		trimmedLen := len(trimmed)
+		t.cursor -= trimmedLen
+		t.CursorLeftN(trimmedLen)
+		t.ClearRightN(originalLen - t.cursor)
+		remaining := t.line[t.cursor:]
+		t.Print(string(remaining))
+		t.CursorLeftN(len(remaining))
+	case '\t': // ignore for now
 	default:
 		prefix, suffix := splitRunes(t.line, t.cursor)
 		t.cursor++
@@ -260,4 +271,19 @@ func (t *terminal) Clear() {
 	// TODO this wipes out some scrollback, need to figure out how to preserve it
 	t.Print(string(escapeCSI) + "[2J")   // clear viewport
 	t.Print(string(escapeCSI) + "[1;1H") // set cursor to top left
+}
+
+func deleteWord(s []rune, cursor int) (newLine, trimmed []rune) {
+	if cursor == 0 {
+		return s, nil
+	}
+
+	str := string(s[:cursor])
+	str = strings.TrimRightFunc(str, unicode.IsSpace)
+	previousWord := strings.LastIndexFunc(str, unicode.IsSpace) + 1
+	// not found is: -1 + 1 == 0
+	// finding a word is: lastSpaceIndex + 1
+
+	newS := string(s[:previousWord]) + string(s[cursor:])
+	return []rune(newS), s[previousWord:cursor]
 }
