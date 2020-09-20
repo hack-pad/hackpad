@@ -19,7 +19,9 @@ const (
 	controlBackspace  = '\x7F'
 	controlClear      = '\f'
 	controlDeleteWord = '\x17'
+	controlEnd        = '\x05'
 	controlEnter      = '\r'
+	controlHome       = '\x01'
 	escapeCSI         = '\x1B'
 	escapeLBracket    = '['
 )
@@ -146,6 +148,12 @@ func (t *terminal) ReadEvalPrint(reader io.RuneReader) error {
 		remaining := t.line[t.cursor:]
 		t.Print(string(remaining))
 		t.CursorLeftN(len(remaining))
+	case controlEnd:
+		t.CursorRightN(len(t.line) - t.cursor)
+		t.cursor = len(t.line)
+	case controlHome:
+		t.CursorLeftN(t.cursor)
+		t.cursor = 0
 	case '\t': // ignore for now
 	default:
 		prefix, suffix := splitRunes(t.line, t.cursor)
@@ -265,6 +273,13 @@ func (t *terminal) CursorLeftN(n int) {
 		return
 	}
 	t.Printf("%c%c%dD", escapeCSI, escapeLBracket, n)
+}
+
+func (t *terminal) CursorRightN(n int) {
+	if n <= 0 {
+		return
+	}
+	t.Printf("%c%c%dC", escapeCSI, escapeLBracket, n)
 }
 
 func (t *terminal) Clear() {
