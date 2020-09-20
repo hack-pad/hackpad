@@ -11,40 +11,36 @@ import (
 	"strconv"
 	"strings"
 	"syscall"
-	"syscall/js"
 
 	"github.com/fatih/color"
 	"github.com/johnstarich/go-wasm/internal/console"
-	"github.com/johnstarich/go-wasm/internal/promise"
 	"github.com/pkg/errors"
 )
 
 type builtinFunc func(term console.Console, args ...string) error
 
 var (
-	builtins   = map[string]builtinFunc{}
-	jsFunction = js.Global().Get("Function")
-	goWasm     = js.Global().Get("goWasm")
+	builtins = map[string]builtinFunc{}
 )
 
 func init() {
-	builtins = map[string]builtinFunc{
-		"cat":    cat,
-		"cd":     cd,
-		"clear":  clear,
-		"echo":   echo,
-		"env":    env,
-		"exit":   exit,
-		"jseval": jseval,
-		"ls":     ls,
-		"mkdir":  mkdir,
-		"mv":     mv,
-		"pwd":    pwd,
-		"rm":     rm,
-		"rmdir":  rmdir,
-		"touch":  touch,
-		"which":  which,
-		"wpk":    wpk,
+	for k, v := range map[string]builtinFunc{
+		"cat":   cat,
+		"cd":    cd,
+		"clear": clear,
+		"echo":  echo,
+		"env":   env,
+		"exit":  exit,
+		"ls":    ls,
+		"mkdir": mkdir,
+		"mv":    mv,
+		"pwd":   pwd,
+		"rm":    rm,
+		"rmdir": rmdir,
+		"touch": touch,
+		"which": which,
+	} {
+		builtins[k] = v
 	}
 }
 
@@ -305,36 +301,4 @@ func runWithEnv(term console.Console, env []string, args ...string) error {
 	cmd := exec.Command(args[0], args[1:]...)
 	cmd.Env = append(os.Environ(), env...)
 	return cmd.Run()
-}
-
-func jsEval(funcStr string, args ...interface{}) js.Value {
-	f := jsFunction.Invoke(`"use strict";` + funcStr)
-	return f.Invoke(args...)
-}
-
-func jseval(term console.Console, args ...string) error {
-	if len(args) < 1 {
-		return errors.New("Must provide a string to run as a function")
-	}
-	result := jsEval(args[0], strings.Join(args[1:], " "))
-	fmt.Fprintln(term.Stdout(), result)
-	return nil
-}
-
-func wpk(term console.Console, args ...string) error {
-	if len(args) < 2 {
-		return errors.New(strings.TrimSpace(`
-Usage: wpk add <pkg>
-
-Installs a remote package by the name of 'pkg'.
-`))
-	}
-	switch args[0] {
-	case "add":
-		prom := promise.From(goWasm.Call("install", args[1]))
-		_, err := promise.Await(prom)
-		return err
-	default:
-		return errors.Errorf("Invalid command: %q", args[0])
-	}
 }
