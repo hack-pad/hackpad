@@ -1,3 +1,23 @@
+:root {
+    --tab-background: #fff;
+    --tab-bar: #eee;
+    --tab-active: #fff;
+    --tab-hover: #ccc;
+}
+
+@media screen and (prefers-color-scheme: dark) {
+    :root {
+        --tab-background: rgb(20, 20, 20);
+        --tab-bar: rgb(25, 25, 25);
+        --tab-active: rgb(33, 33, 33);
+        --tab-hover: rgb(40, 40, 40);
+    }
+}
+
+nav {
+    background-color: var(--tab-background);
+}
+
 nav button {
     font-size: 1em;
     padding: 0.5em 1.5em;
@@ -7,20 +27,21 @@ nav button {
     border-radius: 0;
     outline: none;
     cursor: pointer;
+    background-color: var(--tab-bar);
+    transition: background-color 0.2s, border-color 0.2s;
 }
 
 nav button:hover {
     border-bottom: 1px solid rgba(255, 255, 255, 0.8);
-    background-color: rgba(0, 0, 0, 0.2);
-    transition: background-color 0.2s;
+    background-color: var(--tab-hover);
 }
 
 nav button.active {
-    background-color: #fff;
+    background-color: var(--tab-active);
 }
 
 nav button.active:hover {
-    background-color: #ccc;
+    background-color: var(--tab-hover);
 }
 
 nav .tab-button {
@@ -56,14 +77,4 @@ nav .tab-button {
 .tab-new:hover {
     background-color: rgba(0, 0, 0, 0.4);
     border: 1px solid #aaa;
-}
-
-@media screen and (prefers-color-scheme: dark) {
-    nav button.active {
-        background-color: rgb(33, 33, 33);
-    }
-
-    nav button.active:hover {
-        background-color: rgb(40, 40, 40);
-    }
 }
