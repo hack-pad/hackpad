@@ -3,6 +3,10 @@
     --tab-bar: #eee;
     --tab-active: #fff;
     --tab-hover: #ccc;
+    --tab-highlight: rgb(170, 170, 170);
+    --control-color: var(--tab-highlight);
+    --control-hover: #000;
+    --control-hover-background: var(--tab-active);
 }
 
 @media screen and (prefers-color-scheme: dark) {
@@ -11,6 +15,10 @@
         --tab-bar: rgb(25, 25, 25);
         --tab-active: rgb(33, 33, 33);
         --tab-hover: rgb(40, 40, 40);
+        --tab-highlight: rgb(170, 170, 170);
+        --control-color: var(--tab-highlight);
+        --control-hover: #fff;
+        --control-hover-background: var(--tab-active);
     }
 }
 
@@ -19,28 +27,31 @@ nav {
 }
 
 nav button {
+    cursor: pointer;
+    margin: 0;
+    outline: none;
+    transition: background-color 0.2s, color 0.2s, border-color 0.2s;
+}
+
+nav .tab-button {
     font-size: 1em;
     padding: 0.5em 1.5em;
-    margin: 0;
     border: none;
     border-bottom: 1px solid transparent;
     border-radius: 0;
-    outline: none;
-    cursor: pointer;
     background-color: var(--tab-bar);
-    transition: background-color 0.2s, border-color 0.2s;
 }
 
-nav button:hover {
-    border-bottom: 1px solid rgba(255, 255, 255, 0.8);
+nav .tab-button:hover {
+    border-bottom: 1px solid var(--tab-highlight);
     background-color: var(--tab-hover);
 }
 
-nav button.active {
+nav .tab-button.active {
     background-color: var(--tab-active);
 }
 
-nav button.active:hover {
+nav .tab-button.active:hover {
     background-color: var(--tab-hover);
 }
 
@@ -59,15 +70,15 @@ nav .tab-button {
 
 .tab-new {
     display: inline-block;
-    background-color: rgba(0, 0, 0, 0.15);
-    border: 1px solid transparent;
+    background: none;
+    border: none;
+    color: var(--control-color);
     border-radius: 0.25em;
-    padding: 0 0.3em;
+    padding: 0.1em 0.4em;
     text-align: center;
     font-weight: 800;
     font-family: sans-serif;
     font-size: 1em;
-    margin: 0;
 }
 
 .tab-new:before {
@@ -75,6 +86,6 @@ nav .tab-button {
 }
 
 .tab-new:hover {
-    background-color: rgba(0, 0, 0, 0.4);
-    border: 1px solid #aaa;
+    background-color: var(--control-hover-background);
+    color: var(--control-hover);
 }
