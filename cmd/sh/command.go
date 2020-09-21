@@ -19,7 +19,7 @@ func runLine(term console.Console, line string) error {
 	parser := syntax.NewParser()
 	var cmdErr error
 	err := parser.Stmts(strings.NewReader(line), func(stmt *syntax.Stmt) bool {
-		cmdErr = runCommand(term, line, stmt)
+		cmdErr = runCommand(term, line, stmt, false)
 		return cmdErr == nil
 	})
 	if err != nil {
@@ -86,7 +86,7 @@ func evalWord(parts []syntax.WordPart) (string, error) {
 	return s, nil
 }
 
-func runCommand(term console.Console, line string, stmt *syntax.Stmt) error {
+func runCommand(term console.Console, line string, stmt *syntax.Stmt, isPipe bool) error {
 	switch node := stmt.Cmd.(type) {
 	case *syntax.CallExpr:
 		var env []string
@@ -213,16 +213,124 @@ func runCommand(term console.Console, line string, stmt *syntax.Stmt) error {
 			}
 		}
 
-		return runCmd(cmd, cmdOptions{
+		err := runCmd(cmd, cmdOptions{
 			Background: stmt.Background,
-			Pipe:       false,
+			Pipe:       isPipe,
 		})
+		err = exitErrFromCmd(err, stmt.Negated)
+		return err
 
-	case *syntax.IfClause, *syntax.WhileClause, *syntax.ForClause, *syntax.CaseClause, *syntax.Block, *syntax.Subshell, *syntax.FuncDecl, *syntax.ArithmCmd, *syntax.TestClause, *syntax.DeclClause, *syntax.LetClause, *syntax.TimeClause, *syntax.CoprocClause, *syntax.BinaryCmd:
+	case *syntax.BinaryCmd:
+		switch node.Op {
+		case syntax.AndStmt: // &&
+			err := runCommand(term, line, node.X, false)
+			if err != nil {
+				return err
+			}
+			return runCommand(term, line, node.Y, false)
+		case syntax.OrStmt: // ||
+			err := runCommand(term, line, node.X, false)
+			if err == nil {
+				return nil
+			}
+			return runCommand(term, line, node.Y, false)
+		case syntax.Pipe: // |
+			r, w, err := os.Pipe()
+			if err != nil {
+				return err
+			}
+			leftTerm := &redirectConsole{
+				stdin:  os.Stdin,
+				stdout: w,
+				stderr: term.Stderr(),
+			}
+			rightTerm := &redirectConsole{
+				stdin:  r,
+				stdout: term.Stdout(),
+				stderr: term.Stderr(),
+			}
+			errChan := make(chan error, 1)
+			go func() {
+				errChan <- runCommand(rightTerm, line, node.Y, true)
+			}()
+			err = runCommand(leftTerm, line, node.X, false)
+			if err != nil {
+				return err
+			}
+			w.Close()
+			return <-errChan
+		case syntax.PipeAll: // |&
+			r, w, err := os.Pipe()
+			if err != nil {
+				return err
+			}
+			leftTerm := &redirectConsole{
+				stdin:  os.Stdin,
+				stdout: w,
+				stderr: w,
+			}
+			rightTerm := &redirectConsole{
+				stdin:  r,
+				stdout: term.Stdout(),
+				stderr: term.Stderr(),
+			}
+			errChan := make(chan error, 1)
+			go func() {
+				errChan <- runCommand(rightTerm, line, node.Y, true)
+			}()
+			err = runCommand(leftTerm, line, node.X, false)
+			if err != nil {
+				return err
+			}
+			return <-errChan
+		default:
+			return errors.Errorf("Unknown binary operator: %v", node.Op)
+		}
+
+	case *syntax.IfClause, *syntax.WhileClause, *syntax.ForClause, *syntax.CaseClause, *syntax.Block, *syntax.Subshell, *syntax.FuncDecl, *syntax.ArithmCmd, *syntax.TestClause, *syntax.DeclClause, *syntax.LetClause, *syntax.TimeClause, *syntax.CoprocClause:
 		return errors.Errorf("Unknown statement type: %T %v", stmt.Cmd, stmt.Cmd)
 	default:
 		return errors.Errorf("Unknown statement type: %T %v", stmt.Cmd, stmt.Cmd)
 	}
+}
+
+func exitErrFromCmd(err error, negated bool) error {
+	code := exitCodeFromCmd(err, negated)
+	if code == 0 {
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+	return errors.New("Negated return code")
+}
+
+// exitCodeFromCmd tries to produce an exit code for the given error.
+// 0 for success, non-0 for failure.
+// If negated is true, the success result is flipped.
+func exitCodeFromCmd(err error, negated bool) int {
+	return negateExitCode(exitCodeFromErr(err), negated)
+}
+
+func exitCodeFromErr(err error) int {
+	if err == nil {
+		return 0
+	}
+	exitErr, ok := err.(*exec.ExitError)
+	if !ok {
+		return 1
+	}
+	return exitErr.ExitCode()
+}
+
+func negateExitCode(code int, negated bool) int {
+	if !negated {
+		return code
+	}
+	if code == 0 {
+		return 1
+	}
+	return 0
 }
 
 type cmdOptions struct {
