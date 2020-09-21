@@ -184,6 +184,9 @@ func (t *terminal) ReadEvalPrint(reader io.RuneReader) error {
 		t.Print(string(t.line[t.cursor-1:]))
 		t.CursorLeftN(len(t.line) - t.cursor)
 	}
+	if t.cursor > len(t.line) {
+		panic(fmt.Sprint("Cursor too large: cursor =", t.cursor, "length =", len(t.line)))
+	}
 	log.Debugf("Term = %q %d; Cursor = %q %d", string(t.line), len(t.line), string(t.line[t.cursor:]), t.cursor)
 	return nil
 }
@@ -304,7 +307,6 @@ func (t *terminal) ReadEvalEscape(firstRune rune, r io.RuneReader) error {
 	}
 	str := string(escape)
 	t.Print(str)
-	t.cursor += len(str)
 	return nil
 }
 

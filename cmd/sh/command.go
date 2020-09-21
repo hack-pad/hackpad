@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"os"
 	"os/exec"
+	"strconv"
 	"strings"
 	"unicode"
 
@@ -110,16 +111,108 @@ func runCommand(term console.Console, line string, stmt *syntax.Stmt) error {
 			return errors.New("Setting variables only is not supported")
 		}
 
-		if len(stmt.Redirs) > 0 {
-			return errors.New("File redirects are not supported")
-		}
-
 		commandName, args := args[0], args[1:]
 		cmd := exec.Command(commandName, args...)
 		cmd.Env = append(os.Environ(), env...)
 		cmd.Stdin = os.Stdin
 		cmd.Stdout = term.Stdout()
 		cmd.Stderr = term.Stderr()
+
+		for _, redir := range stmt.Redirs {
+			var redirectPtr string
+			var err error
+			switch redir.Op {
+			case syntax.Hdoc, // <<
+				syntax.DashHdoc: // <<-
+				if redir.Hdoc == nil {
+					var word string
+					if redir.Word != nil {
+						word, _ = evalWord(redir.Word.Parts)
+						word = ": " + word
+					}
+					return errors.New("Invalid heredoc" + word)
+				}
+				redirectPtr, err = evalWord(redir.Hdoc.Parts)
+			case syntax.WordHdoc: // <<<
+				redirectPtr, err = evalWord(redir.Word.Parts)
+			default:
+				redirectPtr, err = evalWord(redir.Word.Parts)
+			}
+			if err != nil {
+				return err
+			}
+
+			var fd int
+			switch redir.Op {
+			case syntax.RdrOut, // >
+				syntax.AppOut, // >>
+				syntax.RdrAll, // &>
+				syntax.AppAll: // &>>
+				fd = 1
+			default:
+				fd = 0
+			}
+			if redir.N != nil {
+				fdStr := redir.N.Value
+				parsedFD, err := strconv.ParseUint(fdStr, 10, 64)
+				if err != nil {
+					return err
+				}
+				fd = int(parsedFD)
+			}
+
+			switch redir.Op {
+			case syntax.RdrOut, // >
+				syntax.AppOut, // >>
+				syntax.RdrAll, // &>
+				syntax.AppAll: // &>>
+				if fd == 0 {
+					return errors.New("Can't redirect stdin to an output file")
+				}
+
+				flag := os.O_WRONLY | os.O_CREATE
+				if redir.Op == syntax.AppOut || redir.Op == syntax.AppAll {
+					flag |= os.O_APPEND
+				} else {
+					flag |= os.O_TRUNC
+				}
+				file, err := os.OpenFile(redirectPtr, flag, 0700)
+				if err != nil {
+					return err
+				}
+
+				switch fd {
+				case 1:
+					cmd.Stdout = file
+				case 2:
+					cmd.Stderr = file
+				default:
+					cmd.ExtraFiles = append(cmd.ExtraFiles, file)
+				}
+			case syntax.RdrIn: // <
+				if fd != 0 {
+					return errors.New("Can't redirect non-stdin to an input file")
+				}
+
+				file, err := os.OpenFile(redirectPtr, os.O_RDONLY, 0)
+				if err != nil {
+					return err
+				}
+
+				cmd.Stdin = file
+			case syntax.Hdoc, // <<
+				syntax.DashHdoc, // <<-
+				syntax.WordHdoc: // <<<
+				file := strings.NewReader(redirectPtr)
+				if fd != 0 {
+					return errors.New("Can't redirect non-stdin to an input file")
+				}
+				cmd.Stdin = file
+			default:
+				return errors.Errorf("File redirect of type %q are not supported", redir.Op.String())
+			}
+		}
+
 		return runCmd(cmd, cmdOptions{
 			Background: stmt.Background,
 			Pipe:       false,
@@ -138,6 +231,11 @@ type cmdOptions struct {
 }
 
 func runCmd(cmd *exec.Cmd, options cmdOptions) error {
+	// ensure files are all attached by default. these are assumed to be set up already
+	if cmd.Stdin == nil || cmd.Stdout == nil || cmd.Stderr == nil {
+		panic("Standard files not set up")
+	}
+
 	args := []string{cmd.Path}
 	if len(cmd.Args) > 0 {
 		args = cmd.Args
@@ -164,7 +262,11 @@ func runCmd(cmd *exec.Cmd, options cmdOptions) error {
 		}
 		os.Setenv(key, value)
 	}
-	err := builtin(&writerConsole{stdout: cmd.Stdout, stderr: cmd.Stderr}, args...)
+	err := builtin(&redirectConsole{
+		stdin:  cmd.Stdin,
+		stdout: cmd.Stdout,
+		stderr: cmd.Stderr,
+	}, args...)
 	// restore env
 	for _, pair := range oldKV {
 		key, value := splitKeyValue(pair)
@@ -176,18 +278,23 @@ func runCmd(cmd *exec.Cmd, options cmdOptions) error {
 	return errors.Wrap(err, commandName)
 }
 
-type writerConsole struct {
+type redirectConsole struct {
+	stdin          io.Reader
 	stdout, stderr io.Writer
 }
 
-func (c *writerConsole) Stdout() io.Writer {
+func (c *redirectConsole) Stdin() io.Reader {
+	return c.stdin
+}
+
+func (c *redirectConsole) Stdout() io.Writer {
 	return &carriageReturnWriter{c.stdout}
 }
 
-func (c *writerConsole) Stderr() io.Writer {
+func (c *redirectConsole) Stderr() io.Writer {
 	return &carriageReturnWriter{c.stderr}
 }
 
-func (c *writerConsole) Note() io.Writer {
+func (c *redirectConsole) Note() io.Writer {
 	return ioutil.Discard
 }
