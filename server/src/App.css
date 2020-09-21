@@ -1,3 +1,13 @@
+:root {
+    --console-border: 2px solid #eee;
+}
+
+@media screen and (prefers-color-scheme: dark) {
+    :root {
+        --console-border: 2px solid #181818;
+    }
+}
+
 pre, textarea {
     letter-spacing: 0.04em;
     line-height: 1.25em;
@@ -12,6 +22,10 @@ h1 pre, h2 pre, h3 pre, h4 pre, h5 pre, h6 pre {
     display: flex;
     flex-direction: column;
     height: 100%;
+}
+
+.ide > *:not(:first-child) {
+    border-top: var(--console-border);
 }
 
 textarea {
@@ -55,10 +69,6 @@ textarea {
     100% {
         transform: rotate(360deg);
     }
-}
-
-.consoles {
-    border-top: 1px solid rgba(255, 255, 255, 0.3);
 }
 
 .console {
