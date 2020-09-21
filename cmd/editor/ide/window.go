@@ -104,9 +104,12 @@ func New(elem js.Value, editorBuilder EditorBuilder, consoleBuilder ConsoleBuild
 			elem.Call("addEventListener", event, f)
 		}
 		addListener(filePickerTab, "keydown", func(args []js.Value) {
-			if args[0].Get("key").String() != "Enter" {
+			event := args[0]
+			if event.Get("key").String() != "Enter" {
 				return
 			}
+			event.Call("preventDefault")
+			event.Call("stopPropagation")
 
 			fileName := inputElem.Get("value").String()
 			fileName = strings.TrimSpace(fileName)
