@@ -72,7 +72,6 @@ textarea {
     min-height: 30em;
     overflow: auto;
     border-radius: 0.25em;
-    background-color: rgba(255, 255, 255, 0.1);
     border-color: #000;
     padding: 0.5em 0.75em;
     margin: 0;
