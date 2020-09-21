@@ -16,6 +16,8 @@ export default function({ args, ...props }) {
   return <div ref={elem} {...props} />
 }
 
+const fontScale = 0.85
+
 export function newTerminal(elem) {
   const fitAddon = new FitAddon()
   const term = new Terminal({
@@ -40,16 +42,22 @@ export function newTerminal(elem) {
   term.open(elem)
   term.setOption('cursorBlink', true)
   term.focus()
-  fitAddon.fit()
+  const fit = () => {
+    const fontSize = parseFloat(getComputedStyle(elem).fontSize)
+    term.setOption('fontSize', fontSize * fontScale)
+    fitAddon.fit()
+  }
+
+  fit()
   if (window.ResizeObserver) {
     const observer = new ResizeObserver(entries => {
       if (entries.length !== 0 && entries[0].target.classList.contains("active")) {
-        fitAddon.fit()
+        fit()
       }
     })
     observer.observe(elem)
   } else {
-    window.addEventListener('resize', () => fitAddon.fit())
+    window.addEventListener('resize', fit)
   }
   return term
 }
