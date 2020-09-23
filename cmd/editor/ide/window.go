@@ -47,22 +47,23 @@ func New(elem js.Value, editorBuilder EditorBuilder, consoleBuilder ConsoleBuild
 	<div class="loading-indicator"></div>
 </div>
 
-<div class="editors">
-	<nav>
-		<ul class="tab-buttons"></ul>
-		<button class="tab-new"></button>
-	</nav>
-	<div class="tabs"></div>
-</div>
+<div class="panes">
+	<div class="pane editors">
+		<nav class="tab-bar">
+			<ul class="tab-buttons"></ul>
+			<button class="tab-new"></button>
+		</nav>
+		<div class="tabs"></div>
+	</div>
 
-<div class="consoles">
-	<nav>
-		<ul class="tab-buttons"></ul>
-		<button class="tab-new"></button>
-	</nav>
-	<div class="tabs"></div>
+	<div class="pane consoles">
+		<nav class="tab-bar">
+			<ul class="tab-buttons"></ul>
+			<button class="tab-new"></button>
+		</nav>
+		<div class="tabs"></div>
+	</div>
 </div>
-
 `)
 
 	w := &window{

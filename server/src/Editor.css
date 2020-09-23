@@ -1,7 +1,11 @@
 .editor {
-    display: flex;
-    flex-direction: column;
-    height: 100%;
+  height: 100%;
+  overflow-y: scroll;
+  resize: vertical;
+}
+
+.editor .CodeMirror {
+  height: 100%;
 }
 
 .editor .CodeMirror-lines {

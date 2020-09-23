@@ -7,6 +7,8 @@
     --control-color: var(--tab-highlight);
     --control-hover: #000;
     --control-hover-background: var(--tab-active);
+
+    --tab-bar-height: 2.25em;
 }
 
 @media screen and (prefers-color-scheme: dark) {
@@ -22,19 +24,22 @@
     }
 }
 
-nav {
+.tab-bar {
     background-color: var(--tab-background);
+    height: var(--tab-bar-height);
 }
 
-nav button {
+.tab-bar button {
     cursor: pointer;
     margin: 0;
     outline: none;
     transition: background-color 0.2s, color 0.2s, border-color 0.2s;
 }
 
-nav .tab-button {
+.tab-bar .tab-button {
     font-size: 1em;
+    height: var(--tab-bar-height);
+    box-sizing: border-box;
     padding: 0.5em 1.5em;
     border: none;
     border-bottom: 1px solid transparent;
@@ -42,21 +47,25 @@ nav .tab-button {
     background-color: var(--tab-bar);
 }
 
-nav .tab-button:hover {
+.tab-bar .tab-button:hover {
     border-bottom: 1px solid var(--tab-highlight);
     background-color: var(--tab-hover);
 }
 
-nav .tab-button.active {
+.tab-bar .tab-button.active {
     background-color: var(--tab-active);
 }
 
-nav .tab-button.active:hover {
+.tab-bar .tab-button.active:hover {
     background-color: var(--tab-hover);
 }
 
-nav .tab-button {
+.tab-bar .tab-button {
     display: inline-block;
+}
+
+.tabs {
+    flex-grow: 1;
 }
 
 .tab.active {

@@ -1,4 +1,4 @@
-body {
+html, body {
     font-family: "Helvetica Neue", Helvetica;
     height: 100%;
     padding: 0;
@@ -21,4 +21,8 @@ nav ul {
 
 nav li {
     display: inline-block;
+}
+
+#root {
+    height: 100%;
 }

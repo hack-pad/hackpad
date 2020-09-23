@@ -1,5 +1,7 @@
 :root {
     --console-border: 2px solid #eee;
+    --controls-height: 2.5em;
+    --panes-height: calc(100vh - var(--controls-height));
 }
 
 @media screen and (prefers-color-scheme: dark) {
@@ -19,43 +21,61 @@ h1 pre, h2 pre, h3 pre, h4 pre, h5 pre, h6 pre {
 }
 
 #app {
-    display: flex;
-    flex-direction: column;
     height: 100%;
 }
 
-.ide > *:not(:first-child) {
+.ide {
+    display: flex;
+    flex-direction: column;
+}
+
+.ide .panes {
+    overflow-y: hidden;
+    max-height: var(--panes-height);
+    display: flex;
+    flex-direction: column;
+}
+
+.ide .pane {
     border-top: var(--console-border);
+    display: flex;
+    flex-direction: column;
 }
 
-textarea {
+.ide .editors {
     flex-grow: 1;
-    height: auto;
-    min-height: 13em;
 }
 
-.controls {
+.ide .editors .editor {
+    flex-grow: 1;
+    min-height: 20em;
+    max-height: 60vh;
+}
+
+.ide .controls {
+    height: var(--controls-height);
+    overflow: hidden;
     display: flex;
     flex-direction: row;
     align-items: center;
 }
 
-.controls > * {
+.ide .controls > * {
     margin: 0.75em 0.5em;
 }
 
-.controls button {
+.ide .controls button {
     cursor: pointer;
 }
 
-.controls .loading-indicator {
+.ide .controls .loading-indicator {
     height: 1em;
     width: 1em;
     border: 3px solid transparent;
     box-sizing: border-box;
 }
 
-.controls .loading-indicator.loading {
+.ide .controls .loading-indicator.loading {
     border-color: rgba(255, 255, 255, 0.1);
     border-top-color: #0099ff;
     border-radius: 50%;
@@ -74,12 +94,11 @@ textarea {
 .console {
     display: flex;
     flex-direction: column;
+    overflow-y: scroll;
 }
 
 .console-output {
     position: relative;
-    max-height: 20vh;
-    min-height: 30em;
     overflow: auto;
     border-radius: 0.25em;
     border-color: #000;

@@ -13,12 +13,21 @@ export function newEditor(elem, onEdit) {
     lineNumbers: true,
     indentUnit: 4,
     indentWithTabs: true,
+    viewportMargin: Infinity,
   })
   listenColorScheme({
     light: () => editor.setOption("theme", "default"),
     dark: () => editor.setOption("theme", "material-darker"),
   })
   editor.on('change', onEdit)
+
+  elem.addEventListener('click', e => {
+    editor.focus()
+    if (e.target === elem) {
+      // If we've clicked outside the code editor area, then it must be the bottom empty space.
+      editor.setCursor({ line: editor.lineCount()-1 })
+    }
+  })
   return {
     getContents() {
       return editor.getValue()
