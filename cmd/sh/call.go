@@ -38,7 +38,7 @@ func runCallExpr(term console.Console, stmt *syntax.Stmt, node *syntax.CallExpr,
 	commandName, args := args[0], args[1:]
 	cmd := exec.Command(commandName, args...)
 	cmd.Env = append(os.Environ(), env...)
-	cmd.Stdin = os.Stdin
+	cmd.Stdin = getConsoleStdin(term)
 	cmd.Stdout = term.Stdout()
 	cmd.Stderr = term.Stderr()
 

@@ -125,11 +125,8 @@ func mkdir(term console.Console, args ...string) error {
 
 func cat(term console.Console, args ...string) error {
 	if len(args) == 0 {
-		if stdiner, ok := term.(interface{ Stdin() io.Reader }); ok {
-			_, err := io.Copy(term.Stdout(), stdiner.Stdin())
-			return err
-		}
-		return errors.New("At least one file is required")
+		_, err := io.Copy(term.Stdout(), getConsoleStdin(term))
+		return err
 	}
 
 	for _, path := range args {

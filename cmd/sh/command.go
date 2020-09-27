@@ -108,7 +108,7 @@ func runCommand(term console.Console, line string, stmt *syntax.Stmt, isPipe boo
 				return err
 			}
 			leftTerm := &redirectConsole{
-				stdin:  os.Stdin,
+				stdin:  getConsoleStdin(term),
 				stdout: w,
 				stderr: term.Stderr(),
 			}
@@ -133,7 +133,7 @@ func runCommand(term console.Console, line string, stmt *syntax.Stmt, isPipe boo
 				return err
 			}
 			leftTerm := &redirectConsole{
-				stdin:  os.Stdin,
+				stdin:  getConsoleStdin(term),
 				stdout: w,
 				stderr: w,
 			}
@@ -234,4 +234,11 @@ func (c *redirectConsole) Stderr() io.Writer {
 
 func (c *redirectConsole) Note() io.Writer {
 	return ioutil.Discard
+}
+
+func getConsoleStdin(term console.Console) io.Reader {
+	if stdiner, ok := term.(interface{ Stdin() io.Reader }); ok {
+		return stdiner.Stdin()
+	}
+	return os.Stdin
 }
