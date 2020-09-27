@@ -1,6 +1,6 @@
 :root {
     --tab-background: #fff;
-    --tab-bar: #eee;
+    --tab-bar: transparent;
     --tab-active: #fff;
     --tab-hover: #ccc;
     --tab-highlight: rgb(170, 170, 170);
@@ -14,7 +14,7 @@
 @media screen and (prefers-color-scheme: dark) {
     :root {
         --tab-background: rgb(20, 20, 20);
-        --tab-bar: rgb(25, 25, 25);
+        --tab-bar: transparent;
         --tab-active: rgb(33, 33, 33);
         --tab-hover: rgb(40, 40, 40);
         --tab-highlight: rgb(170, 170, 170);
