@@ -156,7 +156,7 @@ func runCommand(term console.Console, line string, stmt *syntax.Stmt, isPipe boo
 		}
 
 	case *syntax.IfClause, *syntax.WhileClause, *syntax.ForClause, *syntax.CaseClause, *syntax.Block, *syntax.Subshell, *syntax.FuncDecl, *syntax.ArithmCmd, *syntax.TestClause, *syntax.DeclClause, *syntax.LetClause, *syntax.TimeClause, *syntax.CoprocClause:
-		return errors.Errorf("Unknown statement type: %T %v", stmt.Cmd, stmt.Cmd)
+		return errors.Errorf("Unimplemented statement type: %T %v", stmt.Cmd, stmt.Cmd)
 	default:
 		return errors.Errorf("Unknown statement type: %T %v", stmt.Cmd, stmt.Cmd)
 	}
