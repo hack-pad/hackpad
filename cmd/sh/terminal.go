@@ -150,7 +150,9 @@ func (t *terminal) ReadEvalPrint(reader io.RuneReader) error {
 		t.line = nil
 		t.cursor = 0
 		t.lastHistoryIndex = 0
-		t.history = append(t.history, command)
+		if trimmed := strings.TrimSpace(command); trimmed != "" {
+			t.history = append(t.history, trimmed)
+		}
 		err := runLine(t, command)
 		t.lastExitCode = 0
 		if err != nil {
