@@ -50,12 +50,12 @@ export function newTerminal(elem) {
 
   fit()
   if (window.ResizeObserver) {
-    const observer = new ResizeObserver(entries => {
-      if (entries.length !== 0 && entries[0].target.classList.contains("active")) {
+    const observer = new ResizeObserver(() => {
+      if (elem.classList.contains("active")) {
         fit()
       }
     })
-    observer.observe(elem)
+    observer.observe(elem.parentNode)
   } else {
     window.addEventListener('resize', fit)
   }

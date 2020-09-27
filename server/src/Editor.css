@@ -1,11 +1,10 @@
 .editor {
   height: 100%;
-  overflow-y: scroll;
-  resize: vertical;
 }
 
 .editor .CodeMirror {
   height: 100%;
+  overflow-y: scroll;
 }
 
 .editor .CodeMirror-lines {

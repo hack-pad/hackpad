@@ -30,25 +30,25 @@ h1 pre, h2 pre, h3 pre, h4 pre, h5 pre, h6 pre {
 }
 
 .ide .panes {
-    overflow-y: hidden;
+    overflow: hidden;
     max-height: var(--panes-height);
+    height: var(--panes-height);
     display: flex;
     flex-direction: column;
 }
 
 .ide .pane {
+    overflow: hidden;
     border-top: var(--console-border);
     display: flex;
     flex-direction: column;
+    flex-grow: 1;
+    flex-basis: 0;
 }
 
 .ide .editors {
-    flex-grow: 1;
-}
-
-.ide .editors .editor {
-    flex-grow: 1;
-    min-height: 20em;
+    flex-grow: 10;
+    overflow: hidden;
     max-height: 60vh;
 }
 
@@ -94,7 +94,6 @@ h1 pre, h2 pre, h3 pre, h4 pre, h5 pre, h6 pre {
 .console {
     display: flex;
     flex-direction: column;
-    overflow-y: scroll;
 }
 
 .console-output {

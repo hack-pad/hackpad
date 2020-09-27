@@ -1,9 +1,11 @@
 html, body {
     font-family: "Helvetica Neue", Helvetica;
-    height: 100%;
     padding: 0;
     margin: 0;
     box-sizing: border-box;
+    height: 100vh;
+    width: 100vw;
+    overflow: hidden;
 }
 
 h1, h2, h3, h4, h5, h6 {
@@ -25,4 +27,5 @@ nav li {
 
 #root {
     height: 100%;
+    width: 100%;
 }

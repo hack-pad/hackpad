@@ -66,15 +66,19 @@
 
 .tabs {
     flex-grow: 1;
+    overflow: hidden;
+}
+
+.tab {
+    visibility: hidden;
+    position: absolute;
+    overflow: hidden;
+    height: 100%;
 }
 
 .tab.active {
     visibility: visible;
-}
-
-.tab:not(.active) {
-    visibility: hidden;
-    position: absolute;
+    position: unset;
 }
 
 .tab-new {
