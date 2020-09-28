@@ -4,9 +4,10 @@
     --tab-active: #fff;
     --tab-hover: #ccc;
     --tab-highlight: rgb(170, 170, 170);
+    --tab-highlight-less: rgb(120, 120, 120);
     --control-color: var(--tab-highlight);
     --control-hover: #000;
-    --control-hover-background: var(--tab-active);
+    --control-hover-background: var(--tab-highlight-less);
 
     --tab-bar-height: 2.25em;
 }
@@ -18,9 +19,10 @@
         --tab-active: rgb(33, 33, 33);
         --tab-hover: rgb(40, 40, 40);
         --tab-highlight: rgb(170, 170, 170);
+        --tab-highlight-less: rgb(120, 120, 120);
         --control-color: var(--tab-highlight);
         --control-hover: #fff;
-        --control-hover-background: var(--tab-active);
+        --control-hover-background: var(--tab-highlight-less);
     }
 }
 
@@ -40,11 +42,12 @@
     font-size: 1em;
     height: var(--tab-bar-height);
     box-sizing: border-box;
-    padding: 0.5em 1.5em;
+    padding: 0.5em 1.25em;
     border: none;
     border-bottom: 1px solid transparent;
     border-radius: 0;
     background-color: var(--tab-bar);
+    cursor: pointer;
 }
 
 .tab-bar .tab-button:hover {
@@ -101,4 +104,27 @@
 .tab-new:hover {
     background-color: var(--control-hover-background);
     color: var(--control-hover);
+}
+
+.tab-bar .tab-close {
+    display: inline-block;
+    border: none;
+    background: none;
+    color: var(--control-color);
+    margin-left: 0.3em;
+    margin-right: -0.5em;
+}
+
+.tab-bar .tab-close:hover {
+    color: var(--control-hover);
+    background-color: var(--control-hover-background);
+}
+
+.tab-bar .tab-close:before {
+    content: "×";
+    display: block;
+    font-size: 1.25em;
+    line-height: 0;
+    padding: 0.5em 0;
+    padding-top: 0.6em;
 }

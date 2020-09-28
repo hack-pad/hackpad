@@ -55,14 +55,14 @@ func New(elem js.Value, editorBuilder EditorBuilder, consoleBuilder ConsoleBuild
 		panesElem:      elem.Call("querySelector", ".panes"),
 	}
 
-	w.editorsPane = NewTabPane(TabOptions{NoFocus: true}, func(button, contents js.Value) Tabber {
+	w.editorsPane = NewTabPane(TabOptions{NoFocus: true}, func(title, contents js.Value) Tabber {
 		contents.Get("classList").Call("add", "editor")
 		editor := w.editorBuilder.New(contents)
 		index := len(w.editors)
 		w.editors = append(w.editors, editor)
 
-		button.Set("innerHTML", `<input type="text" placeholder="file_name.go" spellcheck=false />`)
-		inputElem := button.Call("querySelector", "input")
+		title.Set("innerHTML", `<input type="text" placeholder="file_name.go" spellcheck=false />`)
+		inputElem := title.Call("querySelector", "input")
 		inputElem.Call("focus")
 
 		removed := false
@@ -84,7 +84,7 @@ func New(elem js.Value, editorBuilder EditorBuilder, consoleBuilder ConsoleBuild
 			funcs = append(funcs, f)
 			elem.Call("addEventListener", event, f)
 		}
-		addListener(button, "keydown", func(args []js.Value) {
+		addListener(title, "keydown", func(args []js.Value) {
 			event := args[0]
 			if event.Get("key").String() != "Enter" {
 				return
@@ -97,7 +97,7 @@ func New(elem js.Value, editorBuilder EditorBuilder, consoleBuilder ConsoleBuild
 			if fileName == "" {
 				return
 			}
-			button.Set("innerText", "New file")
+			title.Set("innerText", "New file")
 			err := editor.OpenFile(fileName)
 			if err != nil {
 				log.Error(err)
@@ -108,6 +108,11 @@ func New(elem js.Value, editorBuilder EditorBuilder, consoleBuilder ConsoleBuild
 			remove()
 		})
 		return editor
+	}, func(closedIndex int) {
+		var newEditors []Editor
+		newEditors = append(newEditors, w.editors[:closedIndex]...)
+		newEditors = append(newEditors, w.editors[closedIndex+1:]...)
+		w.editors = newEditors
 	})
 	w.panesElem.Call("appendChild", w.editorsPane)
 
@@ -118,6 +123,11 @@ func New(elem js.Value, editorBuilder EditorBuilder, consoleBuilder ConsoleBuild
 		}
 		w.consoles = append(w.consoles, console)
 		return console
+	}, func(closedIndex int) {
+		var newConsoles []Console
+		newConsoles = append(newConsoles, w.consoles[:closedIndex]...)
+		newConsoles = append(newConsoles, w.consoles[closedIndex+1:]...)
+		w.consoles = newConsoles
 	})
 	w.panesElem.Call("appendChild", w.consolesPane)
 
@@ -154,7 +164,7 @@ func New(elem js.Value, editorBuilder EditorBuilder, consoleBuilder ConsoleBuild
 		return nil
 	}))
 
-	taskConsole := w.consolesPane.NewTab(TabOptions{}, func(button, contents js.Value) Tabber {
+	taskConsole := w.consolesPane.NewTab(TabOptions{}, func(_, contents js.Value) Tabber {
 		c := taskConsoleBuilder.New(contents)
 		w.consoles = append(w.consoles, c)
 		return c

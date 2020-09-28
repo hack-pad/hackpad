@@ -10,15 +10,17 @@ type Tab struct {
 	button         js.Value
 	buttonListener js.Func
 	contents       js.Value
+	title          js.Value
 	stopTitlesLoop context.CancelFunc
 }
 
-func newTab(id int, button, contents js.Value, tabber Tabber, focus func(id int)) *Tab {
+func newTab(id int, button, contents, title js.Value, tabber Tabber, focus func(id int)) *Tab {
 	ctx, cancel := context.WithCancel(context.Background())
 	t := &Tab{
 		id:             id,
 		button:         button,
 		contents:       contents,
+		title:          title,
 		stopTitlesLoop: cancel,
 	}
 	go t.watchTitles(ctx, tabber)
@@ -59,7 +61,7 @@ func (t *Tab) watchTitles(ctx context.Context, tabber Tabber) {
 			return
 		case title, ok := <-titles:
 			if ok {
-				t.button.Set("innerText", title)
+				t.title.Set("innerText", title)
 			}
 		}
 	}
