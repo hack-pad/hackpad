@@ -86,13 +86,8 @@ func main() {
 		return
 	}
 
-	_, err = win.NewConsole("", "sh")
-	if err != nil {
-		log.Error("Failed to create shell tab: ", err)
-		return
-	}
-
-	editor := win.NewPane()
+	win.NewConsole()
+	editor := win.NewEditor()
 	editor.OpenFile("main.go")
 
 	select {}

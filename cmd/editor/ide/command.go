@@ -66,58 +66,6 @@ func (w *window) startProcess(console TaskConsole, rawPath, name string, args ..
 	return commandErr == nil, elapsed
 }
 
-func (w *window) activateEditor(tab int) {
-	for ix, button := range w.editorTabButtons {
-		if ix == tab {
-			button.Get("classList").Call("add", "active")
-		} else {
-			button.Get("classList").Call("remove", "active")
-		}
-	}
-	for ix, contents := range w.editorTabs {
-		if ix == tab {
-			contents.Get("classList").Call("add", "active")
-		} else {
-			contents.Get("classList").Call("remove", "active")
-		}
-	}
-	firstInput := w.editorTabs[tab].Call("querySelector", "input, select, textarea")
-	if firstInput.Truthy() {
-		firstInput.Call("focus")
-	}
-	w.currentEditorTab = tab
-}
-
-func (w *window) currentEditor() Editor {
-	return w.editors[w.currentEditorTab]
-}
-
-func (w *window) activateConsole(tab int) {
-	for ix, button := range w.consoleTabButtons {
-		if ix == tab {
-			button.Get("classList").Call("add", "active")
-		} else {
-			button.Get("classList").Call("remove", "active")
-		}
-	}
-	for ix, contents := range w.consoleTabs {
-		if ix == tab {
-			contents.Get("classList").Call("add", "active")
-		} else {
-			contents.Get("classList").Call("remove", "active")
-		}
-	}
-	firstInput := w.consoleTabs[tab].Call("querySelector", "input, select, textarea")
-	if firstInput.Truthy() {
-		firstInput.Call("focus")
-	}
-	w.currentConsoleTab = tab
-}
-
-func (w *window) currentConsole() Console {
-	return w.consoles[w.currentConsoleTab]
-}
-
 func (w *window) runPlayground(console TaskConsole) {
 	w.runGoProcess(console, "build", "-v", ".").Then(func(_ js.Value) interface{} {
 		return w.runProcess(console, "./playground")
