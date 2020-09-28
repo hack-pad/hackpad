@@ -164,7 +164,7 @@ func New(elem js.Value, editorBuilder EditorBuilder, consoleBuilder ConsoleBuild
 		return nil
 	}))
 
-	taskConsole := w.consolesPane.NewTab(TabOptions{}, func(_, contents js.Value) Tabber {
+	taskConsole := w.consolesPane.NewTab(TabOptions{NoClose: true}, func(_, contents js.Value) Tabber {
 		c := taskConsoleBuilder.New(contents)
 		w.consoles = append(w.consoles, c)
 		return c

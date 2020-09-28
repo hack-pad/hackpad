@@ -24,7 +24,8 @@ type TabPane struct {
 }
 
 type TabOptions struct {
-	NoFocus bool
+	NoFocus bool // skips focusing after creating the tab
+	NoClose bool // disables the close button
 }
 
 type TabBuilder func(title, contents js.Value) Tabber
@@ -72,10 +73,13 @@ func (p *TabPane) NewTab(options TabOptions, makeTab TabBuilder) Tabber {
 
 	tabItem := document.Call("createElement", "li")
 	tabItem.Get("classList").Call("add", "tab-button")
-	tabItem.Set("innerHTML", `
+	buttonTemplate := `
 <span class="tab-title">New file</span>
-<button class="tab-close" title="close"></button>
-`)
+`
+	if !options.NoClose {
+		buttonTemplate += `<button class="tab-close" title="close"></button>`
+	}
+	tabItem.Set("innerHTML", buttonTemplate)
 	title := tabItem.Call("querySelector", ".tab-title")
 	p.tabButtonsParent.Call("appendChild", tabItem)
 
@@ -84,13 +88,15 @@ func (p *TabPane) NewTab(options TabOptions, makeTab TabBuilder) Tabber {
 	p.lastTabID++
 	p.tabs = append(p.tabs, tab)
 
-	closeButton := tabItem.Call("querySelector", ".tab-close")
-	closeButton.Call("addEventListener", "click", interop.SingleUseFunc(func(_ js.Value, args []js.Value) interface{} {
-		event := args[0]
-		event.Call("stopPropagation")
-		p.closeTabID(tab.id)
-		return nil
-	}))
+	if !options.NoClose {
+		closeButton := tabItem.Call("querySelector", ".tab-close")
+		closeButton.Call("addEventListener", "click", interop.SingleUseFunc(func(_ js.Value, args []js.Value) interface{} {
+			event := args[0]
+			event.Call("stopPropagation")
+			p.closeTabID(tab.id)
+			return nil
+		}))
+	}
 
 	if !options.NoFocus {
 		p.focusID(tab.id)
