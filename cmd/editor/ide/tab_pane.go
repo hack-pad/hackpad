@@ -28,7 +28,7 @@ type TabOptions struct {
 	NoClose bool // disables the close button
 }
 
-type TabBuilder func(title, contents js.Value) Tabber
+type TabBuilder func(id int, title, contents js.Value) Tabber
 
 func NewTabPane(newTabOptions TabOptions, makeDefaultTab TabBuilder, closedTab func(index int)) *TabPane {
 	elem := document.Call("createElement", "div")
@@ -83,9 +83,10 @@ func (p *TabPane) NewTab(options TabOptions, makeTab TabBuilder) Tabber {
 	title := tabItem.Call("querySelector", ".tab-title")
 	p.tabButtonsParent.Call("appendChild", tabItem)
 
-	tabber := makeTab(title, contents)
-	tab := newTab(p.lastTabID, tabItem, contents, title, tabber, p.focusID)
+	id := p.lastTabID
 	p.lastTabID++
+	tabber := makeTab(id, title, contents)
+	tab := newTab(id, tabItem, contents, title, tabber, p.focusID)
 	p.tabs = append(p.tabs, tab)
 
 	if !options.NoClose {
@@ -124,6 +125,12 @@ func (p *TabPane) focusID(id int) {
 
 func (p *TabPane) Close() {
 	p.newTabListener.Release()
+}
+
+func (p *TabPane) CloseTab(index int) {
+	if index >= 0 {
+		p.closeTabID(p.tabs[index].id)
+	}
 }
 
 func (p *TabPane) closeTabID(id int) {

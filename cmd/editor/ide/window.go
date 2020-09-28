@@ -1,9 +1,11 @@
 package ide
 
 import (
+	"runtime/debug"
 	"strings"
 	"syscall/js"
 
+	"github.com/johnstarich/go-wasm/internal/interop"
 	"github.com/johnstarich/go-wasm/log"
 	"go.uber.org/atomic"
 )
@@ -55,58 +57,52 @@ func New(elem js.Value, editorBuilder EditorBuilder, consoleBuilder ConsoleBuild
 		panesElem:      elem.Call("querySelector", ".panes"),
 	}
 
-	w.editorsPane = NewTabPane(TabOptions{NoFocus: true}, func(title, contents js.Value) Tabber {
+	w.editorsPane = NewTabPane(TabOptions{NoFocus: true}, func(id int, title, contents js.Value) Tabber {
 		contents.Get("classList").Call("add", "editor")
 		editor := w.editorBuilder.New(contents)
-		index := len(w.editors)
 		w.editors = append(w.editors, editor)
 
 		title.Set("innerHTML", `<input type="text" placeholder="file_name.go" spellcheck=false />`)
 		inputElem := title.Call("querySelector", "input")
 		inputElem.Call("focus")
 
-		removed := false
-		var funcs []js.Func
-		remove := func() {
-			if removed {
-				return
-			}
-			removed = true
-			for _, f := range funcs {
-				f.Release()
-			}
-		}
-		addListener := func(elem js.Value, event string, fn func([]js.Value)) {
-			f := js.FuncOf(func(this js.Value, args []js.Value) interface{} {
-				fn(args)
-				return nil
-			})
-			funcs = append(funcs, f)
-			elem.Call("addEventListener", event, f)
-		}
-		addListener(title, "keydown", func(args []js.Value) {
+		success := false
+		var keydownFn js.Func
+		keydownFn = js.FuncOf(func(_ js.Value, args []js.Value) interface{} {
+			defer func() {
+				if r := recover(); r != nil {
+					log.Print("recovered from panic:", r, string(debug.Stack()))
+				}
+			}()
 			event := args[0]
 			if event.Get("key").String() != "Enter" {
-				return
+				return nil
 			}
 			event.Call("preventDefault")
 			event.Call("stopPropagation")
+			success = true
 
 			fileName := inputElem.Get("value").String()
 			fileName = strings.TrimSpace(fileName)
 			if fileName == "" {
-				return
+				return nil
 			}
 			title.Set("innerText", "New file")
 			err := editor.OpenFile(fileName)
 			if err != nil {
 				log.Error(err)
 			}
-			w.editorsPane.Focus(index)
+			w.editorsPane.focusID(id)
+			keydownFn.Release()
+			return nil
 		})
-		addListener(inputElem, "blur", func([]js.Value) {
-			remove()
-		})
+		title.Call("addEventListener", "keydown", keydownFn)
+		inputElem.Call("addEventListener", "blur", interop.SingleUseFunc(func(js.Value, []js.Value) interface{} {
+			if !success {
+				w.editorsPane.closeTabID(id)
+			}
+			return nil
+		}))
 		return editor
 	}, func(closedIndex int) {
 		var newEditors []Editor
@@ -116,7 +112,7 @@ func New(elem js.Value, editorBuilder EditorBuilder, consoleBuilder ConsoleBuild
 	})
 	w.panesElem.Call("appendChild", w.editorsPane)
 
-	w.consolesPane = NewTabPane(TabOptions{}, func(_, contents js.Value) Tabber {
+	w.consolesPane = NewTabPane(TabOptions{}, func(_ int, _, contents js.Value) Tabber {
 		console, err := w.consoleBuilder.New(contents, "", "sh")
 		if err != nil {
 			log.Error(err)
@@ -164,7 +160,7 @@ func New(elem js.Value, editorBuilder EditorBuilder, consoleBuilder ConsoleBuild
 		return nil
 	}))
 
-	taskConsole := w.consolesPane.NewTab(TabOptions{NoClose: true}, func(_, contents js.Value) Tabber {
+	taskConsole := w.consolesPane.NewTab(TabOptions{NoClose: true}, func(_ int, _, contents js.Value) Tabber {
 		c := taskConsoleBuilder.New(contents)
 		w.consoles = append(w.consoles, c)
 		return c
