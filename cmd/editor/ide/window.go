@@ -66,7 +66,6 @@ func New(elem js.Value, editorBuilder EditorBuilder, consoleBuilder ConsoleBuild
 		inputElem := title.Call("querySelector", "input")
 		inputElem.Call("focus")
 
-		success := false
 		var keydownFn js.Func
 		keydownFn = js.FuncOf(func(_ js.Value, args []js.Value) interface{} {
 			defer func() {
@@ -80,7 +79,6 @@ func New(elem js.Value, editorBuilder EditorBuilder, consoleBuilder ConsoleBuild
 			}
 			event.Call("preventDefault")
 			event.Call("stopPropagation")
-			success = true
 
 			fileName := inputElem.Get("value").String()
 			fileName = strings.TrimSpace(fileName)
@@ -98,7 +96,8 @@ func New(elem js.Value, editorBuilder EditorBuilder, consoleBuilder ConsoleBuild
 		})
 		title.Call("addEventListener", "keydown", keydownFn)
 		inputElem.Call("addEventListener", "blur", interop.SingleUseFunc(func(js.Value, []js.Value) interface{} {
-			if !success {
+			titleText := title.Get("innerText")
+			if titleText.Truthy() && titleText.String() != "New file" {
 				w.editorsPane.closeTabID(id)
 			}
 			return nil

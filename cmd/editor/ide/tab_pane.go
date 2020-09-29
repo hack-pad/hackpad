@@ -119,6 +119,7 @@ func (p *TabPane) focusID(id int) {
 		if tab.id == id {
 			p.currentTab = i
 			tab.Focus()
+			return
 		}
 	}
 }
