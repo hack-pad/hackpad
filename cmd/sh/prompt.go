@@ -51,7 +51,14 @@ func newPromptData(term *terminal) (data *promptData, err error) {
 	if err != nil {
 		return
 	}
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return
+	}
 	data.CurDirName = filepath.Base(wd)
+	if wd == home {
+		data.CurDirName = "~"
+	}
 
 	if term.lastExitCode != 0 {
 		data.RCArrow = color.RedString(rcArrow)
