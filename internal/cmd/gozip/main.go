@@ -24,7 +24,7 @@ func main() {
 }
 
 func archiveGo(goRoot string, w io.Writer) error {
-	compressor, err := gzip.NewWriterLevel(w, gzip.BestSpeed)
+	compressor, err := gzip.NewWriterLevel(w, gzip.NoCompression)
 	if err != nil {
 		return err
 	}
