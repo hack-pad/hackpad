@@ -19,7 +19,7 @@ async function init() {
 
   fs.mkdirSync("/go", 0o700)
 
-  await goWasm.overlayTarGzip('/go', '/wasm/go.tar.gz')
+  await goWasm.overlayTarGzip('/go', 'wasm/go.tar.gz')
 
   console.debug("Startup took", (new Date().getTime() - startTime) / 1000, "seconds")
 }

@@ -37,7 +37,7 @@ func install(args []js.Value) error {
 		return err
 	}
 
-	resp, err := http.Get("/wasm/" + command + ".wasm")
+	resp, err := http.Get("wasm/" + command + ".wasm")
 	if err != nil {
 		return err
 	}
