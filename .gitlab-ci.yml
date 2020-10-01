@@ -1,7 +1,7 @@
 pages:
   script:
     - docker build -t go-wasm .
-    - docker cp $(docker create --rm go-wasm):/usr/share/nginx/html ./out
+    - docker cp $(docker create --rm go-wasm):/usr/share/nginx/html ./public
   artifacts:
     paths:
-      - out
+      - public
