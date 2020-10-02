@@ -22,7 +22,12 @@ var (
 )
 
 func OverlayStorage(mountPath string, s storer.Storer) error {
-	return filesystem.Mount(mountPath, storer.New(s))
+	fs := storer.New(s)
+	err := filesystem.Mount(mountPath, fs)
+	if err != nil {
+		return err
+	}
+	return fs.MkdirAll(mountPath, 0755)
 }
 
 func OverlayZip(mountPath string, z *zip.Reader) error {

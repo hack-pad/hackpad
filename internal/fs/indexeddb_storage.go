@@ -2,7 +2,10 @@ package fs
 
 import (
 	"os"
+	"path/filepath"
 	"runtime"
+	"sort"
+	"syscall"
 	"syscall/js"
 	"time"
 
@@ -62,18 +65,62 @@ func (i *indexedDBStorer) GetFileRecord(path string, dest *storer.FileRecord) er
 	return nil
 }
 
-func (i *indexedDBStorer) SetFileRecord(path string, data *storer.FileRecord) error {
+func (i *indexedDBStorer) readWriteTxnStore() (*indexeddb.ObjectStore, error) {
 	txn, err := i.db.Transaction(idbFilesStore, indexeddb.TransactionReadWrite)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	store, err := txn.ObjectStore(idbFilesStore)
+	return txn.ObjectStore(idbFilesStore)
+}
+
+func (i *indexedDBStorer) SetFileRecord(path string, data *storer.FileRecord) error {
+	deleted, err := i.setFile(path, data)
 	if err != nil {
 		return err
 	}
 
+	dir := filepath.Dir(path)
+	if dir == "" || dir == string(filepath.Separator) {
+		return nil
+	}
+	base := filepath.Base(path)
+	var parentData storer.FileRecord
+	err = i.GetFileRecord(dir, &parentData)
+	if err != nil || !parentData.Mode.IsDir() {
+		return err
+	}
+	if deleted {
+		parentData.DirNames = removePath(parentData.DirNames, base)
+	} else {
+		parentData.DirNames = addPath(parentData.DirNames, base)
+	}
+	return i.SetFileRecord(dir, &parentData)
+}
+
+func (i *indexedDBStorer) setFile(path string, data *storer.FileRecord) (deleted bool, err error) {
 	if data == nil {
-		return store.Delete(js.ValueOf(path))
+		store, err := i.readWriteTxnStore()
+		if err != nil {
+			return false, err
+		}
+		return true, store.Delete(js.ValueOf(path))
+	}
+
+	dir := filepath.Dir(path)
+	if dir != "" && dir != string(filepath.Separator) {
+		var parentData storer.FileRecord
+		err := i.GetFileRecord(dir, &parentData)
+		if err != nil {
+			return false, err
+		}
+		if !parentData.Mode.IsDir() {
+			return false, syscall.ENOTDIR
+		}
+	}
+
+	store, err := i.readWriteTxnStore()
+	if err != nil {
+		return false, err
 	}
 	err = store.Put(js.ValueOf(path), js.ValueOf(map[string]interface{}{
 		"Data":     interop.NewByteArray(data.Data),
@@ -82,5 +129,27 @@ func (i *indexedDBStorer) SetFileRecord(path string, data *storer.FileRecord) er
 		"Mode":     uint32(data.Mode),
 	}))
 	runtime.GC()
-	return err
+	return false, err
+}
+
+func removePath(paths []string, path string) []string {
+	for i := range paths {
+		if paths[i] == path {
+			var newPaths []string
+			newPaths = append(newPaths, paths[:i]...)
+			return append(newPaths, paths[i+1:]...)
+		}
+	}
+	return paths
+}
+
+func addPath(paths []string, path string) []string {
+	for _, p := range paths {
+		if p == path {
+			return paths
+		}
+	}
+	paths = append(paths, path)
+	sort.Strings(paths)
+	return paths
 }

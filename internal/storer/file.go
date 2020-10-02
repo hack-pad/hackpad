@@ -74,13 +74,18 @@ func (f *File) Read(p []byte) (n int, err error) {
 }
 
 func (f *File) ReadAt(p []byte, off int64) (n int, err error) {
-	if off > int64(len(f.Data)) {
+	if off >= int64(len(f.Data)) {
 		return 0, io.EOF
 	}
 	defer interop.PanicLogger()
-	log.Warn("Read ", f.path, " ", len(p), "\n"+string(debug.Stack()))
-	n = copy(p, f.Data[off:off+int64(len(p))])
-	if off+int64(n) == int64(len(f.Data)) {
+	log.Warn("Read ", f.path, " ", off, "->", len(p), " / ", len(f.Data), "\n"+string(debug.Stack()))
+	max := int64(len(f.Data))
+	end := off + int64(len(p))
+	if end > max {
+		end = max
+	}
+	n = copy(p, f.Data[off:end])
+	if off+int64(n) == max {
 		return n, io.EOF
 	}
 	return n, nil
@@ -148,7 +153,8 @@ func (f *File) Readdir(count int) ([]os.FileInfo, error) {
 }
 
 func (f *File) Readdirnames(count int) ([]string, error) {
-	if f.dirCount == len(f.DirNames) {
+	log.Print("reading dir: ", f.Name(), " ", f.dirCount, " ", f.DirNames)
+	if count > 0 && f.dirCount == len(f.DirNames) {
 		return nil, io.EOF
 	}
 
@@ -163,8 +169,9 @@ func (f *File) Readdirnames(count int) ([]string, error) {
 	sort.Strings(allNames)
 
 	names := allNames[f.dirCount:endCount]
+	log.Print("finished reading dir:", f.Name(), "; names: ", names)
 	f.dirCount = endCount
-	if f.dirCount == len(f.DirNames) {
+	if count > 0 && f.dirCount == len(f.DirNames) {
 		return names, io.EOF
 	}
 	return names, nil

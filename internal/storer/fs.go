@@ -8,6 +8,7 @@ import (
 
 	"github.com/johnstarich/go-wasm/internal/fsutil"
 	"github.com/johnstarich/go-wasm/internal/rwonly"
+	"github.com/johnstarich/go-wasm/log"
 	"github.com/spf13/afero"
 )
 
@@ -155,6 +156,7 @@ func (fs *Fs) Stat(name string) (os.FileInfo, error) {
 	if err != nil {
 		return nil, fs.wrapperErr("stat", name, err)
 	}
+	log.Printf("Stat IDB: %#v", file.info())
 	return file.info(), nil
 }
 
