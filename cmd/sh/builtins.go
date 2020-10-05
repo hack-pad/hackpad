@@ -94,6 +94,7 @@ func printFileNames(term console.Console, dir string, longForm bool) error {
 		for _, info := range infos {
 			fmt.Fprintln(term.Stdout(), info.Name())
 		}
+		return nil
 	}
 
 	maxBytesWidth := 0
