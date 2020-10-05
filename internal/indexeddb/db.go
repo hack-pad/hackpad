@@ -3,7 +3,9 @@ package indexeddb
 import (
 	"syscall/js"
 
+	"github.com/johnstarich/go-wasm/internal/interop"
 	"github.com/johnstarich/go-wasm/internal/promise"
+	"github.com/johnstarich/go-wasm/log"
 )
 
 var (
@@ -30,7 +32,23 @@ func New(name string, version int, upgrader func(db *DB, oldVersion, newVersion 
 		return nil
 	}))
 	request.Call("addEventListener", "success", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
-		resolve(request.Get("result"))
+		jsDB := request.Get("result")
+		jsDB.Call("addEventListener", "versionchange", js.FuncOf(func(js.Value, []js.Value) interface{} {
+			log.Print("Version change detected, closing DB...")
+			jsDB.Call("close")
+			return nil
+		}))
+		logEvent := func(name string) js.Func {
+			return js.FuncOf(func(_ js.Value, args []js.Value) interface{} {
+				log.Warn("Event: ", name)
+				log.WarnJSValues(interop.SliceFromJSValues(args)...)
+				return nil
+			})
+		}
+		jsDB.Call("addEventListener", "error", logEvent("error"))
+		jsDB.Call("addEventListener", "abort", logEvent("abort"))
+		jsDB.Call("addEventListener", "close", logEvent("close"))
+		resolve(jsDB)
 		return nil
 	}))
 	request.Call("addEventListener", "upgradeneeded", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
@@ -74,5 +92,5 @@ func (db *DB) Close() (err error) {
 func (db *DB) Transaction(objectStoreName string, mode TransactionMode) (_ *Transaction, err error) {
 	defer catch(&err)
 	jsTxn := db.jsDB.Call("transaction", objectStoreName, mode.String())
-	return &Transaction{jsTransaction: jsTxn}, nil
+	return wrapTransaction(jsTxn), nil
 }

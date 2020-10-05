@@ -31,7 +31,8 @@ func (i *Index) Get(key js.Value) (_ js.Value, err error) {
 
 func (i *Index) GetKey(value js.Value) (_ js.Value, err error) {
 	defer catch(&err)
-	return await(processRequest(i.jsIndex.Call("getKey", value)))
+	req := i.jsIndex.Call("getKey", value)
+	return await(processRequest(req))
 }
 
 func (i *Index) OpenCursor(key js.Value, direction CursorDirection) (_ *Cursor, err error) {

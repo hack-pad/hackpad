@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/johnstarich/go-wasm/internal/fsutil"
-	"github.com/johnstarich/go-wasm/log"
 	"github.com/spf13/afero"
 )
 
@@ -68,7 +67,6 @@ func (m *Fs) mountForPath(path string) mount {
 	mounts := m.mounts // copy slice for consistent reads
 	for i := len(mounts) - 1; i >= 0; i-- {
 		if path == mounts[i].path || strings.HasPrefix(path, mounts[i].path+afero.FilePathSeparator) {
-			log.Print("Choosing mount ", mounts[i].path, " for path: ", path)
 			return mounts[i]
 		}
 	}

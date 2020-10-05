@@ -12,6 +12,7 @@ import (
 	"github.com/johnstarich/go-wasm/internal/indexeddb"
 	"github.com/johnstarich/go-wasm/internal/interop"
 	"github.com/johnstarich/go-wasm/internal/storer"
+	"github.com/johnstarich/go-wasm/log"
 )
 
 const (
@@ -56,12 +57,15 @@ func (i *indexedDBStorer) GetFileRecord(path string, dest *storer.FileRecord) er
 		return err
 	}
 	runtime.GC()
+	log.Print("Loading file from JS: ", path)
 	jsData := value.Get("Data")
+	log.Print("Copying ", jsData.Length(), " bytes")
 	dest.Data = make([]byte, jsData.Length())
-	js.CopyBytesToGo(dest.Data, jsData)
+	n := js.CopyBytesToGo(dest.Data, jsData)
 	dest.DirNames = interop.StringsFromJSValue(value.Get("DirNames"))
 	dest.ModTime = time.Unix(int64(value.Get("ModTime").Int()), 0)
 	dest.Mode = os.FileMode(value.Get("Mode").Int())
+	log.Print("Copied ", n, " bytes")
 	return nil
 }
 
@@ -94,7 +98,8 @@ func (i *indexedDBStorer) SetFileRecord(path string, data *storer.FileRecord) er
 	} else {
 		parentData.DirNames = addPath(parentData.DirNames, base)
 	}
-	return i.SetFileRecord(dir, &parentData)
+	_, err = i.setFile(dir, &parentData)
+	return err
 }
 
 func (i *indexedDBStorer) setFile(path string, data *storer.FileRecord) (deleted bool, err error) {

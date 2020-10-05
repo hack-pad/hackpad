@@ -2,6 +2,9 @@ package indexeddb
 
 import (
 	"syscall/js"
+
+	"github.com/johnstarich/go-wasm/internal/interop"
+	"github.com/johnstarich/go-wasm/log"
 )
 
 type TransactionMode int
@@ -24,6 +27,26 @@ type Transaction struct {
 	jsTransaction js.Value
 }
 
+func wrapTransaction(jsTransaction js.Value) *Transaction {
+	var funcs []js.Func
+	newFunc := func(name string) js.Func {
+		f := js.FuncOf(func(_ js.Value, args []js.Value) interface{} {
+			log.Print("TXN State: ", name)
+			log.PrintJSValues(interop.SliceFromJSValues(args)...)
+			for _, fn := range funcs {
+				fn.Release()
+			}
+			return nil
+		})
+		funcs = append(funcs, f)
+		return f
+	}
+	jsTransaction.Call("addEventListener", "abort", newFunc("abort"))
+	jsTransaction.Call("addEventListener", "complete", newFunc("complete"))
+	jsTransaction.Call("addEventListener", "error", newFunc("error"))
+	return &Transaction{jsTransaction: jsTransaction}
+}
+
 func (t *Transaction) Abort() (err error) {
 	defer catch(&err)
 	t.jsTransaction.Call("abort")
@@ -39,5 +62,6 @@ func (t *Transaction) ObjectStore(name string) (_ *ObjectStore, err error) {
 func (t *Transaction) Commit() (err error) {
 	defer catch(&err)
 	t.jsTransaction.Call("commit")
+	log.Print("Committing txn!")
 	return nil
 }

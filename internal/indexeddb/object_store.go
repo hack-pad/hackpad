@@ -61,7 +61,8 @@ func (o *ObjectStore) DeleteIndex(name string) (err error) {
 func (o *ObjectStore) Get(key js.Value) (val js.Value, err error) {
 	defer catch(&err)
 	req := o.jsObjectStore.Call("get", key)
-	return await(processRequest(req))
+	prom := processRequest(req)
+	return await(prom)
 }
 
 func (o *ObjectStore) GetKey(value js.Value) (val js.Value, err error) {
