@@ -11,6 +11,7 @@ import (
 	"strconv"
 	"strings"
 	"syscall"
+	"time"
 
 	"github.com/fatih/color"
 	"github.com/johnstarich/go-wasm/internal/console"
@@ -59,15 +60,22 @@ func pwd(term console.Console, args ...string) error {
 }
 
 func ls(term console.Console, args ...string) error {
+	set := flag.NewFlagSet("ls", flag.ContinueOnError)
+	longForm := set.Bool("l", false, "Long format")
+	err := set.Parse(args)
+	if err != nil {
+		return err
+	}
+	args = set.Args()
 	if len(args) == 0 {
 		args = []string{"."}
 	}
 	if len(args) == 1 {
-		return printFileNames(term, args[0])
+		return printFileNames(term, args[0], *longForm)
 	}
 	for _, f := range args {
 		fmt.Fprintln(term.Stdout(), f+":")
-		err := printFileNames(term, f)
+		err := printFileNames(term, f, *longForm)
 		if err != nil {
 			return err
 		}
@@ -76,14 +84,34 @@ func ls(term console.Console, args ...string) error {
 	return nil
 }
 
-func printFileNames(term console.Console, dir string) error {
+func printFileNames(term console.Console, dir string, longForm bool) error {
 	infos, err := ioutil.ReadDir(dir)
 	if err != nil {
 		return err
 	}
 
+	if !longForm {
+		for _, info := range infos {
+			fmt.Fprintln(term.Stdout(), info.Name())
+		}
+	}
+
+	maxBytesWidth := 0
 	for _, info := range infos {
-		fmt.Fprintln(term.Stdout(), info.Name())
+		width := len(strconv.FormatInt(info.Size(), 10))
+		if width > maxBytesWidth {
+			maxBytesWidth = width
+		}
+	}
+	maxWidthStr := strconv.FormatInt(int64(maxBytesWidth), 10)
+	for _, info := range infos {
+		fmt.Fprintf(term.Stdout(),
+			"%s %"+maxWidthStr+"d %s %s\n",
+			info.Mode(),
+			info.Size(),
+			info.ModTime().Format(time.Stamp),
+			info.Name(),
+		)
 	}
 	return nil
 }
