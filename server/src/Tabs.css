@@ -29,6 +29,10 @@
 .tab-bar {
     background-color: var(--tab-background);
     height: var(--tab-bar-height);
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
 }
 
 .tab-bar button {
@@ -63,8 +67,10 @@
     background-color: var(--tab-hover);
 }
 
-.tab-bar .tab-button {
-    display: inline-block;
+.tab-buttons {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
 }
 
 .tabs {
@@ -84,13 +90,14 @@
     position: unset;
 }
 
-.tab-new {
-    display: inline-block;
+button.tab-new {
+    display: block;
     background: none;
     border: none;
     color: var(--control-color);
     border-radius: 0.25em;
-    padding: 0.1em 0.4em;
+    padding: 0.1em 0.3em;
+    margin: 0.4em;
     text-align: center;
     font-weight: 800;
     font-family: sans-serif;
