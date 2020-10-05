@@ -1,5 +1,5 @@
 SHELL := /usr/bin/env bash
-GO_VERSION = 1.15
+GO_VERSION = 1.15.2
 GOBIN = ${PWD}/cache/go${GO_VERSION}/bin
 PATH := ${GOBIN}:${PATH}
 GOOS = js
