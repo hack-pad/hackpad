@@ -1,0 +1,14 @@
+.compat {
+    padding: 2em;
+    animation: fade 5s 1s linear 1;
+}
+
+@keyframes fade {
+    0% {
+        opacity: 1;
+    }
+    100% {
+        padding: 0 2em;
+        opacity: 0.2;
+    }
+}

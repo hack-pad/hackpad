@@ -2,10 +2,10 @@ import React from 'react';
 import './App.css';
 
 import './Tabs.css';
-
+import Compat from './Compat';
 import { install, run } from './GoWASM';
-import { newTerminal } from './Terminal';
 import { newEditor } from './Editor';
+import { newTerminal } from './Terminal';
 
 function App() {
   React.useEffect(() => {
@@ -21,6 +21,7 @@ function App() {
 
   return (
     <div id="app">
+      <Compat />
       <div id="editor"></div>
     </div>
   );
