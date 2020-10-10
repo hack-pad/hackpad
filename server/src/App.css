@@ -4,7 +4,9 @@
     --panes-height: calc(100vh - var(--controls-height));
     --app-controls-color: #222;
     --app-controls-background: #fff;
-    --app-controls-highlight: rgba(0, 0, 0, 0.1);
+    --app-controls-highlight: rgba(119, 0, 136, 0.1);
+
+    --app-title-highlight: #708;
 }
 
 @media screen and (prefers-color-scheme: dark) {
@@ -12,7 +14,9 @@
         --console-border: 2px solid #181818;
         --app-controls-color: #fff;
         --app-controls-background: #111;
-        --app-controls-highlight: rgba(255, 255, 255, 0.1);
+        --app-controls-highlight: rgba(199, 146, 234, 0.1);
+
+        --app-title-highlight: #C792EA;
     }
 }
 
@@ -44,7 +48,7 @@ h1.app-title {
 }
 
 .app-title-go {
-    color: #708;
+    color: var(--app-title-highlight);
     display: inline-block;
     transition: transform 0.2s 0s ease-in;
 }
@@ -60,10 +64,6 @@ h1.app-title {
 @media screen and (prefers-color-scheme: dark) {
     h1.app-title {
         border-right: 1px solid rgb(45, 45, 45);
-    }
-
-    .app-title-go {
-        color: #C792EA;
     }
 
     .app-title-wasm {
@@ -132,6 +132,7 @@ h1.app-title {
 }
 
 .ide .controls button:hover {
+    color: var(--app-title-highlight);
     background-color: var(--app-controls-highlight);
 }
 
