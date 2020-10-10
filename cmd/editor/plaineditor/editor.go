@@ -45,6 +45,10 @@ func (e *textAreaEditor) OpenFile(path string) error {
 	return e.ReloadFile()
 }
 
+func (e *textAreaEditor) CurrentFile() string {
+	return e.filePath
+}
+
 func (e *textAreaEditor) ReloadFile() error {
 	contents, err := ioutil.ReadFile(e.filePath)
 	if err != nil {

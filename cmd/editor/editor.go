@@ -46,6 +46,10 @@ func (j *jsEditor) OpenFile(path string) error {
 	return j.ReloadFile()
 }
 
+func (j *jsEditor) CurrentFile() string {
+	return j.filePath
+}
+
 func (j *jsEditor) ReloadFile() error {
 	contents, err := ioutil.ReadFile(j.filePath)
 	if err != nil {

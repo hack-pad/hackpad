@@ -8,6 +8,7 @@ type EditorBuilder interface {
 
 type Editor interface {
 	OpenFile(path string) error
+	CurrentFile() string
 	ReloadFile() error
 	GetCursor() int
 	SetCursor(i int) error

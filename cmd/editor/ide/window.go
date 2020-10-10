@@ -1,6 +1,8 @@
 package ide
 
 import (
+	"go/format"
+	"io/ioutil"
 	"runtime/debug"
 	"strings"
 	"syscall/js"
@@ -143,17 +145,37 @@ func New(elem js.Value, editorBuilder EditorBuilder, consoleBuilder ConsoleBuild
 		return nil
 	}))
 	w.controlButtons.Index(2).Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
-		w.consolesPane.Focus(buildConsoleIndex)
-		console := w.consoles[buildConsoleIndex]
-		w.runGoProcess(console.(TaskConsole), "fmt", ".").Then(func(_ js.Value) interface{} {
-			for _, editor := range w.editors {
-				err := editor.ReloadFile()
-				if err != nil {
-					log.Error("Failed to reload file: ", err)
-				}
-			}
+		ix := w.editorsPane.currentTab
+		if ix < 0 || ix >= len(w.editorsPane.tabs) {
 			return nil
-		})
+		}
+
+		editor := w.editors[ix]
+		path := editor.CurrentFile()
+		if path == "" {
+			return nil
+		}
+
+		src, err := ioutil.ReadFile(path)
+		if err != nil {
+			log.Errorf("Failed to read Go file %q: %v", path, err)
+			return nil
+		}
+		out, err := format.Source(src)
+		if err != nil {
+			log.Errorf("Failed to format Go file %q: %v", path, err)
+			return nil
+		}
+		err = ioutil.WriteFile(path, out, 0)
+		if err != nil {
+			log.Errorf("Failed to write Go file %q: %v", path, err)
+			return nil
+		}
+		err = editor.ReloadFile()
+		if err != nil {
+			log.Errorf("Failed to reload Go file %q: %v", path, err)
+			return nil
+		}
 		return nil
 	}))
 
