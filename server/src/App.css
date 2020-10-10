@@ -54,7 +54,7 @@ h1.app-title {
 }
 
 .app-title:hover .app-title-go {
-    transform: matrix(1, 0, -0.25, 1, 0, 0);
+    transform: matrix(1, 0, -0.25, 1, 2, 0);
 }
 
 .app-title-wasm:after {
