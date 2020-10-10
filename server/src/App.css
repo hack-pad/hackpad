@@ -34,6 +34,40 @@ h1.app-title {
     font-family: var(--font-mono);
     font-weight: 800;
     font-size: 1em;
+    cursor: default;
+    user-select: none;
+
+    margin: 0;
+    padding-right: 0.6em;
+    margin-right: 0.2em;
+    border-right: 1px solid #ddd;
+}
+
+.app-title-go {
+    color: #708;
+}
+
+.app-title-wasm:after {
+    content: "()";
+}
+
+@media screen and (prefers-color-scheme: dark) {
+    h1.app-title {
+        border-right: 1px solid rgb(45, 45, 45);
+    }
+
+    .app-title-go {
+        color: #C792EA;
+    }
+
+    .app-title-wasm {
+        color: #f07178;
+    }
+
+    .app-title-wasm:after {
+        color: white;
+        content: "()";
+    }
 }
 
 .ide {
@@ -76,17 +110,13 @@ h1.app-title {
     flex-direction: row;
     align-items: center;
     background-color: var(--app-controls-background);
-    padding: 0 0.25em;
-}
-
-.ide .controls > * {
-    margin: 0.75em 0.5em;
+    padding: 0 1em;
 }
 
 .ide .controls button {
     cursor: pointer;
     padding: 0;
-    margin: 0.2em;
+    margin: 0;
     height: 2.6em;
     width:  2.6em;
     border: none;
