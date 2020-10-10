@@ -2,21 +2,22 @@
     --console-border: 2px solid #eee;
     --controls-height: 2.5em;
     --panes-height: calc(100vh - var(--controls-height));
+    --app-accent: rgba(119, 0, 136);
     --app-controls-color: #222;
     --app-controls-background: #fff;
     --app-controls-highlight: rgba(119, 0, 136, 0.1);
-
-    --app-title-highlight: #708;
+    --app-title-highlight: var(--app-accent);
+    --app-accent-alternate: rgba(50, 0, 135);
 }
 
 @media screen and (prefers-color-scheme: dark) {
     :root {
         --console-border: 2px solid #181818;
+        --app-accent: rgba(199, 146, 234);
         --app-controls-color: #fff;
         --app-controls-background: #111;
         --app-controls-highlight: rgba(199, 146, 234, 0.1);
-
-        --app-title-highlight: #C792EA;
+        --app-accent-alternate: rgb(154, 145, 235);
     }
 }
 
@@ -141,6 +142,7 @@ h1.app-title {
 }
 
 .ide .controls .loading-indicator {
+    margin: 0.6em;
     height: 1em;
     width: 1em;
     border: 3px solid transparent;
@@ -149,7 +151,7 @@ h1.app-title {
 
 .ide .controls .loading-indicator.loading {
     border-color: rgba(255, 255, 255, 0.1);
-    border-top-color: #0099ff;
+    border-top-color: var(--app-accent-alternate);
     border-radius: 50%;
     animation: spin 1s linear infinite;
 }
