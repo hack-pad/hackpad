@@ -45,6 +45,12 @@ h1.app-title {
 
 .app-title-go {
     color: #708;
+    display: inline-block;
+    transition: transform 0.2s 0s ease-in;
+}
+
+.app-title:hover .app-title-go {
+    transform: matrix(1, 0, -0.25, 1, 0, 0);
 }
 
 .app-title-wasm:after {
