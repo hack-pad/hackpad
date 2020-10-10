@@ -4,9 +4,9 @@ import './Loading.css';
 
 export default function Loading() {
   return (
-    <div className="loading">
-      <div className="loading-center">
-        <div className="loading-spinner">
+    <div className="app-loading">
+      <div className="app-loading-center">
+        <div className="app-loading-spinner">
           <span className="fa fa-spin fa-circle-notch" />
         </div>
         <p>
