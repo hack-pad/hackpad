@@ -25,9 +25,9 @@ function App() {
 
   return (
     <>
+      <Compat />
       {loading ? <Loading /> : null}
       <div id="app">
-        <Compat />
         <div id="editor"></div>
       </div>
     </>
