@@ -2,7 +2,7 @@ import React from 'react';
 import './App.css';
 
 import './Tabs.css';
-import 'font-awesome/css/font-awesome.css';
+import '@fortawesome/fontawesome-free/css/all.css';
 import Compat from './Compat';
 import { install, run } from './GoWASM';
 import { newEditor } from './Editor';

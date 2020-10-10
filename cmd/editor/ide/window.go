@@ -38,7 +38,7 @@ type window struct {
 func New(elem js.Value, editorBuilder EditorBuilder, consoleBuilder ConsoleBuilder, taskConsoleBuilder TaskConsoleBuilder) (Window, TaskConsole) {
 	elem.Set("innerHTML", `
 <div class="controls">
-	<button title="build"><span class="fa fa-wrench"></span></button>
+	<button title="build"><span class="fa fa-hammer"></span></button>
 	<button title="run"><span class="fa fa-play"></span></button>
 	<button title="gofmt"><span class="fa fa-magic"></span></button>
 	<div class="loading-indicator"></div>
