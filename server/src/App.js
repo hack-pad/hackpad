@@ -4,11 +4,13 @@ import './App.css';
 import './Tabs.css';
 import '@fortawesome/fontawesome-free/css/all.css';
 import Compat from './Compat';
+import Loading from './Loading';
 import { install, run } from './GoWASM';
 import { newEditor } from './Editor';
 import { newTerminal } from './Terminal';
 
 function App() {
+  const [loading, setLoading] = React.useState(true);
   React.useEffect(() => {
     window.editor = {
       newTerminal,
@@ -17,14 +19,18 @@ function App() {
     Promise.all([ install('editor'), install('sh') ])
       .then(() => {
         run('editor', '--editor=editor')
+        setLoading(false)
       })
-  }, [])
+  }, [setLoading])
 
   return (
-    <div id="app">
-      <Compat />
-      <div id="editor"></div>
-    </div>
+    <>
+      {loading ? <Loading /> : null}
+      <div id="app">
+        <Compat />
+        <div id="editor"></div>
+      </div>
+    </>
   );
 }
 
