@@ -1,13 +1,12 @@
 :root {
-    --tab-background: #fff;
+    --tab-background: rgb(240, 240, 240);
     --tab-bar: transparent;
     --tab-active: #fff;
-    --tab-hover: #ccc;
+    --tab-hover: rgb(250, 250, 250);
     --tab-highlight: rgb(170, 170, 170);
-    --tab-highlight-less: rgb(120, 120, 120);
     --control-color: var(--tab-highlight);
-    --control-hover: #000;
-    --control-hover-background: var(--tab-highlight-less);
+    --control-hover: #111;
+    --control-hover-background: rgb(220, 220, 220);
 
     --tab-bar-height: 2.25em;
 }
@@ -19,10 +18,9 @@
         --tab-active: rgb(33, 33, 33);
         --tab-hover: rgb(40, 40, 40);
         --tab-highlight: rgb(170, 170, 170);
-        --tab-highlight-less: rgb(120, 120, 120);
         --control-color: var(--tab-highlight);
         --control-hover: #fff;
-        --control-hover-background: var(--tab-highlight-less);
+        --control-hover-background: rgb(70, 70, 70);
     }
 }
 
