@@ -36,7 +36,7 @@ func NewTabPane(newTabOptions TabOptions, makeDefaultTab TabBuilder, closedTab f
 	elem.Set("innerHTML", `
 <nav class="tab-bar">
 	<ul class="tab-buttons"></ul>
-	<button class="tab-new"></button>
+	<button class="tab-new" title="new tab"><span class="fa fa-plus"></span></button>
 </nav>
 <div class="tabs"></div>
 `)
@@ -77,7 +77,7 @@ func (p *TabPane) NewTab(options TabOptions, makeTab TabBuilder) Tabber {
 <span class="tab-title">New file</span>
 `
 	if !options.NoClose {
-		buttonTemplate += `<button class="tab-close" title="close"></button>`
+		buttonTemplate += `<button class="tab-close" title="close"><span class="fa fa-times"></span></button>`
 	}
 	tabItem.Set("innerHTML", buttonTemplate)
 	title := tabItem.Call("querySelector", ".tab-title")

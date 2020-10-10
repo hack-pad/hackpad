@@ -42,8 +42,8 @@ h1.app-title {
     user-select: none;
 
     margin: 0;
-    padding-right: 0.6em;
-    margin-right: 0.2em;
+    padding-right: 0.8em;
+    margin-right: 0.5em;
     border-right: 1px solid #ddd;
 }
 
@@ -96,6 +96,7 @@ h1.app-title {
     flex-direction: column;
     flex-grow: 1;
     flex-basis: 0;
+    font-size: 0.9em;
 }
 
 .ide .editors {
@@ -106,7 +107,6 @@ h1.app-title {
 
 .ide .pane:first-child .tab-bar {
     font-family: var(--font-mono);
-    font-size: 0.8em;
 }
 
 .ide .controls {

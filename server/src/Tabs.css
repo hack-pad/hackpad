@@ -93,17 +93,14 @@ button.tab-new {
     background: none;
     border: none;
     color: var(--control-color);
-    border-radius: 0.25em;
-    padding: 0.1em 0.3em;
     margin: 0.4em;
     text-align: center;
     font-weight: 800;
     font-family: sans-serif;
-    font-size: 1em;
-}
-
-.tab-new:before {
-    content: "\FF0B"; /* full-width plus */
+    font-size: 0.8em;
+    height: 2.2em;
+    width:  2.2em;
+    border-radius: 0.25em;
 }
 
 .tab-new:hover {
@@ -125,11 +122,9 @@ button.tab-new {
     background-color: var(--control-hover-background);
 }
 
-.tab-bar .tab-close:before {
-    content: "×";
-    display: block;
-    font-size: 1.25em;
-    line-height: 0;
-    padding: 0.5em 0;
-    padding-top: 0.6em;
+.tab-bar .tab-close {
+    font-size: 0.8em;
+    height: 1.8em;
+    width:  1.8em;
+    border-radius: 0.25em;
 }
