@@ -30,6 +30,12 @@ h1 pre, h2 pre, h3 pre, h4 pre, h5 pre, h6 pre {
     height: 100%;
 }
 
+h1.app-title {
+    font-family: var(--font-mono);
+    font-weight: 800;
+    font-size: 1em;
+}
+
 .ide {
     display: flex;
     flex-direction: column;
@@ -56,6 +62,11 @@ h1 pre, h2 pre, h3 pre, h4 pre, h5 pre, h6 pre {
     flex-grow: 10;
     overflow: hidden;
     max-height: 60vh;
+}
+
+.ide .pane:first-child .tab-bar {
+    font-family: var(--font-mono);
+    font-size: 0.8em;
 }
 
 .ide .controls {

@@ -8,7 +8,7 @@
     --control-hover: #111;
     --control-hover-background: rgb(220, 220, 220);
 
-    --tab-bar-height: 2.25em;
+    --tab-bar-height: 2.3m;
 }
 
 @media screen and (prefers-color-scheme: dark) {

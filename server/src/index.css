@@ -1,3 +1,7 @@
+:root {
+    --font-mono: Menlo, Courier, monospace;
+}
+
 html, body {
     font-family: "Helvetica Neue", Helvetica;
     padding: 0;
