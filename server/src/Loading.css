@@ -22,9 +22,11 @@
     font-size: var(--loading-size);
     width: var(--loading-size);
     height: var(--loading-size);
-    margin: 1rem;
+    margin: 1.5rem;
 }
 
 .loading p {
     text-align: center;
+    margin: 0.25rem;
+    padding: 0;
 }

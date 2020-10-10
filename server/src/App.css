@@ -35,8 +35,6 @@ h1 pre, h2 pre, h3 pre, h4 pre, h5 pre, h6 pre {
 }
 
 h1.app-title {
-    font-family: var(--font-mono);
-    font-weight: 800;
     font-size: 1em;
     cursor: default;
     user-select: none;
@@ -45,6 +43,12 @@ h1.app-title {
     padding-right: 0.8em;
     margin-right: 0.5em;
     border-right: 1px solid #ddd;
+}
+
+.app-title {
+    font-family: var(--font-mono);
+    font-weight: 800;
+    margin: 0 0.3em;
 }
 
 .app-title-go {

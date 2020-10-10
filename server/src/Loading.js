@@ -9,7 +9,12 @@ export default function Loading() {
         <div className="loading-spinner">
           <span className="fa fa-spin fa-circle-notch" />
         </div>
-        <p><em>Loading, please wait...</em></p>
+        <p>
+          installing <span className="app-title">
+            <span className="app-title-go">go</span> <span className="app-title-wasm">wasm</span>
+          </span>
+        </p>
+        <p><em>please wait...</em></p>
       </div>
     </div>
   )
