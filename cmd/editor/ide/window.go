@@ -38,9 +38,9 @@ type window struct {
 func New(elem js.Value, editorBuilder EditorBuilder, consoleBuilder ConsoleBuilder, taskConsoleBuilder TaskConsoleBuilder) (Window, TaskConsole) {
 	elem.Set("innerHTML", `
 <div class="controls">
-	<button>build</button>
-	<button>run</button>
-	<button>fmt</button>
+	<button title="build"><span class="fa fa-wrench"></span></button>
+	<button title="run"><span class="fa fa-play"></span></button>
+	<button title="gofmt"><span class="fa fa-magic"></span></button>
 	<div class="loading-indicator"></div>
 </div>
 
@@ -126,25 +126,19 @@ func New(elem js.Value, editorBuilder EditorBuilder, consoleBuilder ConsoleBuild
 	})
 	w.panesElem.Call("appendChild", w.consolesPane)
 
-	controlButtons := make(map[string]js.Value)
-	for i := 0; i < w.controlButtons.Length(); i++ {
-		button := w.controlButtons.Index(i)
-		name := button.Get("textContent").String()
-		controlButtons[name] = button
-	}
-	controlButtons["build"].Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+	w.controlButtons.Index(0).Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
 		w.consolesPane.Focus(buildConsoleIndex)
 		console := w.consoles[buildConsoleIndex]
 		w.runGoProcess(console.(TaskConsole), "build", "-v", ".")
 		return nil
 	}))
-	controlButtons["run"].Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+	w.controlButtons.Index(1).Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
 		w.consolesPane.Focus(buildConsoleIndex)
 		console := w.consoles[buildConsoleIndex]
 		w.runPlayground(console.(TaskConsole))
 		return nil
 	}))
-	controlButtons["fmt"].Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+	w.controlButtons.Index(2).Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
 		w.consolesPane.Focus(buildConsoleIndex)
 		console := w.consoles[buildConsoleIndex]
 		w.runGoProcess(console.(TaskConsole), "fmt", ".").Then(func(_ js.Value) interface{} {

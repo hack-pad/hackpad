@@ -66,6 +66,7 @@ h1 pre, h2 pre, h3 pre, h4 pre, h5 pre, h6 pre {
 
 .ide .controls button {
     cursor: pointer;
+    padding: 0.25em 0.7em;
 }
 
 .ide .controls .loading-indicator {
