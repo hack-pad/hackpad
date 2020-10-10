@@ -2,11 +2,17 @@
     --console-border: 2px solid #eee;
     --controls-height: 2.5em;
     --panes-height: calc(100vh - var(--controls-height));
+    --app-controls-color: #222;
+    --app-controls-background: #fff;
+    --app-controls-highlight: rgba(0, 0, 0, 0.1);
 }
 
 @media screen and (prefers-color-scheme: dark) {
     :root {
         --console-border: 2px solid #181818;
+        --app-controls-color: #fff;
+        --app-controls-background: #111;
+        --app-controls-highlight: rgba(255, 255, 255, 0.1);
     }
 }
 
@@ -58,6 +64,8 @@ h1 pre, h2 pre, h3 pre, h4 pre, h5 pre, h6 pre {
     display: flex;
     flex-direction: row;
     align-items: center;
+    background-color: var(--app-controls-background);
+    padding: 0 0.25em;
 }
 
 .ide .controls > * {
@@ -66,8 +74,18 @@ h1 pre, h2 pre, h3 pre, h4 pre, h5 pre, h6 pre {
 
 .ide .controls button {
     cursor: pointer;
-    padding: 0.25em 0.7em;
+    padding: 0;
+    margin: 0.2em;
+    height: 2.6em;
+    width:  2.6em;
     border: none;
+    border-radius: 0.25em;
+    background-color: transparent;
+    color: var(--app-controls-color);
+}
+
+.ide .controls button:hover {
+    background-color: var(--app-controls-highlight);
 }
 
 .ide .controls .loading-indicator {
