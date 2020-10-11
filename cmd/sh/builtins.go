@@ -65,6 +65,9 @@ func ls(term console.Console, args ...string) error {
 	longForm := set.Bool("l", false, "Long format")
 	err := set.Parse(args)
 	if err != nil {
+		if err == flag.ErrHelp {
+			return nil
+		}
 		return err
 	}
 	args = set.Args()
