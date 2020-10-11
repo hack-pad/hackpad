@@ -128,8 +128,12 @@ func cd(term console.Console, args ...string) error {
 		fallthrough
 	case 1:
 		dir := args[0]
-		if _, err := os.Stat(dir); err != nil {
+		info, err := os.Stat(dir)
+		if err != nil {
 			return err
+		}
+		if !info.IsDir() {
+			return errors.Errorf("Not a directory: %s", dir)
 		}
 		return os.Chdir(dir)
 	default:
