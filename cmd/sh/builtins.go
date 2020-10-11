@@ -163,6 +163,9 @@ func cat(term console.Console, args ...string) error {
 	}
 
 	for _, path := range args {
+		if info, err := os.Stat(path); err == nil && info.IsDir() {
+			return errors.Errorf("%s: Is a directory", path)
+		}
 		f, err := os.Open(path)
 		if err != nil {
 			return err
