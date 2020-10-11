@@ -26,6 +26,10 @@ func newTab(id int, button, contents, title js.Value, tabber Tabber, focus func(
 	go t.watchTitles(ctx, tabber)
 
 	t.buttonListener = js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+		formElem := t.title.Call("querySelector", "input")
+		if formElem.Truthy() {
+			return nil
+		}
 		focus(t.id)
 		return nil
 	})
