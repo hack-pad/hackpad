@@ -28,6 +28,7 @@ func init() {
 	for k, v := range map[string]builtinFunc{
 		"cat":   cat,
 		"cd":    cd,
+		"chmod": chmod,
 		"clear": clear,
 		"echo":  echo,
 		"env":   env,
@@ -339,4 +340,17 @@ func runWithEnv(term console.Console, env []string, args ...string) error {
 	cmd.Stderr = term.Stderr()
 	cmd.Env = append(os.Environ(), env...)
 	return runCmd(cmd, cmdOptions{})
+}
+
+func chmod(term console.Console, args ...string) error {
+	if len(args) < 2 {
+		return errors.New("Not enough args")
+	}
+
+	perm, err := strconv.ParseInt(args[0], 8, 12) // parse octal permission
+	if err != nil {
+		return err
+	}
+	file := args[1]
+	return os.Chmod(file, os.FileMode(perm))
 }
