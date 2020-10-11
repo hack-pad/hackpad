@@ -68,7 +68,7 @@ func New(elem js.Value, editorBuilder EditorBuilder, consoleBuilder ConsoleBuild
 		editor := w.editorBuilder.New(contents)
 		w.editors = append(w.editors, editor)
 
-		title.Set("innerHTML", `<input type="text" placeholder="file_name.go" spellcheck=false />`)
+		title.Set("innerHTML", `<input type="text" class="editor-file-picker" placeholder="file_name.go" spellcheck=false />`)
 		inputElem := title.Call("querySelector", "input")
 		inputElem.Call("focus")
 

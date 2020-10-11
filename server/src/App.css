@@ -134,6 +134,7 @@ h1.app-title {
     border-radius: 0.25em;
     background-color: transparent;
     color: var(--app-controls-color);
+    outline: none;
 }
 
 .ide .controls button:hover {

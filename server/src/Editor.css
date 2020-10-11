@@ -15,3 +15,14 @@
 .editor .CodeMirror pre.CodeMirror-line-like {
   padding: 0 0.5em; /* Horizontal padding of content */
 }
+
+@media screen and (prefers-color-scheme: dark) {
+  .editor-file-picker {
+    background-color: transparent;
+    color: inherit;
+    font-family: inherit;
+    outline: none;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 0.2em;
+  }
+}
