@@ -10,6 +10,7 @@ import (
 	"github.com/johnstarich/go-wasm/internal/interop"
 	"github.com/johnstarich/go-wasm/internal/promise"
 	"github.com/johnstarich/go-wasm/log"
+	"github.com/pkg/errors"
 )
 
 var wasmCache = make(map[string]wasmCacheValue)
@@ -25,6 +26,20 @@ func (p *process) startWasm() error {
 	command, err := exec.LookPath(p.command)
 	if err != nil {
 		return err
+	}
+	f, err := os.Open(command)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	buf := make([]byte, 4)
+	_, err = f.Read(buf)
+	if err != nil {
+		return err
+	}
+	magicNumber := string(buf)
+	if magicNumber != "\x00asm" {
+		return errors.Errorf("Format error. Expected WASM file header but found: %q", magicNumber)
 	}
 	go p.runWasm(command)
 	return nil
