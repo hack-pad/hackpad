@@ -114,18 +114,24 @@ h1.app-title {
     font-family: var(--font-mono);
 }
 
-.ide .controls {
+.ide header, .ide header .controls {
     height: var(--controls-height);
     overflow: hidden;
     display: flex;
     flex-direction: row;
     align-items: center;
     background-color: var(--app-controls-background);
+}
+
+.ide header {
     padding: 0 1em;
 }
 
-.ide .controls button {
-    cursor: pointer;
+.ide .controls {
+    flex-grow: 1;
+}
+
+.ide .controls .control {
     padding: 0;
     margin: 0;
     height: 2.6em;
@@ -135,11 +141,34 @@ h1.app-title {
     background-color: transparent;
     color: var(--app-controls-color);
     outline: none;
+    cursor: pointer;
 }
 
-.ide .controls button:hover {
+.ide .controls .control:hover {
     color: var(--app-title-highlight);
     background-color: var(--app-controls-highlight);
+}
+
+.ide .controls .spacer {
+    flex-grow: 1;
+}
+
+.ide .controls .control > a {
+    display: block;
+    height: inherit;
+    width: inherit;
+    color: inherit;
+    text-decoration: none;
+}
+
+.ide .controls .control > a span {
+    display: block;
+    position: relative;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 1em;
+    height: 1em;
 }
 
 .ide .controls .loading-indicator {
