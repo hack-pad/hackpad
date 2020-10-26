@@ -25,6 +25,7 @@
 }
 
 .app-loading .app-loading-spinner {
+    position: relative; /* enable percentage to be absolutely centered */
     font-size: var(--app-loading-size);
     width: var(--app-loading-size);
     height: var(--app-loading-size);
@@ -35,4 +36,13 @@
     text-align: center;
     margin: 0.25rem;
     padding: 0;
+}
+
+.app-loading-percentage {
+    font-size: 1rem;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translateX(calc(-50% + 0.25rem));
+    font-style: italic;
 }

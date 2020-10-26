@@ -3,11 +3,16 @@ package fs
 import (
 	"archive/zip"
 	"bytes"
+	"context"
 	"errors"
+	"io"
 	"io/ioutil"
 	"net/http"
 	"net/url"
 	"syscall/js"
+	"time"
+
+	"github.com/machinebox/progress"
 
 	"github.com/johnstarich/go-wasm/internal/fs"
 	"github.com/johnstarich/go-wasm/internal/interop"
@@ -121,7 +126,7 @@ func overlayTarGzip(this js.Value, args []js.Value) interface{} {
 }
 
 func OverlayTarGzip(args []js.Value) error {
-	if len(args) != 2 {
+	if len(args) < 2 {
 		return errors.New("overlayTarGzip: mount path and .tar.gz URL path is required")
 	}
 
@@ -138,5 +143,35 @@ func OverlayTarGzip(args []js.Value) error {
 	}
 	log.Debug("Download response received. Reading body...")
 
-	return fs.OverlayTarGzip(mountPath, resp.Body)
+	reader := resp.Body
+	if len(args) >= 3 && !args[2].IsUndefined() && resp.ContentLength > 0 {
+		progressCallback := args[2]
+		reader = wrapProgress(reader, resp.ContentLength, func(percentage float64) {
+			progressCallback.Invoke(percentage)
+		})
+	}
+	return fs.OverlayTarGzip(mountPath, reader)
+}
+
+func wrapProgress(r io.ReadCloser, contentLength int64, setProgress func(float64)) io.ReadCloser {
+	progressR := progress.NewReader(r)
+	go func() {
+		progressChan := progress.NewTicker(context.Background(), progressR, contentLength, 100*time.Millisecond)
+		for p := range progressChan {
+			setProgress(p.Percent())
+		}
+	}()
+	return newReadCloseWrapper(progressR, r)
+}
+
+type readCloseWrapper struct {
+	io.Reader
+	io.Closer
+}
+
+func newReadCloseWrapper(r io.Reader, closer io.Closer) io.ReadCloser {
+	return &readCloseWrapper{
+		Reader: r,
+		Closer: closer,
+	}
 }

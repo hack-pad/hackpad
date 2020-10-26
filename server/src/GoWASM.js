@@ -3,6 +3,9 @@ import 'whatwg-fetch';
 
 const Go = window.Go; // loaded from wasm_exec.js script in index.html
 
+let overlayProgress = 0;
+let progressListeners = [];
+
 async function init() {
   const startTime = new Date().getTime()
   const go = new Go();
@@ -19,7 +22,10 @@ async function init() {
 
   fs.mkdirSync("/go", 0o700)
 
-  await goWasm.overlayTarGzip('/go', 'wasm/go.tar.gz')
+  await goWasm.overlayTarGzip('/go', 'wasm/go.tar.gz', percentage => {
+    overlayProgress = percentage
+    progressListeners.forEach(c => c(percentage))
+  })
 
   console.debug("Startup took", (new Date().getTime() - startTime) / 1000, "seconds")
 }
@@ -73,4 +79,9 @@ export async function mkdirAll(path) {
   await initOnce
   const { fs } = window
   fs.mkdirSync(path, { recursive: true, mode: 0o755 })
+}
+
+export function observeGoDownloadProgress(callback) {
+  progressListeners.push(callback)
+  callback(overlayProgress)
 }

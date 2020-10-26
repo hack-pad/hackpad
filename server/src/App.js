@@ -5,13 +5,16 @@ import './Tabs.css';
 import '@fortawesome/fontawesome-free/css/all.css';
 import Compat from './Compat';
 import Loading from './Loading';
-import { install, run } from './GoWASM';
+import { install, run, observeGoDownloadProgress } from './GoWASM';
 import { newEditor } from './Editor';
 import { newTerminal } from './Terminal';
 
 function App() {
+  const [percentage, setPercentage] = React.useState(0);
   const [loading, setLoading] = React.useState(true);
   React.useEffect(() => {
+    observeGoDownloadProgress(setPercentage)
+
     window.editor = {
       newTerminal,
       newEditor,
@@ -21,12 +24,12 @@ function App() {
         run('editor', '--editor=editor')
         setLoading(false)
       })
-  }, [setLoading])
+  }, [setLoading, setPercentage])
 
   return (
     <>
       <Compat />
-      {loading ? <Loading /> : null}
+      {loading ? <Loading percentage={percentage} /> : null}
       <div id="app">
         <div id="editor"></div>
       </div>
