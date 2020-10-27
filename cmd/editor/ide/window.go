@@ -51,7 +51,7 @@ func New(elem js.Value, editorBuilder EditorBuilder, consoleBuilder ConsoleBuild
 		<div class="loading-indicator"></div>
 		<div class="spacer"></div>
 		<div class="control">
-			<a target="_blank" title="Go WASM on GitHub" href="https://github.com/johnstarich/go-wasm">
+			<a target="_blank" title="Go Wasm on GitHub" href="https://github.com/johnstarich/go-wasm">
 				<span class="fab fa-github"></span>
 			</a>
 		</div>

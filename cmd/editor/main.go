@@ -77,7 +77,7 @@ import (
 )
 
 func main() {
-	fmt.Println("Hello from WASM!", datasize.Gigabytes(4))
+	fmt.Println("Hello from Wasm!", datasize.Gigabytes(4))
 }
 `
 	err := ioutil.WriteFile("main.go", []byte(mainGoContents), 0600)

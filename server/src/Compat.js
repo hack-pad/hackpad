@@ -12,7 +12,7 @@ export default function Compat() {
   }
   return (
     <div className="compat">
-      <p>Go WASM may not work reliably in your browser.</p>
+      <p>Go Wasm may not work reliably in your browser.</p>
       <p>If you're seeing issues, try a recent version of {joinOr(knownWorkingBrowsers)}.</p>
     </div>
   )

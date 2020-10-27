@@ -39,7 +39,7 @@ func (p *process) startWasm() error {
 	}
 	magicNumber := string(buf)
 	if magicNumber != "\x00asm" {
-		return errors.Errorf("Format error. Expected WASM file header but found: %q", magicNumber)
+		return errors.Errorf("Format error. Expected Wasm file header but found: %q", magicNumber)
 	}
 	go p.runWasm(command)
 	return nil

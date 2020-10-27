@@ -1,6 +1,6 @@
 {
-  "short_name": "Go WASM",
-  "name": "Go WASM",
+  "short_name": "Go Wasm",
+  "name": "Go Wasm",
   "icons": [
     {
       "src": "favicon.ico",
