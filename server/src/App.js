@@ -28,8 +28,10 @@ function App() {
 
   return (
     <>
-      <Compat />
-      {loading ? <Loading percentage={percentage} /> : null}
+      { loading ? <>
+        <Compat />
+        <Loading percentage={percentage} />
+      </> : null }
       <div id="app">
         <div id="editor"></div>
       </div>

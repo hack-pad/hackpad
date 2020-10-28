@@ -5,6 +5,7 @@
     --app-accent: rgba(119, 0, 136);
     --app-controls-color: #222;
     --app-controls-background: #fff;
+    --app-controls-background-light: rgba(224, 224, 224, 0.5);
     --app-controls-highlight: rgba(119, 0, 136, 0.1);
     --app-title-highlight: var(--app-accent);
     --app-accent-alternate: rgba(50, 0, 135);
@@ -16,6 +17,7 @@
         --app-accent: rgba(199, 146, 234);
         --app-controls-color: #fff;
         --app-controls-background: #111;
+        --app-controls-background-light: rgba(32, 32, 32, 0.5);
         --app-controls-highlight: rgba(199, 146, 234, 0.1);
         --app-accent-alternate: rgb(154, 145, 235);
     }

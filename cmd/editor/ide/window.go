@@ -7,6 +7,7 @@ import (
 	"strings"
 	"syscall/js"
 
+	"github.com/avct/uasurfer"
 	"github.com/johnstarich/go-wasm/internal/interop"
 	"github.com/johnstarich/go-wasm/log"
 	"go.uber.org/atomic"
@@ -187,6 +188,32 @@ func New(elem js.Value, editorBuilder EditorBuilder, consoleBuilder ConsoleBuild
 		return nil
 	}))
 
+	if !isCompatibleBrowser() {
+		dialogElem := document.Call("createElement", "div")
+		dialogClassList := dialogElem.Get("classList")
+		dialogClassList.Call("add", "compatibility-warning-dialog")
+		dialogElem.Set("innerHTML", `
+			<p>Go Wasm may not work reliably in your browser.</p>
+			<p>If you're experience any issues, try a recent version of Chrome or Firefox on a device with enough memory, like a PC.</p>
+		`)
+
+		warningElem := document.Call("createElement", "button")
+		warningClassList := warningElem.Get("classList")
+		warningClassList.Call("add", "control")
+		warningClassList.Call("add", "compatibility-warning")
+		warningElem.Set("title", "Show browser compatibility warning")
+		warningElem.Set("innerHTML", `<span class="fa fa-exclamation-triangle"></span>`)
+		warningElem.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+			dialogClassList.Call("toggle", "compatibility-warning-show")
+			return nil
+		}))
+
+		body := document.Get("body")
+		body.Call("insertBefore", dialogElem, body.Get("firstChild"))
+		controls := elem.Call("querySelector", ".controls")
+		controls.Call("appendChild", warningElem)
+	}
+
 	taskConsole := w.consolesPane.NewTab(TabOptions{NoClose: true}, func(_ int, _, contents js.Value) Tabber {
 		c := taskConsoleBuilder.New(contents)
 		w.consoles = append(w.consoles, c)
@@ -201,4 +228,17 @@ func (w *window) NewEditor() Editor {
 
 func (w *window) NewConsole() Console {
 	return w.consolesPane.NewDefaultTab(TabOptions{}).(Console)
+}
+
+func isCompatibleBrowser() bool {
+	userAgentStr := js.Global().Get("navigator").Get("userAgent").String()
+	userAgent := uasurfer.Parse(userAgentStr)
+	if userAgent.DeviceType != uasurfer.DeviceComputer {
+		return false
+	}
+	switch userAgent.Browser.Name {
+	case uasurfer.BrowserChrome, uasurfer.BrowserFirefox:
+		return true
+	}
+	return false
 }

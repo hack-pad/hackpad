@@ -1,32 +1,31 @@
 import React from 'react';
 import './Compat.css';
+import MobileDetect from 'mobile-detect';
 
+
+const md = new MobileDetect(window.navigator.userAgent);
+let browserName = ""
+if (window.navigator.vendor.match(/google/i)) {
+  browserName = 'Chrome'
+} else if (navigator.userAgent.match(/firefox\//i)) {
+  browserName = 'Firefox'
+}
+const knownWorkingBrowsers = [
+  'Chrome',
+  'Firefox',
+]
+const isCompatibleBrowser = md.mobile() === null && knownWorkingBrowsers.includes(browserName)
 
 export default function Compat() {
-  const knownWorkingBrowsers = [
-    'Chrome',
-    'Firefox',
-  ]
-  if (knownWorkingBrowsers.includes(getBrowser())) {
+  if (isCompatibleBrowser) {
     return null
   }
   return (
     <div className="compat">
       <p>Go Wasm may not work reliably in your browser.</p>
-      <p>If you're seeing issues, try a recent version of {joinOr(knownWorkingBrowsers)}.</p>
+      <p>If you're experience any issues, try a recent version of {joinOr(knownWorkingBrowsers)} on a device with enough memory, like a PC.</p>
     </div>
   )
-}
-
-function getBrowser() {
-  if (window.navigator.vendor.match(/google/i)) {
-    return 'Chrome'
-  } else if (navigator.vendor.match(/apple/i)) {
-    return 'Safari'
-  } else if (navigator.userAgent.match(/firefox\//i)) {
-    return 'Firefox'
-  }
-  return 'other';
 }
 
 function joinOr(arr) {

@@ -1,14 +1,36 @@
 .compat {
-    padding: 2em;
-    animation: fade 5s 1s linear 1;
+    padding: 0 2em;
 }
 
-@keyframes fade {
-    0% {
-        opacity: 1;
-    }
-    100% {
-        padding: 0 2em;
-        opacity: 0.2;
-    }
+.compatibility-warning-dialog {
+    visibility: hidden;
+    z-index: 1000;
+    position: absolute;
+    top: var(--controls-height);
+    right: 0;
+    color: var(--app-controls-color);
+    background-color: var(--app-controls-background);
+    text-align: left;
+    width: 20em;
+    padding: 0 1em;
+    border-left: 2px solid;
+    border-bottom: 2px solid;
+    border-color: var(--app-controls-background-light);
+    border-bottom-left-radius: 0.5em;
+}
+
+.compatibility-warning-dialog p {
+    margin-top: 0.25em;
+}
+
+.compatibility-warning-dialog.compatibility-warning-show {
+    visibility: visible;
+}
+
+.ide .controls .control.compatibility-warning {
+    color: rgba(230, 160, 0, 1);
+}
+
+.ide .controls .control.compatibility-warning:hover {
+    background-color: rgba(230, 160, 0, 0.2);
 }

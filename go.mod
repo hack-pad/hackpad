@@ -3,6 +3,7 @@ module github.com/johnstarich/go-wasm
 go 1.13
 
 require (
+	github.com/avct/uasurfer v0.0.0-20191028135549-26b5daa857f1
 	github.com/fatih/color v1.9.0
 	github.com/machinebox/progress v0.2.0
 	github.com/mattn/go-runewidth v0.0.9 // indirect
