@@ -1,0 +1,23 @@
+language: go
+go:
+  - 1.15.x
+
+before_install:
+  - npm i -g npm@^6
+
+jobs:
+  include:
+    - name: Release
+      stage: github-pages
+      if: branch = master AND type = push
+      script:
+        - docker build -t go-wasm .
+        - docker cp $(docker create --rm go-wasm):/usr/share/nginx/html ./public
+      services:
+        - docker
+      deploy:
+        provider: pages
+        skip_cleanup: true
+        github_token: $GITHUB_TOKEN
+        keep_history: true
+        local_dir: ./public
