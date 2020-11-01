@@ -17,6 +17,7 @@ jobs:
         - docker
       deploy:
         provider: pages
+        fqdn: go-wasm.johnstarich.com
         skip_cleanup: true
         github_token: $GITHUB_TOKEN
         keep_history: true
