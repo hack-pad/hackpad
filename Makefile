@@ -39,7 +39,7 @@ test-js: go
 		./...
 
 .PHONY: test
-test: test-native test-js
+test: test-native #test-js  # TODO restore when this is resolved: https://travis-ci.community/t/goos-js-goarch-wasm-go-run-fails-panic-newosproc-not-implemented/1651
 
 .PHONY: static
 static: server/public/wasm/go.tar.gz commands
