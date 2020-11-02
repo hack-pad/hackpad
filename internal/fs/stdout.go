@@ -3,7 +3,6 @@ package fs
 import (
 	"bytes"
 	"sync"
-	"syscall/js"
 	"time"
 
 	"github.com/johnstarich/go-wasm/log"
@@ -23,7 +22,6 @@ type bufferedLogger struct {
 	mu        sync.Mutex
 	buf       bytes.Buffer
 	timerOnce sync.Once
-	timerID   js.Value
 }
 
 func (b *bufferedLogger) flush() {
@@ -51,11 +49,6 @@ func (b *bufferedLogger) flush() {
 	}
 }
 
-func (b *bufferedLogger) jsFlush(this js.Value, args []js.Value) interface{} {
-	b.flush()
-	return nil
-}
-
 func (b *bufferedLogger) Print(s string) int {
 	n, _ := b.Write([]byte(s))
 	return n
@@ -64,7 +57,15 @@ func (b *bufferedLogger) Print(s string) int {
 func (b *bufferedLogger) Write(p []byte) (n int, err error) {
 	b.timerOnce.Do(func() {
 		const waitTime = time.Second / 2
-		b.timerID = js.Global().Call("setInterval", js.FuncOf(b.jsFlush), waitTime.Milliseconds())
+		go func() {
+			ticker := time.NewTicker(waitTime)
+			for {
+				select {
+				case <-ticker.C:
+					b.flush()
+				}
+			}
+		}()
 	})
 
 	b.mu.Lock()

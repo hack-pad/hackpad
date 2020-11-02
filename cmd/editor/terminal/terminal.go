@@ -1,3 +1,5 @@
+// +build js
+
 package terminal
 
 import (

@@ -1,8 +1,9 @@
+// +build js
+
 package process
 
 import (
 	"os"
-	"os/exec"
 	"strings"
 	"syscall/js"
 	"time"
@@ -10,7 +11,6 @@ import (
 	"github.com/johnstarich/go-wasm/internal/interop"
 	"github.com/johnstarich/go-wasm/internal/promise"
 	"github.com/johnstarich/go-wasm/log"
-	"github.com/pkg/errors"
 )
 
 var wasmCache = make(map[string]wasmCacheValue)
@@ -18,47 +18,6 @@ var wasmCache = make(map[string]wasmCacheValue)
 type wasmCacheValue struct {
 	modTime time.Time
 	module  js.Value
-}
-
-func (p *process) startWasm() error {
-	pids[p.pid] = p
-	log.Debugf("Spawning process: %v", p)
-	command, err := exec.LookPath(p.command)
-	if err != nil {
-		return err
-	}
-	f, err := os.Open(command)
-	if err != nil {
-		return err
-	}
-	defer f.Close()
-	buf := make([]byte, 4)
-	_, err = f.Read(buf)
-	if err != nil {
-		return err
-	}
-	magicNumber := string(buf)
-	if magicNumber != "\x00asm" {
-		return errors.Errorf("Format error. Expected Wasm file header but found: %q", magicNumber)
-	}
-	go p.runWasm(command)
-	return nil
-}
-
-func (p *process) Done() {
-	log.Debug("PID ", p.pid, " is done.\n", p.fileDescriptors)
-	p.fileDescriptors.CloseAll()
-	p.ctxDone()
-}
-
-func (p *process) handleErr(err error) {
-	p.state = stateDone
-	if err != nil {
-		log.Errorf("Failed to start process: %s", err.Error())
-		p.err = err
-		p.state = stateError
-	}
-	p.Done()
 }
 
 func cacheAllowed(path string) bool {
@@ -100,7 +59,7 @@ func (p *process) loadWasmModule(path string) (js.Value, error) {
 	return module, nil
 }
 
-func (p *process) runWasm(path string) {
+func (p *process) run(path string) {
 	exitChan := make(chan int, 1)
 	runPromise, err := p.startWasmPromise(path, exitChan)
 	if err != nil {

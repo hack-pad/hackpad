@@ -8,7 +8,6 @@ import (
 	"sort"
 	"time"
 
-	"github.com/johnstarich/go-wasm/internal/interop"
 	"github.com/johnstarich/go-wasm/log"
 	"github.com/pkg/errors"
 )
@@ -77,7 +76,6 @@ func (f *File) ReadAt(p []byte, off int64) (n int, err error) {
 	if off >= int64(len(f.Data)) {
 		return 0, io.EOF
 	}
-	defer interop.PanicLogger()
 	log.Warn("Read ", f.path, " ", off, "->", len(p), " / ", len(f.Data), "\n"+string(debug.Stack()))
 	max := int64(len(f.Data))
 	end := off + int64(len(p))

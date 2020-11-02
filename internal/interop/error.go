@@ -5,7 +5,6 @@ import (
 	"io"
 	"os"
 	"os/exec"
-	"syscall/js"
 
 	"github.com/johnstarich/go-wasm/internal/common"
 	"github.com/johnstarich/go-wasm/log"
@@ -45,18 +44,6 @@ func (e *interopErr) Message() string {
 
 func (e *interopErr) Code() string {
 	return e.code
-}
-
-func WrapAsJSError(err error, message string) error {
-	if err == nil {
-		return nil
-	}
-
-	val := js.ValueOf(map[string]interface{}{
-		"message": js.ValueOf(errors.Wrap(err, message).Error()),
-		"code":    js.ValueOf(mapToErrNo(err)),
-	})
-	return js.Error{Value: val}
 }
 
 // errno names pulled from syscall/tables_js.go
