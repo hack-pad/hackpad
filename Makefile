@@ -1,7 +1,7 @@
 SHELL := /usr/bin/env bash
 GO_VERSION = 1.15.2
-GOROOT = ${PWD}/cache/go${GO_VERSION}
-PATH := ${GOROOT}/bin:${GOROOT}/misc/wasm:${PATH}
+GOROOT =
+PATH := ${PWD}/cache/go/bin:${PWD}/cache/go/misc/wasm:${PATH}
 GOOS = js
 GOARCH = wasm
 export
@@ -27,7 +27,7 @@ lint-fix: lint-deps
 
 .PHONY: test-native
 test-native:
-	GOROOT= GOARCH= GOOS= go test \
+	GOARCH= GOOS= go test \
 		-race \
 		-coverprofile=cover.out \
 		./...
@@ -74,9 +74,9 @@ cache/go${GO_VERSION}: cache
 			--branch go${GO_VERSION} \
 			https://github.com/golang/go.git \
 			"$$TMP"; \
-		GOROOT= $(MAKE) -e TMP_GO="$$TMP" go-ext; \
+		$(MAKE) -e TMP_GO="$$TMP" go-ext; \
 		pushd "$$TMP/src"; \
-		GOROOT= ./make.bash; \
+		./make.bash; \
 		export PATH="$$TMP/bin:$$PATH"; \
 		export GOROOT="$$TMP"; \
 		go version; \
