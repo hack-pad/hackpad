@@ -1,7 +1,7 @@
 SHELL := /usr/bin/env bash
 GO_VERSION = 1.15.2
-GOBIN = ${PWD}/cache/go${GO_VERSION}/bin
-PATH := ${GOBIN}:${PATH}
+GOROOT = ${PWD}/cache/go${GO_VERSION}
+PATH := ${GOROOT}/bin:${PATH}
 GOOS = js
 GOARCH = wasm
 export
@@ -12,7 +12,7 @@ serve:
 	go run ./server
 
 .PHONY: lint-deps
-lint-deps:
+lint-deps: go
 	@if ! which golangci-lint >/dev/null || [[ "$$(golangci-lint version 2>&1)" != *${LINT_VERSION}* ]]; then \
 		curl -sfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $$(go env GOPATH)/bin v${LINT_VERSION}; \
 	fi
@@ -27,7 +27,7 @@ lint-fix: lint-deps
 
 .PHONY: test-native
 test-native:
-	GOARCH= GOOS= go test \
+	GOROOT= GOARCH= GOOS= go test \
 		-race \
 		-coverprofile=cover.out \
 		./...
@@ -48,7 +48,7 @@ static: server/public/wasm/go.tar.gz commands
 server/public/wasm:
 	mkdir -p server/public/wasm
 
-server/public/wasm/go.tar.gz: server/public/wasm cache/go${GO_VERSION}
+server/public/wasm/go.tar.gz: server/public/wasm go
 	GOARCH=$$(go env GOHOSTARCH) GOOS=$$(go env GOHOSTOS) \
 		go run ./internal/cmd/gozip cache/go > server/public/wasm/go.tar.gz
 
@@ -75,16 +75,17 @@ cache/go${GO_VERSION}: cache
 			--branch go${GO_VERSION} \
 			https://github.com/golang/go.git \
 			"$$TMP"; \
-		$(MAKE) -e TMP_GO="$$TMP" go-ext; \
+		GOROOT= $(MAKE) -e TMP_GO="$$TMP" go-ext; \
 		pushd "$$TMP/src"; \
-		./make.bash; \
+		GOROOT= ./make.bash; \
 		export PATH="$$TMP/bin:$$PATH"; \
+		export GOROOT="$$TMP"; \
 		go version; \
 		mkdir -p ../bin/js_wasm; \
 		go build -o ../bin/js_wasm/ std cmd/go cmd/gofmt; \
 		go tool dist test -rebuild -list; \
 		go build -o ../pkg/tool/js_wasm/ std cmd/buildid cmd/pack; \
-		GOROOT="$$TMP" go install ./...; \
+		go install ./...; \
 		popd; \
 		mv "$$TMP" cache/go${GO_VERSION}; \
 		ln -sfn go${GO_VERSION} cache/go; \
