@@ -29,6 +29,7 @@ lint-fix: lint-deps
 test:
 	# Run native tests
 	GOARCH= GOOS= go test \
+		-race \
 		-coverprofile=cover.out \
 		./...
 	# Run JS tests
