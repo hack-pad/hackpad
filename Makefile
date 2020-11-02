@@ -25,18 +25,22 @@ lint: lint-deps
 lint-fix: lint-deps
 	golangci-lint run --fix
 
-.PHONY: test
-test:
-	# Run native tests
+.PHONY: test-native
+test-native:
 	GOARCH= GOOS= go test \
 		-race \
 		-coverprofile=cover.out \
 		./...
-	# Run JS tests
+
+.PHONY: test-js
+test-js: go
 	go test \
 		-coverprofile=cover_js.out \
 		-exec ${PWD}/cache/go/misc/wasm/go_js_wasm_exec \
 		./...
+
+.PHONY: test
+test: test-native test-js
 
 .PHONY: static
 static: server/public/wasm/go.tar.gz commands
