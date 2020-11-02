@@ -1,7 +1,7 @@
 SHELL := /usr/bin/env bash
 GO_VERSION = 1.15.2
 GOROOT = ${PWD}/cache/go${GO_VERSION}
-PATH := ${GOROOT}/bin:${PATH}
+PATH := ${GOROOT}/bin:${GOROOT}/misc/wasm:${PATH}
 GOOS = js
 GOARCH = wasm
 export
@@ -36,7 +36,6 @@ test-native:
 test-js: go
 	go test \
 		-coverprofile=cover_js.out \
-		-exec ${PWD}/cache/go/misc/wasm/go_js_wasm_exec \
 		./...
 
 .PHONY: test
