@@ -6,7 +6,6 @@ import (
 	"os"
 	"os/exec"
 	"strings"
-	"unicode"
 
 	"github.com/johnstarich/go-wasm/internal/console"
 	"github.com/pkg/errors"
@@ -30,23 +29,6 @@ func runLine(term console.Console, line string) error {
 		return errors.New("Incomplete command. Multi-line commands not supported.")
 	}
 	return nil
-}
-
-func tokenize(line string) []string {
-	var tokens []string
-	var buf []rune
-	for _, c := range line {
-		if unicode.IsSpace(c) && len(buf) != 0 {
-			tokens = append(tokens, string(buf))
-			buf = nil
-		} else {
-			buf = append(buf, c)
-		}
-	}
-	if len(buf) != 0 {
-		tokens = append(tokens, string(buf))
-	}
-	return tokens
 }
 
 func evalWord(parts []syntax.WordPart) (string, error) {

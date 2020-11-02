@@ -3,10 +3,19 @@ go:
   - 1.15.x
 
 before_install:
-  - npm i -g npm@^6
+  - source ~/.nvm/nvm.sh
+  - nvm install 14
 
 jobs:
   include:
+    - name: Lint
+      script: make lint
+    - name: Test
+      script: make test
+    - name: Build Docker image
+      script: make docker
+      services:
+        - docker
     - name: Release
       stage: github-pages
       if: branch = master AND type = push

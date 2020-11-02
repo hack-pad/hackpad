@@ -1,3 +1,5 @@
+// +build js
+
 package main
 
 import (
@@ -88,7 +90,10 @@ func main() {
 
 	win.NewConsole()
 	editor := win.NewEditor()
-	editor.OpenFile("main.go")
+	err = editor.OpenFile("main.go")
+	if err != nil {
+		log.Error("Failed to open main.go in editor: ", err)
+	}
 
 	select {}
 }

@@ -1,3 +1,5 @@
+// +build js
+
 package fs
 
 import (
@@ -137,7 +139,8 @@ func OverlayTarGzip(args []js.Value) error {
 	if err != nil {
 		return err
 	}
-	resp, err := http.Get(u.Path) // only download from current server, not just any URL
+	// only download from current server, not just any URL
+	resp, err := http.Get(u.Path) // nolint:bodyclose // Body is closed in OverlayTarGzip handler to keep this async
 	if err != nil {
 		return err
 	}

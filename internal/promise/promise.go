@@ -1,3 +1,5 @@
+// +build js
+
 package promise
 
 import (
@@ -13,8 +15,6 @@ var jsPromise = js.Global().Get("Promise")
 type Promise struct {
 	value js.Value
 }
-
-type Resolver func(interface{})
 
 func From(promiseValue js.Value) Promise {
 	return Promise{value: promiseValue}

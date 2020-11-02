@@ -1,3 +1,5 @@
+// +build js
+
 package interop
 
 import (
@@ -21,7 +23,6 @@ func NewEventTarget() EventTarget {
 type Event struct {
 	Target          js.Value
 	Type            string
-	preventDefault  bool
 	stopPropagation bool
 }
 

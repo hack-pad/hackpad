@@ -3,13 +3,15 @@ package process
 import (
 	"context"
 	"fmt"
+	"os"
+	"os/exec"
 	"sort"
 	"strings"
-	"syscall/js"
 
 	"github.com/johnstarich/go-wasm/internal/common"
 	"github.com/johnstarich/go-wasm/internal/fs"
-	"github.com/johnstarich/go-wasm/internal/interop"
+	"github.com/johnstarich/go-wasm/log"
+	"github.com/pkg/errors"
 	"go.uber.org/atomic"
 )
 
@@ -27,11 +29,6 @@ const (
 	stateRunning   processState = "running"
 	stateDone      processState = "done"
 	stateError     processState = "error"
-)
-
-var (
-	jsGo   = js.Global().Get("Go")
-	jsWasm = js.Global().Get("WebAssembly")
 )
 
 var (
@@ -102,11 +99,52 @@ func (p *process) Files() *fs.FileDescriptors {
 }
 
 func (p *process) Start() error {
-	err := p.startWasm()
+	err := p.start()
 	if p.err == nil {
 		p.err = err
 	}
 	return p.err
+}
+
+func (p *process) start() error {
+	pids[p.pid] = p
+	log.Debugf("Spawning process: %v", p)
+	command, err := exec.LookPath(p.command)
+	if err != nil {
+		return err
+	}
+	f, err := os.Open(command)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	buf := make([]byte, 4)
+	_, err = f.Read(buf)
+	if err != nil {
+		return err
+	}
+	magicNumber := string(buf)
+	if magicNumber != "\x00asm" {
+		return errors.Errorf("Format error. Expected Wasm file header but found: %q", magicNumber)
+	}
+	go p.run(command)
+	return nil
+}
+
+func (p *process) Done() {
+	log.Debug("PID ", p.pid, " is done.\n", p.fileDescriptors)
+	p.fileDescriptors.CloseAll()
+	p.ctxDone()
+}
+
+func (p *process) handleErr(err error) {
+	p.state = stateDone
+	if err != nil {
+		log.Errorf("Failed to start process: %s", err.Error())
+		p.err = err
+		p.state = stateError
+	}
+	p.Done()
 }
 
 func (p *process) Wait() (exitCode int, err error) {
@@ -122,20 +160,8 @@ func (p *process) SetWorkingDirectory(wd string) error {
 	return p.setFilesWD(wd)
 }
 
-func (p *process) JSValue() js.Value {
-	return js.ValueOf(map[string]interface{}{
-		"pid":   p.pid,
-		"ppid":  p.parentPID,
-		"error": interop.WrapAsJSError(p.err, "spawn"),
-	})
-}
-
 func (p *process) String() string {
 	return fmt.Sprintf("PID=%s, Command=%v, State=%s, WD=%s, Attr=%+v, Err=%+v, Files:\n%v", p.pid, p.args, p.state, p.WorkingDirectory(), p.attr, p.err, p.fileDescriptors)
-}
-
-func (p *process) StartCPUProfile() error {
-	return interop.StartCPUProfile(p.ctx)
 }
 
 func Dump() interface{} {

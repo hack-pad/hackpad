@@ -94,7 +94,9 @@ func (fs *Fs) downloadGzipErr(r io.Reader) error {
 		}
 
 		fs.files[path] = file
-		fs.ps.Emit(path)
+		if !file.header.FileInfo().IsDir() {
+			fs.ps.Emit(path) // only emit for non-dirs, dirs will wait until the download completes to ensure correctness
+		}
 		for _, segment := range dirsFromPath(originalName) {
 			if fs.directories[segment] == nil {
 				fs.directories[segment] = make(map[string]bool, 1)

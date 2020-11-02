@@ -1,3 +1,5 @@
+// +build js
+
 package fs
 
 import (
@@ -20,11 +22,12 @@ func mkdirSync(args []js.Value) (interface{}, error) {
 	path := args[0].String()
 	options := args[1]
 	var mode os.FileMode
-	if options.Type() == js.TypeNumber {
+	switch {
+	case options.Type() == js.TypeNumber:
 		mode = os.FileMode(options.Int())
-	} else if options.Type() == js.TypeObject && options.Get("mode").Truthy() {
+	case options.Type() == js.TypeObject && options.Get("mode").Truthy():
 		mode = os.FileMode(options.Get("mode").Int())
-	} else {
+	default:
 		mode = 0777
 	}
 	recursive := false

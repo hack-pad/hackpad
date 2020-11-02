@@ -1,7 +1,7 @@
 SHELL := /usr/bin/env bash
 GO_VERSION = 1.15.2
-GOBIN = ${PWD}/cache/go${GO_VERSION}/bin
-PATH := ${GOBIN}:${PATH}
+GOROOT =
+PATH := ${PWD}/cache/go/bin:${PWD}/cache/go/misc/wasm:${PATH}
 GOOS = js
 GOARCH = wasm
 export
@@ -12,7 +12,7 @@ serve:
 	go run ./server
 
 .PHONY: lint-deps
-lint-deps:
+lint-deps: go
 	@if ! which golangci-lint >/dev/null || [[ "$$(golangci-lint version 2>&1)" != *${LINT_VERSION}* ]]; then \
 		curl -sfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $$(go env GOPATH)/bin v${LINT_VERSION}; \
 	fi
@@ -25,13 +25,29 @@ lint: lint-deps
 lint-fix: lint-deps
 	golangci-lint run --fix
 
+.PHONY: test-native
+test-native:
+	GOARCH= GOOS= go test \
+		-race \
+		-coverprofile=cover.out \
+		./...
+
+.PHONY: test-js
+test-js: go
+	go test \
+		-coverprofile=cover_js.out \
+		./...
+
+.PHONY: test
+test: test-native #test-js  # TODO restore when this is resolved: https://travis-ci.community/t/goos-js-goarch-wasm-go-run-fails-panic-newosproc-not-implemented/1651
+
 .PHONY: static
 static: server/public/wasm/go.tar.gz commands
 
 server/public/wasm:
 	mkdir -p server/public/wasm
 
-server/public/wasm/go.tar.gz: server/public/wasm cache/go${GO_VERSION}
+server/public/wasm/go.tar.gz: server/public/wasm go
 	GOARCH=$$(go env GOHOSTARCH) GOOS=$$(go env GOHOSTOS) \
 		go run ./internal/cmd/gozip cache/go > server/public/wasm/go.tar.gz
 
@@ -67,7 +83,7 @@ cache/go${GO_VERSION}: cache
 		go build -o ../bin/js_wasm/ std cmd/go cmd/gofmt; \
 		go tool dist test -rebuild -list; \
 		go build -o ../pkg/tool/js_wasm/ std cmd/buildid cmd/pack; \
-		GOROOT="$$TMP" go install ./...; \
+		go install ./...; \
 		popd; \
 		mv "$$TMP" cache/go${GO_VERSION}; \
 		ln -sfn go${GO_VERSION} cache/go; \

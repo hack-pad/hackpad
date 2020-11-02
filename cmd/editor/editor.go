@@ -1,7 +1,10 @@
+// +build js
+
 package main
 
 import (
 	"io/ioutil"
+	"os"
 	"syscall/js"
 
 	"github.com/johnstarich/go-wasm/cmd/editor/ide"
@@ -33,7 +36,12 @@ type jsEditor struct {
 
 func (j *jsEditor) onEdit(js.Value, []js.Value) interface{} {
 	contents := j.elem.Call("getContents").String()
-	err := ioutil.WriteFile(j.filePath, []byte(contents), 0700)
+	perm := os.FileMode(0700)
+	info, err := os.Stat(j.filePath)
+	if err == nil {
+		perm = info.Mode()
+	}
+	err = ioutil.WriteFile(j.filePath, []byte(contents), perm)
 	if err != nil {
 		log.Error("Failed to write file contents: ", err)
 	}
