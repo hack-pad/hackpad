@@ -78,7 +78,6 @@ cache/go${GO_VERSION}: cache
 		pushd "$$TMP/src"; \
 		./make.bash; \
 		export PATH="$$TMP/bin:$$PATH"; \
-		export GOROOT="$$TMP"; \
 		go version; \
 		mkdir -p ../bin/js_wasm; \
 		go build -o ../bin/js_wasm/ std cmd/go cmd/gofmt; \
