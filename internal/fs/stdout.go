@@ -59,11 +59,8 @@ func (b *bufferedLogger) Write(p []byte) (n int, err error) {
 		const waitTime = time.Second / 2
 		go func() {
 			ticker := time.NewTicker(waitTime)
-			for {
-				select {
-				case <-ticker.C:
-					b.flush()
-				}
+			for range ticker.C {
+				b.flush()
 			}
 		}()
 	})
