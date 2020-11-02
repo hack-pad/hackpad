@@ -7,6 +7,14 @@ before_install:
 
 jobs:
   include:
+    - name: Lint
+      script: make lint
+    - name: Test
+      script: make test
+    - name: Build Docker image
+      script: make docker
+      services:
+        - docker
     - name: Release
       stage: github-pages
       if: branch = master AND type = push
