@@ -229,10 +229,6 @@ func (f *FileDescriptors) Utimes(path string, atime, mtime time.Time) error {
 	return filesystem.Chtimes(f.resolvePath(path), atime, mtime)
 }
 
-func ptr(f FID) *FID {
-	return &f
-}
-
 func (f *FileDescriptors) String() string {
 	var s strings.Builder
 	var fids []FID

@@ -338,7 +338,7 @@ func splitKeyValue(kv string) (key, value string) {
 }
 
 func runWithEnv(term console.Console, env []string, args ...string) error {
-	cmd := exec.Command(args[0], args[1:]...)
+	cmd := exec.Command(args[0], args[1:]...) // nolint:gosec // Running any given process args is the whole point, so this isn't a security issue.
 	cmd.Stdout = term.Stdout()
 	cmd.Stderr = term.Stderr()
 	cmd.Env = append(os.Environ(), env...)

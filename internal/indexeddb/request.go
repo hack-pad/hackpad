@@ -50,14 +50,6 @@ func processRequest(request js.Value) promise.GoPromise {
 	return prom
 }
 
-func commitTxn(txn js.Value) (err error) {
-	defer catch(&err)
-	if txn.Type() != js.TypeNull {
-		txn.Call("commit")
-	}
-	return nil
-}
-
 func await(prom promise.GoPromise) (js.Value, error) {
 	log.Print("Awaiting Promise: ", prom)
 	runtime.Gosched()

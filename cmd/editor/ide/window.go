@@ -72,58 +72,7 @@ func New(elem js.Value, editorBuilder EditorBuilder, consoleBuilder ConsoleBuild
 		panesElem:      elem.Call("querySelector", ".panes"),
 	}
 
-	w.editorsPane = NewTabPane(TabOptions{NoFocus: true}, func(id int, title, contents js.Value) Tabber {
-		contents.Get("classList").Call("add", "editor")
-		editor := w.editorBuilder.New(contents)
-		w.editors = append(w.editors, editor)
-
-		title.Set("innerHTML", `<input type="text" class="editor-file-picker" placeholder="file_name.go" spellcheck=false />`)
-		inputElem := title.Call("querySelector", "input")
-		inputElem.Call("focus")
-
-		var keydownFn js.Func
-		keydownFn = js.FuncOf(func(_ js.Value, args []js.Value) interface{} {
-			defer func() {
-				if r := recover(); r != nil {
-					log.Print("recovered from panic:", r, string(debug.Stack()))
-				}
-			}()
-			event := args[0]
-			if event.Get("key").String() != "Enter" {
-				return nil
-			}
-			event.Call("preventDefault")
-			event.Call("stopPropagation")
-
-			fileName := inputElem.Get("value").String()
-			fileName = strings.TrimSpace(fileName)
-			if fileName == "" {
-				return nil
-			}
-			title.Set("innerText", "New file")
-			err := editor.OpenFile(fileName)
-			if err != nil {
-				log.Error(err)
-			}
-			w.editorsPane.focusID(id)
-			keydownFn.Release()
-			return nil
-		})
-		title.Call("addEventListener", "keydown", keydownFn)
-		inputElem.Call("addEventListener", "blur", interop.SingleUseFunc(func(js.Value, []js.Value) interface{} {
-			titleText := title.Get("innerText")
-			if titleText.Truthy() && titleText.String() != "New file" {
-				w.editorsPane.closeTabID(id)
-			}
-			return nil
-		}))
-		return editor
-	}, func(closedIndex int) {
-		var newEditors []Editor
-		newEditors = append(newEditors, w.editors[:closedIndex]...)
-		newEditors = append(newEditors, w.editors[closedIndex+1:]...)
-		w.editors = newEditors
-	})
+	w.editorsPane = NewTabPane(TabOptions{NoFocus: true}, w.makeDefaultEditor, w.closedEditor)
 	w.panesElem.Call("appendChild", w.editorsPane)
 
 	w.consolesPane = NewTabPane(TabOptions{}, func(_ int, _, contents js.Value) Tabber {
@@ -241,4 +190,59 @@ func isCompatibleBrowser() bool {
 		return true
 	}
 	return false
+}
+
+func (w *window) makeDefaultEditor(id int, title, contents js.Value) Tabber {
+	contents.Get("classList").Call("add", "editor")
+	editor := w.editorBuilder.New(contents)
+	w.editors = append(w.editors, editor)
+
+	title.Set("innerHTML", `<input type="text" class="editor-file-picker" placeholder="file_name.go" spellcheck=false />`)
+	inputElem := title.Call("querySelector", "input")
+	inputElem.Call("focus")
+
+	var keydownFn js.Func
+	keydownFn = js.FuncOf(func(_ js.Value, args []js.Value) interface{} {
+		defer func() {
+			if r := recover(); r != nil {
+				log.Print("recovered from panic:", r, string(debug.Stack()))
+			}
+		}()
+		event := args[0]
+		if event.Get("key").String() != "Enter" {
+			return nil
+		}
+		event.Call("preventDefault")
+		event.Call("stopPropagation")
+
+		fileName := inputElem.Get("value").String()
+		fileName = strings.TrimSpace(fileName)
+		if fileName == "" {
+			return nil
+		}
+		title.Set("innerText", "New file")
+		err := editor.OpenFile(fileName)
+		if err != nil {
+			log.Error(err)
+		}
+		w.editorsPane.focusID(id)
+		keydownFn.Release()
+		return nil
+	})
+	title.Call("addEventListener", "keydown", keydownFn)
+	inputElem.Call("addEventListener", "blur", interop.SingleUseFunc(func(js.Value, []js.Value) interface{} {
+		titleText := title.Get("innerText")
+		if titleText.Truthy() && titleText.String() != "New file" {
+			w.editorsPane.closeTabID(id)
+		}
+		return nil
+	}))
+	return editor
+}
+
+func (w *window) closedEditor(closedIndex int) {
+	var newEditors []Editor
+	newEditors = append(newEditors, w.editors[:closedIndex]...)
+	newEditors = append(newEditors, w.editors[closedIndex+1:]...)
+	w.editors = newEditors
 }

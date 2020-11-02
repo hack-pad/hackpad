@@ -141,6 +141,7 @@ func OverlayTarGzip(args []js.Value) error {
 	if err != nil {
 		return err
 	}
+	defer resp.Body.Close()
 	log.Debug("Download response received. Reading body...")
 
 	reader := resp.Body

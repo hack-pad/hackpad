@@ -133,9 +133,10 @@ func (t *terminal) ReadEvalPrint(reader io.RuneReader) error {
 	case controlBackspace:
 		if t.cursor > 0 {
 			t.cursor--
-			prefix, suffix := splitRunes(t.line, t.cursor)
+			runes, suffix := splitRunes(t.line, t.cursor)
 			suffix = suffix[1:] // trim off char after decremented cursor
-			t.line = append(prefix, suffix...)
+			runes = append(runes, suffix...)
+			t.line = runes
 			t.CursorLeftN(1)
 			t.ClearRightN(len(t.line) - t.cursor + 1)
 			t.Print(string(t.line[t.cursor:]))
@@ -295,9 +296,10 @@ func (t *terminal) ReadEvalEscape(firstRune rune, r io.RuneReader) error {
 		return nil
 	case '~': // forward delete
 		if t.cursor != len(t.line) {
-			prefix, suffix := splitRunes(t.line, t.cursor)
+			runes, suffix := splitRunes(t.line, t.cursor)
 			suffix = suffix[1:]
-			t.line = append(prefix, suffix...)
+			runes = append(runes, suffix...)
+			t.line = runes
 			t.ClearRightN(len(t.line) - t.cursor + 1)
 			t.Print(string(t.line[t.cursor:]))
 			t.CursorLeftN(len(t.line) - t.cursor)
