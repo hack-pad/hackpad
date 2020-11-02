@@ -8,6 +8,7 @@ import (
 	"os"
 	goPath "path"
 	"strings"
+	"sync"
 	"syscall"
 	"time"
 
@@ -24,11 +25,12 @@ const (
 
 type Fs struct {
 	// directories holds directory paths and their children's base names. Non-nil means directory exists with no children.
-	directories map[string]map[string]bool
-	ps          pubsub.PubSub
-	done        context.CancelFunc
-	files       map[string]*uncompressedFile
-	initErr     error
+	directories   map[string]map[string]bool
+	directoriesMu sync.RWMutex
+	ps            pubsub.PubSub
+	done          context.CancelFunc
+	files         map[string]*uncompressedFile
+	initErr       error
 }
 
 type uncompressedFile struct {
@@ -97,7 +99,9 @@ func (fs *Fs) downloadGzipErr(r io.Reader) error {
 		fs.ps.Emit(path)
 		for _, segment := range dirsFromPath(originalName) {
 			if fs.directories[segment] == nil {
+				fs.directoriesMu.Lock()
 				fs.directories[segment] = make(map[string]bool, 1)
+				fs.directoriesMu.Unlock()
 			}
 		}
 	}
@@ -106,13 +110,17 @@ func (fs *Fs) downloadGzipErr(r io.Reader) error {
 	for dir := range fs.directories {
 		parent := goPath.Dir(dir)
 		if dir != pathSeparator {
+			fs.directoriesMu.Lock()
 			fs.directories[parent][dir] = true
+			fs.directoriesMu.Unlock()
 		}
 	}
 	for path := range fs.files {
 		parent := goPath.Dir(path)
 		if path != pathSeparator {
+			fs.directoriesMu.Lock()
 			fs.directories[parent][path] = true
+			fs.directoriesMu.Unlock()
 		}
 	}
 	return nil

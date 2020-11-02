@@ -124,7 +124,14 @@ func (f *file) Readdirnames(n int) ([]string, error) {
 
 // dirFiles returns the files in this directory (check f.isDir first)
 func (f *file) dirFiles() map[string]bool {
-	return f.fs.directories[f.header.Name]
+	f.fs.directoriesMu.RLock()
+	m := f.fs.directories[f.header.Name]
+	mCopy := make(map[string]bool, len(m))
+	for k, v := range m {
+		mCopy[k] = v
+	}
+	f.fs.directoriesMu.RUnlock()
+	return mCopy
 }
 
 func (f *file) Stat() (os.FileInfo, error) {
