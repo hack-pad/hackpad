@@ -29,5 +29,5 @@ jobs:
         fqdn: go-wasm.johnstarich.com
         skip_cleanup: true
         github_token: $GITHUB_TOKEN
-        keep_history: true
+        keep_history: false  # Wasm binaries and go.tar.gz are quite large
         local_dir: ./public
