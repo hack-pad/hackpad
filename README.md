@@ -13,4 +13,4 @@ Check out the article announcement on [Medium][], and the demo at https://go-was
 
 Want to discuss an idea or a bug? Open up a new [issue][] and we can talk about it. Pull requests are welcome.
 
-[new issue]: https://github.com/JohnStarich/go-wasm/issues
+[issue]: https://github.com/JohnStarich/go-wasm/issues
