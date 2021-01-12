@@ -28,7 +28,7 @@ func New(name string, version int, upgrader func(db *DB, oldVersion, newVersion 
 	db := &DB{}
 	request := jsIndexedDB.Call("open", name, version)
 
-	resolve, reject, prom := promise.NewGoPromise()
+	resolve, reject, prom := promise.NewGo()
 	request.Call("addEventListener", "error", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
 		reject(request.Get("error"))
 		return nil

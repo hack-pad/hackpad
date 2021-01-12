@@ -12,8 +12,8 @@ import (
 	"github.com/pkg/errors"
 )
 
-func processRequest(request js.Value) promise.GoPromise {
-	resolve, reject, prom := promise.NewGoPromise()
+func processRequest(request js.Value) promise.Promise {
+	resolve, reject, prom := promise.NewGo()
 
 	done := false
 	var errFunc, successFunc js.Func
@@ -52,12 +52,12 @@ func processRequest(request js.Value) promise.GoPromise {
 	return prom
 }
 
-func await(prom promise.GoPromise) (js.Value, error) {
+func await(prom promise.Promise) (js.Value, error) {
 	log.Print("Awaiting Promise: ", prom)
 	runtime.Gosched()
-	val, errVal := promise.AwaitGo(prom)
-	if errVal != nil {
-		return js.Value{}, js.Error{Value: errVal.(js.Value)}
+	val, err := prom.Await()
+	if err != nil {
+		return js.Value{}, err
 	}
 	return val.(js.Value), nil
 }

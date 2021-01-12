@@ -49,7 +49,7 @@ Installs a remote package by the name of 'pkg'.
 	switch args[0] {
 	case "add":
 		prom := promise.From(goWasm.Call("install", args[1]))
-		_, err := promise.Await(prom)
+		_, err := prom.Await()
 		return err
 	default:
 		return errors.Errorf("Invalid command: %q", args[0])
