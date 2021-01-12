@@ -15,6 +15,10 @@ import (
 
 var wasmCache = make(map[string]wasmCacheValue)
 
+var (
+	jsObject = js.Global().Get("Object")
+)
+
 type wasmCacheValue struct {
 	modTime time.Time
 	module  js.Value
@@ -137,9 +141,13 @@ func (p *process) startWasmPromise(path string, exitChan chan<- int) (promise.Pr
 			wrapperExports[export] = value
 		}
 	}
-	wrapperInstance := js.ValueOf(map[string]interface{}{ // Instance.exports is read-only, so create a shim
-		"exports": wrapperExports,
-	})
+	wrapperInstance := jsObject.Call("defineProperty",
+		jsObject.Call("create", instance),
+		"exports", map[string]interface{}{ // Instance.exports is read-only, so create a shim
+			"value":    wrapperExports,
+			"writable": false,
+		},
+	)
 
 	time.Sleep(1) // nolint:staticcheck // allow JS event loop to run
 	p.state = stateRunning
