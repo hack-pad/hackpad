@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"os"
 	"syscall/js"
+	"time"
 
 	"github.com/johnstarich/go-wasm/cmd/editor/ide"
 	"github.com/johnstarich/go-wasm/cmd/editor/plaineditor"
@@ -85,6 +86,12 @@ func main() {
 	err := ioutil.WriteFile("main.go", []byte(mainGoContents), 0600)
 	if err != nil {
 		log.Error("Failed to write to main.go: ", err)
+		return
+	}
+
+	time.Sleep(1) // nolint:staticcheck // allow JS event loop to run
+	if _, err := tasks.Start(goBinaryPath, "go", "mod", "tidy"); err != nil {
+		log.Error("Failed to start go mod tidy: ", err)
 		return
 	}
 
