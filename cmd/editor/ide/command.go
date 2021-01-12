@@ -4,7 +4,6 @@ package ide
 
 import (
 	"strings"
-	"syscall/js"
 	"time"
 
 	"github.com/johnstarich/go-wasm/internal/promise"
@@ -69,7 +68,7 @@ func (w *window) startProcess(console TaskConsole, rawPath, name string, args ..
 }
 
 func (w *window) runPlayground(console TaskConsole) {
-	w.runGoProcess(console, "build", "-v", ".").Then(func(_ js.Value) interface{} {
+	w.runGoProcess(console, "build", "-v", ".").Then(func(_ interface{}) interface{} {
 		return w.runProcess(console, "./playground")
 	})
 }

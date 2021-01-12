@@ -49,18 +49,19 @@ func (p *process) loadWasmModule(path string) (js.Value, error) {
 	}
 	jsBuf := interop.NewByteArray(wasm)
 	compilePromise := promise.From(jsWasm.Call("compile", jsBuf))
-	module, err := promise.Await(compilePromise)
+	module, err := compilePromise.Await()
 	if err != nil {
 		return js.Value{}, err
 	}
+	jsModule := module.(js.Value)
 
 	if allowCache {
 		wasmCache[path] = wasmCacheValue{
 			modTime: info.ModTime(),
-			module:  module,
+			module:  jsModule,
 		}
 	}
-	return module, nil
+	return jsModule, nil
 }
 
 func (p *process) run(path string) {
@@ -70,7 +71,7 @@ func (p *process) run(path string) {
 		p.handleErr(err)
 		return
 	}
-	_, err = promise.Await(runPromise)
+	_, err = runPromise.Await()
 	p.exitCode = <-exitChan
 	p.handleErr(err)
 }
@@ -78,7 +79,7 @@ func (p *process) run(path string) {
 func (p *process) startWasmPromise(path string, exitChan chan<- int) (promise.Promise, error) {
 	module, err := p.loadWasmModule(path)
 	if err != nil {
-		return promise.Promise{}, err
+		return nil, err
 	}
 
 	p.state = stateCompiling
@@ -110,10 +111,11 @@ func (p *process) startWasmPromise(path string, exitChan chan<- int) (promise.Pr
 	importObject := goInstance.Get("importObject")
 	time.Sleep(1) // nolint:staticcheck // allow JS event loop to run
 	instantiatePromise := promise.From(jsWasm.Call("instantiate", module, importObject))
-	instance, err := promise.Await(instantiatePromise)
+	instanceInterface, err := instantiatePromise.Await()
 	if err != nil {
-		return promise.Promise{}, err
+		return nil, err
 	}
+	instance := instanceInterface.(js.Value)
 
 	exports := instance.Get("exports")
 
