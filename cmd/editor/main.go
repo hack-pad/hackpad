@@ -22,7 +22,7 @@ var (
 )
 
 const (
-	goBinaryPath = "/go/bin/js_wasm/go"
+	goBinaryPath = "/usr/local/go/bin/js_wasm/go"
 )
 
 func main() {

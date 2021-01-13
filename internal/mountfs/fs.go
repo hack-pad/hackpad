@@ -69,7 +69,7 @@ func (m *Fs) Mount(path string, fs afero.Fs) error {
 }
 
 func (m *Fs) fsForPath(path string) afero.Fs {
-	return m.mountForPath(path).fs
+	return mountedFs{m.mountForPath(path)}
 }
 
 func (m *Fs) mountForPath(path string) mount {
@@ -125,7 +125,7 @@ func (m *Fs) Rename(oldname, newname string) error {
 		log.Warnf("Attempted rename across mounts: %#v != %#v", oldMount, newMount)
 		return &os.PathError{Op: "rename", Path: oldname, Err: syscall.EXDEV}
 	}
-	return oldMount.fs.Rename(oldname, newname)
+	return mountedFs{oldMount}.Rename(oldname, newname)
 }
 
 func (m *Fs) Stat(name string) (os.FileInfo, error) {

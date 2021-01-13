@@ -147,7 +147,7 @@ func (fs *Fs) RemoveAll(path string) error {
 	return &os.PathError{Op: "removeall", Path: path, Err: syscall.ENOSYS}
 }
 
-func (fs *Fs) Rename(oldname, newname string) (returnErr error) {
+func (fs *Fs) Rename(oldname, newname string) error {
 	oldFile, err := fs.fileStorer.GetFile(oldname)
 	if err != nil {
 		return &os.LinkError{Op: "rename", Old: oldname, New: newname, Err: afero.ErrFileNotFound}
