@@ -34,6 +34,15 @@ func New(defaultFs afero.Fs) *Fs {
 	}
 }
 
+func (m *Fs) Mounts() (pathsToFSName map[string]string) {
+	pathsToFSName = make(map[string]string)
+	mounts := m.mounts
+	for _, mount := range mounts {
+		pathsToFSName[mount.path] = mount.fs.Name()
+	}
+	return
+}
+
 func (m *Fs) Mount(path string, fs afero.Fs) error {
 	path = fsutil.NormalizePath(path)
 	if path == afero.FilePathSeparator {

@@ -17,6 +17,10 @@ var (
 	filesystem = mountfs.New(afero.NewMemMapFs())
 )
 
+func Mounts() (pathsToFSName map[string]string) {
+	return filesystem.Mounts()
+}
+
 func OverlayStorage(mountPath string, s storer.Storer) error {
 	fs := storer.New(s)
 	err := filesystem.Mount(mountPath, fs)

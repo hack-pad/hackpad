@@ -75,6 +75,7 @@ func Init() {
 	interop.SetFunc(fs, "write", write)
 	interop.SetFunc(fs, "writeSync", writeSync)
 
+	global.Set("getMounts", js.FuncOf(getMounts))
 	global.Set("overlayZip", js.FuncOf(overlayZip))
 	global.Set("overlayTarGzip", js.FuncOf(overlayTarGzip))
 	global.Set("overlayStorage", js.FuncOf(overlayStorage))
@@ -100,4 +101,12 @@ func dumpZip(this js.Value, args []js.Value) interface{} {
 	path := args[0].String()
 	path = common.ResolvePath(process.Current().WorkingDirectory(), path)
 	return interop.WrapAsJSError(fs.DumpZip(path), "dumpZip")
+}
+
+func getMounts(this js.Value, args []js.Value) interface{} {
+	jsMounts := make(map[string]interface{})
+	for k, v := range fs.Mounts() {
+		jsMounts[k] = v
+	}
+	return jsMounts
 }
