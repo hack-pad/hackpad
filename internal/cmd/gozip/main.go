@@ -34,14 +34,13 @@ func archiveGo(goRoot string, w io.Writer) error {
 	if err != nil {
 		return err
 	}
-	goRootPrefix := filepath.Dir(goRoot)
 
 	stats, err := walkGo(goRoot, func(path string, info os.FileInfo) error {
 		header, err := tar.FileInfoHeader(info, "")
 		if err != nil {
 			return err
 		}
-		header.Name = strings.TrimPrefix(path, goRootPrefix)
+		header.Name = strings.TrimPrefix(path, goRoot)
 		err = archive.WriteHeader(header)
 		if err != nil {
 			return err

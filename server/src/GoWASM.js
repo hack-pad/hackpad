@@ -11,18 +11,21 @@ async function init() {
   const go = new Go();
   const cmd = await WebAssembly.instantiateStreaming(fetch(`wasm/main.wasm`), go.importObject)
   go.env = {
+    'GOMODCACHE': '/home/me/.cache/go-mod',
     'GOPROXY': 'https://proxy.golang.org/',
-    'GOROOT': '/go',
+    'GOROOT': '/usr/local/go',
     'HOME': '/home/me',
-    'PATH': '/bin:/home/me/go/bin:/go/bin/js_wasm:/go/pkg/tool/js_wasm',
+    'PATH': '/bin:/home/me/go/bin:/usr/local/go/bin/js_wasm:/usr/local/go/pkg/tool/js_wasm',
   }
   go.run(cmd.instance)
   const { goWasm, fs } = window
   console.debug(`go-wasm status: ${goWasm.ready ? 'ready' : 'not ready'}`)
 
-  fs.mkdirSync("/go", 0o700)
+  fs.mkdirSync("/home/me/.cache", 0o700)
+  goWasm.overlayIndexedDB('/home/me/.cache')
 
-  await goWasm.overlayTarGzip('/go', 'wasm/go.tar.gz', percentage => {
+  fs.mkdirSync("/usr/local/go", {recursive: true, mode: 0o700})
+  await goWasm.overlayTarGzip('/usr/local/go', 'wasm/go.tar.gz', percentage => {
     overlayProgress = percentage
     progressListeners.forEach(c => c(percentage))
   })

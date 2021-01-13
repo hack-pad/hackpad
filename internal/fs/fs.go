@@ -23,11 +23,7 @@ func Mounts() (pathsToFSName map[string]string) {
 
 func OverlayStorage(mountPath string, s storer.Storer) error {
 	fs := storer.New(s)
-	err := filesystem.Mount(mountPath, fs)
-	if err != nil {
-		return err
-	}
-	return fs.MkdirAll(mountPath, 0755)
+	return filesystem.Mount(mountPath, fs)
 }
 
 func OverlayZip(mountPath string, z *zip.Reader) error {

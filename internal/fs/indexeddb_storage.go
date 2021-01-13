@@ -80,14 +80,23 @@ func (i *indexedDBStorer) readWriteTxnStore() (*indexeddb.ObjectStore, error) {
 }
 
 func (i *indexedDBStorer) SetFileRecord(path string, data *storer.FileRecord) error {
+	path = filepath.Clean(path)
+	isRoot := path == "." || path == string(filepath.Separator)
+	if data == nil && isRoot {
+		return syscall.ENOSYS // cannot delete root dir
+	}
 	deleted, err := i.setFile(path, data)
 	if err != nil {
 		return err
 	}
 
+	// update parent dir's entries
+	if isRoot {
+		return nil // root directory does not have a parent dir
+	}
 	dir := filepath.Dir(path)
-	if dir == "" || dir == string(filepath.Separator) {
-		return nil
+	if dir == "." {
+		dir = string(filepath.Separator)
 	}
 	base := filepath.Base(path)
 	var parentData storer.FileRecord
