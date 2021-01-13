@@ -59,15 +59,15 @@ func (i *indexedDBStorer) GetFileRecord(path string, dest *storer.FileRecord) er
 		return err
 	}
 	runtime.GC()
-	log.Print("Loading file from JS: ", path)
+	log.Debug("Loading file from JS: ", path)
 	jsData := value.Get("Data")
-	log.Print("Copying ", jsData.Length(), " bytes")
+	log.Debug("Copying ", jsData.Length(), " bytes")
 	dest.Data = make([]byte, jsData.Length())
 	n := js.CopyBytesToGo(dest.Data, jsData)
 	dest.DirNames = interop.StringsFromJSValue(value.Get("DirNames"))
 	dest.ModTime = time.Unix(int64(value.Get("ModTime").Int()), 0)
 	dest.Mode = os.FileMode(value.Get("Mode").Int())
-	log.Print("Copied ", n, " bytes")
+	log.Debug("Copied ", n, " bytes")
 	return nil
 }
 

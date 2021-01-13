@@ -4,11 +4,9 @@ import (
 	"io"
 	"os"
 	"path/filepath"
-	"runtime/debug"
 	"sort"
 	"time"
 
-	"github.com/johnstarich/go-wasm/log"
 	"github.com/pkg/errors"
 )
 
@@ -76,7 +74,6 @@ func (f *File) ReadAt(p []byte, off int64) (n int, err error) {
 	if off >= int64(len(f.Data)) {
 		return 0, io.EOF
 	}
-	log.Warn("Read ", f.path, " ", off, "->", len(p), " / ", len(f.Data), "\n"+string(debug.Stack()))
 	max := int64(len(f.Data))
 	end := off + int64(len(p))
 	if end > max {
@@ -116,7 +113,6 @@ func (f *File) Write(p []byte) (n int, err error) {
 
 func (f *File) WriteAt(p []byte, off int64) (n int, err error) {
 	endIndex := off + int64(len(p))
-	log.Warn("Write ", endIndex)
 	if int64(len(f.Data)) < endIndex {
 		f.Data = append(f.Data, make([]byte, endIndex-int64(len(f.Data)))...)
 	}
@@ -151,7 +147,6 @@ func (f *File) Readdir(count int) ([]os.FileInfo, error) {
 }
 
 func (f *File) Readdirnames(count int) ([]string, error) {
-	log.Print("reading dir: ", f.Name(), " ", f.dirCount, " ", f.DirNames)
 	if count > 0 && f.dirCount == len(f.DirNames) {
 		return nil, io.EOF
 	}
@@ -167,7 +162,6 @@ func (f *File) Readdirnames(count int) ([]string, error) {
 	sort.Strings(allNames)
 
 	names := allNames[f.dirCount:endCount]
-	log.Print("finished reading dir:", f.Name(), "; names: ", names)
 	f.dirCount = endCount
 	if count > 0 && f.dirCount == len(f.DirNames) {
 		return names, io.EOF

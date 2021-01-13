@@ -156,7 +156,6 @@ func (fs *Fs) Stat(name string) (os.FileInfo, error) {
 	if err != nil {
 		return nil, fs.wrapperErr("stat", name, err)
 	}
-	log.Printf("Stat IDB: %#v", file.info())
 	return file.info(), nil
 }
 
