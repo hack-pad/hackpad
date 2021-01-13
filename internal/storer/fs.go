@@ -1,6 +1,7 @@
 package storer
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"syscall"
@@ -8,7 +9,6 @@ import (
 
 	"github.com/johnstarich/go-wasm/internal/fsutil"
 	"github.com/johnstarich/go-wasm/internal/rwonly"
-	"github.com/johnstarich/go-wasm/log"
 	"github.com/spf13/afero"
 )
 
@@ -147,8 +147,44 @@ func (fs *Fs) RemoveAll(path string) error {
 	return &os.PathError{Op: "removeall", Path: path, Err: syscall.ENOSYS}
 }
 
-func (fs *Fs) Rename(oldname, newname string) error {
-	return &os.LinkError{Op: "rename", Old: oldname, New: newname, Err: syscall.ENOSYS}
+func (fs *Fs) Rename(oldname, newname string) (returnErr error) {
+	oldFile, err := fs.fileStorer.GetFile(oldname)
+	if err != nil {
+		return &os.LinkError{Op: "rename", Old: oldname, New: newname, Err: afero.ErrFileNotFound}
+	}
+	oldInfo, err := oldFile.Stat()
+	if err != nil {
+		return err
+	}
+	if !oldInfo.IsDir() {
+		err := fs.fileStorer.SetFile(newname, oldFile.fileData)
+		if err != nil {
+			return err
+		}
+		return fs.fileStorer.SetFile(oldname, nil)
+	}
+
+	_, err = fs.fileStorer.GetFile(newname)
+	if !os.IsNotExist(err) {
+		return &os.LinkError{Op: "rename", Old: oldname, New: newname, Err: afero.ErrDestinationExists}
+	}
+
+	files, err := oldFile.Readdirnames(-1)
+	if err != nil {
+		return err
+	}
+	err = fs.fileStorer.SetFile(newname, oldFile.fileData)
+	if err != nil {
+		return err
+	}
+	for _, name := range files {
+		err := fs.Rename(filepath.Join(oldname, name), filepath.Join(newname, name))
+		if err != nil {
+			// TODO don't leave destination in corrupted state (missing file records for dir names)
+			return err
+		}
+	}
+	return fs.fileStorer.SetFile(oldname, nil)
 }
 
 func (fs *Fs) Stat(name string) (os.FileInfo, error) {
@@ -160,7 +196,7 @@ func (fs *Fs) Stat(name string) (os.FileInfo, error) {
 }
 
 func (fs *Fs) Name() string {
-	return "storer.Fs"
+	return fmt.Sprintf("storer.Fs(%T)", fs.Storer)
 }
 
 func (fs *Fs) Chmod(name string, mode os.FileMode) error {

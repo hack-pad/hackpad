@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/johnstarich/go-wasm/internal/fsutil"
+	"github.com/johnstarich/go-wasm/log"
 	"github.com/spf13/afero"
 )
 
@@ -120,8 +121,9 @@ func (m *Fs) Rename(oldname, newname string) error {
 	newMount := m.mountForPath(newname)
 	m.mu.RUnlock()
 	if oldMount.path != newMount.path {
-		// TODO support renames across mount paths
-		return &os.PathError{Op: "rename", Path: oldname, Err: syscall.ENOSYS}
+		// TODO support renames across mount paths?
+		log.Warnf("Attempted rename across mounts: %#v != %#v", oldMount, newMount)
+		return &os.PathError{Op: "rename", Path: oldname, Err: syscall.EXDEV}
 	}
 	return oldMount.fs.Rename(oldname, newname)
 }
