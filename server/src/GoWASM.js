@@ -21,8 +21,9 @@ async function init() {
   const { goWasm, fs } = window
   console.debug(`go-wasm status: ${goWasm.ready ? 'ready' : 'not ready'}`)
 
-  fs.mkdirSync("/home/me/.cache", 0o700)
-  goWasm.overlayIndexedDB('/home/me/.cache')
+  await goWasm.overlayIndexedDB('/home/me')
+  await promisify(fs.mkdir, "/home/me/.cache", {recursive: true, mode: 0o700})
+  await goWasm.overlayIndexedDB('/home/me/.cache')
 
   fs.mkdirSync("/usr/local/go", {recursive: true, mode: 0o700})
   await goWasm.overlayTarGzip('/usr/local/go', 'wasm/go.tar.gz', percentage => {
@@ -88,3 +89,18 @@ export function observeGoDownloadProgress(callback) {
   progressListeners.push(callback)
   callback(overlayProgress)
 }
+
+function promisify(fn, ...args) {
+  return new Promise((resolve, reject) => {
+    const newArgs = [...args]
+    newArgs.push((err, ...results) => {
+      if (err) {
+        reject(err)
+      } else {
+        resolve(results)
+      }
+    })
+    fn(...newArgs)
+  })
+}
+
