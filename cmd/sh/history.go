@@ -32,6 +32,9 @@ func newHistory() (*history, error) {
 func loadHistoryFile() ([]string, error) {
 	historyFile, err := os.Open(historyFile)
 	if err != nil {
+		if os.IsNotExist(err) {
+			err = nil
+		}
 		return nil, err
 	}
 	defer historyFile.Close()
