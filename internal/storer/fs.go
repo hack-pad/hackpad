@@ -85,6 +85,9 @@ func (fs *Fs) findMissingDirs(path string) ([]string, error) {
 			return nil, &os.PathError{Op: "mkdirall", Path: currentPath, Err: afero.ErrNotDir}
 		}
 	}
+	if _, err := fs.Stat(afero.FilePathSeparator); os.IsNotExist(err) {
+		missingDirs = append(missingDirs, afero.FilePathSeparator)
+	}
 	return missingDirs, nil
 }
 
