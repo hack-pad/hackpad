@@ -14,7 +14,6 @@ import (
 	"github.com/johnstarich/go-wasm/internal/interop"
 	"github.com/pkg/errors"
 	"github.com/spf13/afero"
-	"go.uber.org/atomic"
 )
 
 var (
@@ -26,7 +25,7 @@ type FileDescriptors struct {
 	previousFID      FID
 	files            map[FID]*fileDescriptor
 	mu               sync.Mutex
-	workingDirectory *atomic.String
+	workingDirectory *workingDirectory
 }
 
 func NewStdFileDescriptors(parentPID common.PID, workingDirectory string) (*FileDescriptors, error) {
@@ -34,7 +33,7 @@ func NewStdFileDescriptors(parentPID common.PID, workingDirectory string) (*File
 		parentPID:        parentPID,
 		previousFID:      0,
 		files:            make(map[FID]*fileDescriptor),
-		workingDirectory: atomic.NewString(workingDirectory),
+		workingDirectory: newWorkingDirectory(workingDirectory),
 	}
 	// order matters
 	_, err := f.Open("/dev/stdin", syscall.O_RDONLY, 0)
@@ -54,7 +53,7 @@ func NewFileDescriptors(parentPID common.PID, workingDirectory string, parentFil
 		parentPID:        parentPID,
 		previousFID:      0,
 		files:            make(map[FID]*fileDescriptor),
-		workingDirectory: atomic.NewString(workingDirectory),
+		workingDirectory: newWorkingDirectory(workingDirectory),
 	}
 	if len(inheritFDs) == 0 {
 		inheritFDs = []Attr{{FID: 0}, {FID: 1}, {FID: 2}}
@@ -86,23 +85,19 @@ func NewFileDescriptors(parentPID common.PID, workingDirectory string, parentFil
 
 func (f *FileDescriptors) setWorkingDirectory(path string) error {
 	path = f.resolvePath(path)
-	info, err := f.Stat(path)
-	if err != nil {
-		return err
-	}
-	if !info.IsDir() {
-		return ErrNotDir
-	}
-	f.workingDirectory.Store(path)
-	return nil
+	return f.workingDirectory.Set(path)
 }
 
 func (f *FileDescriptors) WorkingDirectory() string {
-	return f.workingDirectory.Load()
+	wd, err := f.workingDirectory.Get()
+	if err != nil {
+		panic(err)
+	}
+	return wd
 }
 
 func (f *FileDescriptors) resolvePath(path string) string {
-	return common.ResolvePath(f.workingDirectory.Load(), path)
+	return common.ResolvePath(f.WorkingDirectory(), path)
 }
 
 func (f *FileDescriptors) newFID() FID {
