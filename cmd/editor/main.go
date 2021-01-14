@@ -52,6 +52,11 @@ func main() {
 	taskConsoleBuilder := taskconsole.New()
 	win, tasks := ide.New(app, editorBuilder, consoleBuilder, taskConsoleBuilder)
 
+	if _, err := tasks.Start(goBinaryPath, "go", "version"); err != nil {
+		log.Error("Failed to start go version: ", err)
+		return
+	}
+
 	if err := os.MkdirAll("playground", 0700); err != nil {
 		log.Error("Failed to make playground dir", err)
 		return
@@ -61,17 +66,18 @@ func main() {
 		return
 	}
 
-	if _, err := tasks.Start(goBinaryPath, "go", "mod", "init", "playground"); err != nil {
-		log.Error("Failed to start module init: ", err)
-		return
+	_, err := os.Stat("go.mod")
+	makeNewModule := os.IsNotExist(err)
+	if makeNewModule {
+		_, err := tasks.Start(goBinaryPath, "go", "mod", "init", "playground")
+		if err != nil {
+			log.Error("Failed to start module init: ", err)
+			return
+		}
 	}
 
-	if _, err := tasks.Start(goBinaryPath, "go", "version"); err != nil {
-		log.Error("Failed to start go version: ", err)
-		return
-	}
-
-	mainGoContents := `package main
+	if _, err := os.Stat("main.go"); os.IsNotExist(err) {
+		mainGoContents := `package main
 
 import (
 	"fmt"
@@ -83,16 +89,20 @@ func main() {
 	fmt.Println("Hello from Wasm!", datasize.Gigabytes(4))
 }
 `
-	err := ioutil.WriteFile("main.go", []byte(mainGoContents), 0600)
-	if err != nil {
-		log.Error("Failed to write to main.go: ", err)
-		return
+		err := ioutil.WriteFile("main.go", []byte(mainGoContents), 0600)
+		if err != nil {
+			log.Error("Failed to write to main.go: ", err)
+			return
+		}
 	}
 
 	time.Sleep(1) // nolint:staticcheck // allow JS event loop to run
-	if _, err := tasks.Start(goBinaryPath, "go", "mod", "tidy"); err != nil {
-		log.Error("Failed to start go mod tidy: ", err)
-		return
+	if makeNewModule {
+		_, err := tasks.Start(goBinaryPath, "go", "mod", "tidy")
+		if err != nil {
+			log.Error("Failed to start go mod tidy: ", err)
+			return
+		}
 	}
 
 	win.NewConsole()
