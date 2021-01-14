@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"os/exec"
 	"sort"
 	"strings"
 
@@ -121,17 +120,18 @@ func (p *process) start() error {
 }
 
 func (p *process) prepExecutable() (command string, err error) {
-	command, err = exec.LookPath(p.command)
+	fs := p.Files()
+	command, err = lookPath(fs.Stat, os.Getenv("PATH"), p.command)
 	if err != nil {
 		return "", err
 	}
-	f, err := os.Open(command)
+	fid, err := fs.Open(command, 0, 0)
 	if err != nil {
 		return "", err
 	}
-	defer f.Close()
+	defer fs.Close(fid)
 	buf := make([]byte, 4)
-	_, err = f.Read(buf)
+	_, err = fs.Read(fid, buf, 0, len(buf), nil)
 	if err != nil {
 		return "", err
 	}
