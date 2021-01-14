@@ -32,10 +32,15 @@ type Fs struct {
 
 var _ afero.Fs = &Fs{}
 
-func New(r io.Reader, undleryingFs afero.Fs) (_ *Fs, retErr error) {
+func New(r io.Reader, underlyingFs afero.Fs) (_ *Fs, retErr error) {
 	defer func() { retErr = errors.Wrap(retErr, "tarfs") }()
 
-	root, err := undleryingFs.Open("/")
+	err := underlyingFs.MkdirAll("/", 0700) // ensure root exists
+	if err != nil {
+		return nil, errors.Wrap(err, "Failed to ensure root '/' directory on underlying FS")
+	}
+
+	root, err := underlyingFs.Open("/")
 	if err != nil {
 		return nil, errors.Wrap(err, "Error reading root '/' on underlying FS")
 	}
@@ -46,8 +51,8 @@ func New(r io.Reader, undleryingFs afero.Fs) (_ *Fs, retErr error) {
 
 	ctx, cancel := context.WithCancel(context.Background())
 	fs := &Fs{
-		underlyingFs:         undleryingFs,
-		underlyingReadOnlyFs: afero.NewReadOnlyFs(undleryingFs),
+		underlyingFs:         underlyingFs,
+		underlyingReadOnlyFs: afero.NewReadOnlyFs(underlyingFs),
 		ps:                   pubsub.New(ctx),
 		done:                 cancel,
 	}

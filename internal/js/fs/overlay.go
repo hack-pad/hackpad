@@ -134,6 +134,10 @@ func OverlayTarGzip(args []js.Value) error {
 
 	mountPath := args[0].String()
 	downloadPath := args[1].String()
+	var options map[string]js.Value
+	if len(args) >= 3 && args[2].Type() == js.TypeObject {
+		options = interop.Entries(args[2])
+	}
 	log.Debug("Downloading overlay .tar.gz FS: ", downloadPath)
 	u, err := url.Parse(downloadPath)
 	if err != nil {
@@ -147,13 +151,13 @@ func OverlayTarGzip(args []js.Value) error {
 	log.Debug("Download response received. Reading body...")
 
 	reader := resp.Body
-	if len(args) >= 3 && !args[2].IsUndefined() && resp.ContentLength > 0 {
-		progressCallback := args[2]
+	if progressCallback := options["progress"]; progressCallback.Type() == js.TypeFunction && resp.ContentLength > 0 {
 		reader = wrapProgress(reader, resp.ContentLength, func(percentage float64) {
 			progressCallback.Invoke(percentage)
 		})
 	}
-	return fs.OverlayTarGzip(mountPath, reader)
+	persist := options["persist"].Truthy()
+	return fs.OverlayTarGzip(mountPath, reader, persist)
 }
 
 func wrapProgress(r io.ReadCloser, contentLength int64, setProgress func(float64)) io.ReadCloser {

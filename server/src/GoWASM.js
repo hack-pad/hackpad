@@ -26,9 +26,12 @@ async function init() {
   await goWasm.overlayIndexedDB('/home/me/.cache')
 
   await promisify(fs.mkdir, "/usr/local/go", {recursive: true, mode: 0o700})
-  await goWasm.overlayTarGzip('/usr/local/go', 'wasm/go.tar.gz', percentage => {
-    overlayProgress = percentage
-    progressListeners.forEach(c => c(percentage))
+  await goWasm.overlayTarGzip('/usr/local/go', 'wasm/go.tar.gz', {
+    persist: true,
+    progress: percentage => {
+      overlayProgress = percentage
+      progressListeners.forEach(c => c(percentage))
+    },
   })
 
   console.debug("Startup took", (new Date().getTime() - startTime) / 1000, "seconds")

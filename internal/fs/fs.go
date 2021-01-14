@@ -30,8 +30,30 @@ func OverlayZip(mountPath string, z *zip.Reader) error {
 	return filesystem.Mount(mountPath, zipfs.New(z))
 }
 
-func OverlayTarGzip(mountPath string, r io.Reader) error {
-	fs, err := tarfs.New(r, afero.NewMemMapFs())
+func OverlayTarGzip(mountPath string, r io.Reader, persist bool) error {
+	if !persist {
+		underlyingFs := afero.NewMemMapFs()
+		fs, err := tarfs.New(r, underlyingFs)
+		if err != nil {
+			return err
+		}
+		return filesystem.Mount(mountPath, fs)
+	}
+
+	underlyingFs, err := NewIndexedDBFs(mountPath)
+	if err != nil {
+		return err
+	}
+	root, err := underlyingFs.Open(afero.FilePathSeparator)
+	if err == nil {
+		dirEntries, err := root.Readdirnames(-1)
+		if err == nil && len(dirEntries) > 0 {
+			// TODO should not assume valid if only non-empty. add a flag indicating completion
+			return filesystem.Mount(mountPath, underlyingFs)
+		}
+	}
+
+	fs, err := tarfs.New(r, underlyingFs)
 	if err != nil {
 		return err
 	}
