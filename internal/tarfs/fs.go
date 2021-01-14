@@ -4,15 +4,16 @@ import (
 	"archive/tar"
 	"compress/gzip"
 	"context"
+	"fmt"
 	"io"
 	"os"
-	goPath "path"
-	"strings"
+	"path/filepath"
 	"syscall"
 	"time"
 
 	"github.com/johnstarich/go-wasm/internal/fsutil"
 	"github.com/johnstarich/go-wasm/internal/pubsub"
+	"github.com/johnstarich/go-wasm/log"
 	"github.com/pkg/errors"
 	"github.com/spf13/afero"
 )
@@ -23,37 +24,42 @@ const (
 )
 
 type Fs struct {
-	// directories holds directory paths and their children's base names. Non-nil means directory exists with no children.
-	directories map[string]map[string]bool
-	ps          pubsub.PubSub
-	done        context.CancelFunc
-	files       map[string]*uncompressedFile
-	initErr     error
-}
-
-type uncompressedFile struct {
-	header   *tar.Header
-	contents []byte
+	underlyingFs, underlyingReadOnlyFs afero.Fs
+	ps                                 pubsub.PubSub
+	done                               context.CancelFunc
+	initErr                            error
 }
 
 var _ afero.Fs = &Fs{}
 
-func New(r io.Reader) *Fs {
+func New(r io.Reader, undleryingFs afero.Fs) (_ *Fs, retErr error) {
+	defer func() { retErr = errors.Wrap(retErr, "tarfs") }()
+
+	root, err := undleryingFs.Open("/")
+	if err != nil {
+		return nil, errors.Wrap(err, "Error reading root '/' on underlying FS")
+	}
+	defer root.Close()
+	if names, err := root.Readdirnames(-1); err != nil || len(names) != 0 {
+		return nil, errors.New("Root '/' must be an empty directory")
+	}
+
 	ctx, cancel := context.WithCancel(context.Background())
 	fs := &Fs{
-		directories: make(map[string]map[string]bool),
-		files:       make(map[string]*uncompressedFile),
-		ps:          pubsub.New(ctx),
-		done:        cancel,
+		underlyingFs:         undleryingFs,
+		underlyingReadOnlyFs: afero.NewReadOnlyFs(undleryingFs),
+		ps:                   pubsub.New(ctx),
+		done:                 cancel,
 	}
 	go fs.downloadGzip(r)
-	return fs
+	return fs, nil
 }
 
 func (fs *Fs) downloadGzip(r io.Reader) {
 	err := fs.downloadGzipErr(r)
 	if err != nil {
 		fs.initErr = err
+		log.Error("tarfs: Failed to complete overlay: ", err)
 	}
 	fs.done()
 
@@ -81,124 +87,74 @@ func (fs *Fs) downloadGzipErr(r io.Reader) error {
 
 		originalName := header.Name
 		path := fsutil.NormalizePath(originalName)
-		contents := make([]byte, header.Size)
-		_, err = io.ReadFull(archive, contents)
+		info := header.FileInfo()
+
+		dir := fsutil.NormalizePath(filepath.Dir(path))
+		err = fs.underlyingFs.MkdirAll(dir, 0700)
 		if err != nil {
-			return err
+			return errors.Wrap(err, "prepping base dir")
 		}
 
-		header.Name = path
-		file := &uncompressedFile{
-			header:   header,
-			contents: contents,
-		}
-
-		fs.files[path] = file
-		if !file.header.FileInfo().IsDir() {
+		if info.IsDir() {
+			destInfo, err := fs.underlyingFs.Stat(path)
+			if err == nil && destInfo.IsDir() {
+				err = fs.underlyingFs.Chmod(path, info.Mode())
+			} else {
+				err = fs.underlyingFs.Mkdir(path, info.Mode())
+			}
+			if err != nil {
+				return errors.Wrap(err, "copying dir")
+			}
+		} else {
+			f, err := fs.underlyingFs.OpenFile(path, syscall.O_WRONLY|syscall.O_CREAT|syscall.O_TRUNC, info.Mode())
+			if err != nil {
+				return errors.Wrap(err, "opening destination file")
+			}
+			_, err = io.Copy(f, archive)
+			if err != nil {
+				f.Close()
+				return errors.Wrap(err, "copying file")
+			}
+			f.Close()
 			fs.ps.Emit(path) // only emit for non-dirs, dirs will wait until the download completes to ensure correctness
 		}
-		for _, segment := range dirsFromPath(originalName) {
-			if fs.directories[segment] == nil {
-				fs.directories[segment] = make(map[string]bool, 1)
-			}
-		}
 	}
-
-	// register dirs and files with parent directories
-	for dir := range fs.directories {
-		parent := goPath.Dir(dir)
-		if dir != pathSeparator {
-			fs.directories[parent][dir] = true
-		}
-	}
-	for path := range fs.files {
-		parent := goPath.Dir(path)
-		if path != pathSeparator {
-			fs.directories[parent][path] = true
-		}
-	}
+	log.Warn("Done overlaying tarfs")
 	return nil
 }
 
-// dirsFromPath returns all directory segments in 'path'. Assumes 'path' is a raw header name from a tar.
-func dirsFromPath(path string) []string {
-	var dirs []string
-	if strings.HasSuffix(path, pathSeparator) {
-		// denotes a tar directory path, so clean it and add it before pop
-		path = fsutil.NormalizePath(path)
-		dirs = append(dirs, path)
-	}
-	if path == pathSeparator {
-		return dirs
-	}
-	path = fsutil.NormalizePath(path) // make absolute + clean
-	path = goPath.Dir(path)           // pop normal files from the end
-	var prevPath string
-	for ; path != prevPath; path = goPath.Dir(path) {
-		dirs = append(dirs, path)
-		prevPath = path
-	}
-	return dirs
-}
-
-func (fs *Fs) ensurePath(path string) error {
+func (fs *Fs) ensurePath(path string) (normalizedPath string, err error) {
+	path = fsutil.NormalizePath(path)
 	fs.ps.Wait(path)
-	return fs.initErr
+	return path, fs.initErr
 }
 
 func (fs *Fs) Open(path string) (afero.File, error) {
-	path = fsutil.NormalizePath(path)
-	if err := fs.ensurePath(path); err != nil {
+	path, err := fs.ensurePath(path)
+	if err != nil {
 		return nil, err
 	}
-	_, isDir := fs.directories[path]
-	if isDir {
-		return &file{
-			uncompressedFile: &uncompressedFile{
-				header: &tar.Header{Name: path}, // just enough to look up more dir info in fs
-			},
-			fs:    fs,
-			isDir: true,
-		}, nil
-	}
-	f, present := fs.files[path]
-	if !present {
-		return nil, &os.PathError{Op: "open", Path: path, Err: os.ErrNotExist}
-	}
-
-	return &file{
-		uncompressedFile: f,
-		fs:               fs,
-		isDir:            f.header.FileInfo().IsDir(),
-	}, nil
+	return fs.underlyingReadOnlyFs.Open(path)
 }
 
 func (fs *Fs) OpenFile(name string, flag int, perm os.FileMode) (afero.File, error) {
-	if flag != os.O_RDONLY {
-		return nil, syscall.EPERM
+	name, err := fs.ensurePath(name)
+	if err != nil {
+		return nil, err
 	}
-	return fs.Open(name)
+	return fs.underlyingReadOnlyFs.OpenFile(name, flag, perm)
 }
 
 func (fs *Fs) Stat(path string) (os.FileInfo, error) {
-	path = fsutil.NormalizePath(path)
-	if err := fs.ensurePath(path); err != nil {
+	path, err := fs.ensurePath(path)
+	if err != nil {
 		return nil, err
 	}
-	f, present := fs.files[path]
-	if present {
-		return f.header.FileInfo(), nil
-	}
-	_, isDir := fs.directories[path]
-	if !isDir {
-		return nil, &os.PathError{Op: "stat", Path: path, Err: os.ErrNotExist}
-	}
-
-	return &genericDirInfo{name: goPath.Base(path)}, nil
+	return fs.underlyingReadOnlyFs.Stat(path)
 }
 
 func (fs *Fs) Name() string {
-	return "tarfs.Fs"
+	return fmt.Sprintf("tarfs.Fs(%q)", fs.underlyingFs.Name())
 }
 
 func (fs *Fs) Create(name string) (afero.File, error)                      { return nil, syscall.EPERM }
