@@ -35,16 +35,18 @@ type jsEditor struct {
 }
 
 func (j *jsEditor) onEdit(js.Value, []js.Value) interface{} {
-	contents := j.elem.Call("getContents").String()
-	perm := os.FileMode(0700)
-	info, err := os.Stat(j.filePath)
-	if err == nil {
-		perm = info.Mode()
-	}
-	err = ioutil.WriteFile(j.filePath, []byte(contents), perm)
-	if err != nil {
-		log.Error("Failed to write file contents: ", err)
-	}
+	go func() {
+		contents := j.elem.Call("getContents").String()
+		perm := os.FileMode(0700)
+		info, err := os.Stat(j.filePath)
+		if err == nil {
+			perm = info.Mode()
+		}
+		err = ioutil.WriteFile(j.filePath, []byte(contents), perm)
+		if err != nil {
+			log.Error("Failed to write file contents: ", err)
+		}
+	}()
 	return nil
 }
 
