@@ -40,13 +40,18 @@ type terminal struct {
 	line   []rune
 	cursor int
 	// command state
-	lastExitCode     int
-	lastHistoryIndex int
-	history          []string
+	lastExitCode int
+	history      *history
 }
 
 func newTerminal() *terminal {
-	return &terminal{}
+	term := &terminal{}
+	history, err := newHistory()
+	if err != nil {
+		term.ErrPrint(color.RedString(err.Error()) + "\n")
+	}
+	term.history = history
+	return term
 }
 
 func (t *terminal) Stdout() io.Writer {
@@ -112,6 +117,7 @@ func (t *terminal) ReadEvalPrint(reader io.RuneReader) error {
 			// attempt to return to a recovered state
 			t.line = nil
 			t.cursor = 0
+			t.lastExitCode = 1
 			t.Print(prompt(t))
 		}
 	}()
@@ -150,11 +156,7 @@ func (t *terminal) ReadEvalPrint(reader io.RuneReader) error {
 		command := string(t.line)
 		t.line = nil
 		t.cursor = 0
-		t.lastHistoryIndex = 0
-		if trimmed := strings.TrimSpace(command); trimmed != "" {
-			t.history = append(t.history, trimmed)
-		}
-		err := runLine(t, command)
+		err = runLine(t, command)
 		t.lastExitCode = 0
 		if err != nil {
 			t.ErrPrint(color.RedString(err.Error()) + "\n")
@@ -162,6 +164,10 @@ func (t *terminal) ReadEvalPrint(reader io.RuneReader) error {
 			if exitErr, ok := err.(*exec.ExitError); ok {
 				t.lastExitCode = exitErr.ExitCode()
 			}
+		}
+		err := t.history.Push(command)
+		if err != nil {
+			t.ErrPrint(color.RedString(err.Error()) + "\n")
 		}
 		t.Print(prompt(t))
 	case controlDeleteWord:
@@ -175,7 +181,7 @@ func (t *terminal) ReadEvalPrint(reader io.RuneReader) error {
 	case controlSigTStop:
 		t.line = nil
 		t.cursor = 0
-		t.lastHistoryIndex = 0
+		t.history.Push("")
 		t.lastExitCode = 1
 		t.Print("^C\n\r")
 		t.Print(prompt(t))
@@ -249,32 +255,22 @@ func (t *terminal) ReadEvalEscape(firstRune rune, r io.RuneReader) error {
 	log.Debugf("Got escape sequence: %q", escape)
 	switch controlRune {
 	case controlCursorUp:
-		if t.lastHistoryIndex < len(t.history) {
-			t.lastHistoryIndex++
+		previousCommand, ok := t.history.Previous()
+		if ok {
 			t.CursorLeftN(t.cursor)
 			t.ClearRightN(len(t.line))
-			historyLine := t.history[len(t.history)-t.lastHistoryIndex]
-			t.line = []rune(historyLine)
+			t.line = []rune(previousCommand)
 			t.cursor = len(t.line)
-			t.Print(historyLine)
+			t.Print(previousCommand)
 		}
 		return nil
 	case controlCursorDown:
-		if t.lastHistoryIndex == 1 {
-			t.lastHistoryIndex = 0
-			t.CursorLeftN(t.cursor)
-			t.ClearRightN(len(t.line))
-			t.line = nil
-			t.cursor = 0
-		} else if t.lastHistoryIndex > 1 {
-			t.lastHistoryIndex--
-			t.CursorLeftN(t.cursor)
-			t.ClearRightN(len(t.line))
-			historyLine := t.history[len(t.history)-t.lastHistoryIndex]
-			t.line = []rune(historyLine)
-			t.cursor = len(t.line)
-			t.Print(historyLine)
-		}
+		nextCommand, _ := t.history.Next()
+		t.CursorLeftN(t.cursor)
+		t.ClearRightN(len(t.line))
+		t.line = []rune(nextCommand)
+		t.cursor = len(t.line)
+		t.Print(nextCommand)
 		return nil
 	case controlCursorForward:
 		if t.cursor >= len(t.line) {
