@@ -109,26 +109,37 @@ func (p *process) Start() error {
 func (p *process) start() error {
 	pids[p.pid] = p
 	log.Debugf("Spawning process: %v", p)
-	command, err := exec.LookPath(p.command)
+	go func() {
+		command, err := p.prepExecutable()
+		if err != nil {
+			p.handleErr(err)
+			return
+		}
+		p.run(command)
+	}()
+	return nil
+}
+
+func (p *process) prepExecutable() (command string, err error) {
+	command, err = exec.LookPath(p.command)
 	if err != nil {
-		return err
+		return "", err
 	}
 	f, err := os.Open(command)
 	if err != nil {
-		return err
+		return "", err
 	}
 	defer f.Close()
 	buf := make([]byte, 4)
 	_, err = f.Read(buf)
 	if err != nil {
-		return err
+		return "", err
 	}
 	magicNumber := string(buf)
 	if magicNumber != "\x00asm" {
-		return errors.Errorf("Format error. Expected Wasm file header but found: %q", magicNumber)
+		return "", errors.Errorf("Format error. Expected Wasm file header but found: %q", magicNumber)
 	}
-	go p.run(command)
-	return nil
+	return command, nil
 }
 
 func (p *process) Done() {
