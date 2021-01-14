@@ -21,11 +21,11 @@ async function init() {
   const { goWasm, fs } = window
   console.debug(`go-wasm status: ${goWasm.ready ? 'ready' : 'not ready'}`)
 
-  //await goWasm.overlayIndexedDB('/home/me')
+  await goWasm.overlayIndexedDB('/home/me')
   await promisify(fs.mkdir, "/home/me/.cache", {recursive: true, mode: 0o700})
   await goWasm.overlayIndexedDB('/home/me/.cache')
 
-  fs.mkdirSync("/usr/local/go", {recursive: true, mode: 0o700})
+  await promisify(fs.mkdir, "/usr/local/go", {recursive: true, mode: 0o700})
   await goWasm.overlayTarGzip('/usr/local/go', 'wasm/go.tar.gz', percentage => {
     overlayProgress = percentage
     progressListeners.forEach(c => c(percentage))
