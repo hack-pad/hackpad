@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"syscall"
 	"time"
 
 	"github.com/pkg/errors"
@@ -13,6 +14,7 @@ import (
 type File struct {
 	*fileData
 	offset   int64
+	flag     int
 	dirCount int
 }
 
@@ -30,8 +32,9 @@ type FileRecord struct {
 	Mode     os.FileMode
 }
 
-func (fs *Fs) newFile(path string, mode os.FileMode) *File {
+func (fs *Fs) newFile(path string, flag int, mode os.FileMode) *File {
 	return &File{
+		flag: flag,
 		fileData: &fileData{
 			storer: fs.fileStorer,
 			path:   path,
@@ -112,6 +115,10 @@ func (f *File) Write(p []byte) (n int, err error) {
 }
 
 func (f *File) WriteAt(p []byte, off int64) (n int, err error) {
+	if f.flag&syscall.O_APPEND != 0 {
+		off = int64(len(f.fileData.Data))
+	}
+
 	endIndex := off + int64(len(p))
 	if int64(len(f.Data)) < endIndex {
 		f.Data = append(f.Data, make([]byte, endIndex-int64(len(f.Data)))...)

@@ -45,7 +45,7 @@ func (fs *Fs) Mkdir(name string, perm os.FileMode) error {
 	case err == nil:
 		return &os.PathError{Op: "mkdir", Path: name, Err: os.ErrExist}
 	case os.IsNotExist(err):
-		file := fs.newFile(name, os.ModeDir|(perm&os.ModePerm))
+		file := fs.newFile(name, 0, os.ModeDir|(perm&os.ModePerm))
 		return fs.wrapperErr("mkdir", name, file.save())
 	default:
 		return &os.PathError{Op: "mkdir", Path: name, Err: err}
@@ -101,13 +101,14 @@ func (fs *Fs) OpenFile(name string, flag int, perm os.FileMode) (afFile afero.Fi
 			// write-only on a directory isn't allowed on os.OpenFile either
 			return nil, &os.PathError{Op: "open", Path: name, Err: syscall.EISDIR}
 		}
+		storerFile.flag = flag
 	case os.IsNotExist(err) && flag&os.O_CREATE != 0:
 		// require parent directory
 		_, err := fs.fileStorer.GetFile(filepath.Dir(name))
 		if err != nil {
 			return nil, fs.wrapperErr("stat", name, err)
 		}
-		storerFile = fs.newFile(name, perm&os.ModePerm)
+		storerFile = fs.newFile(name, flag, perm&os.ModePerm)
 		if err := storerFile.save(); err != nil {
 			return nil, fs.wrapperErr("open", name, err)
 		}
