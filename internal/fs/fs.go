@@ -31,7 +31,10 @@ func OverlayZip(mountPath string, z *zip.Reader) error {
 }
 
 func OverlayTarGzip(mountPath string, r io.Reader) error {
-	fs := tarfs.New(r)
+	fs, err := tarfs.New(r, afero.NewMemMapFs())
+	if err != nil {
+		return err
+	}
 	return filesystem.Mount(mountPath, fs)
 }
 

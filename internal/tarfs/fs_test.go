@@ -6,12 +6,15 @@ import (
 	"compress/gzip"
 	"io"
 	"os"
+	goPath "path"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/johnstarich/go-wasm/internal/fstest"
+	"github.com/johnstarich/go-wasm/internal/fsutil"
 	"github.com/pkg/errors"
 	"github.com/spf13/afero"
 	"github.com/stretchr/testify/assert"
@@ -57,7 +60,7 @@ func newTarFromFS(src afero.Fs) (*Fs, error) {
 	if err != nil {
 		return nil, err
 	}
-	return New(r), nil
+	return New(r, afero.NewMemMapFs())
 }
 
 func buildTarFromFS(src afero.Fs) (io.Reader, error) {
@@ -197,4 +200,25 @@ func TestDirsFromPath(t *testing.T) {
 			assert.Equal(t, tc.expect, dirsFromPath(tc.path))
 		})
 	}
+}
+
+// dirsFromPath returns all directory segments in 'path'. Assumes 'path' is a raw header name from a tar.
+func dirsFromPath(path string) []string {
+	var dirs []string
+	if strings.HasSuffix(path, pathSeparator) {
+		// denotes a tar directory path, so clean it and add it before pop
+		path = fsutil.NormalizePath(path)
+		dirs = append(dirs, path)
+	}
+	if path == pathSeparator {
+		return dirs
+	}
+	path = fsutil.NormalizePath(path) // make absolute + clean
+	path = goPath.Dir(path)           // pop normal files from the end
+	var prevPath string
+	for ; path != prevPath; path = goPath.Dir(path) {
+		dirs = append(dirs, path)
+		prevPath = path
+	}
+	return dirs
 }
