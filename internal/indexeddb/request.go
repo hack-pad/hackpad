@@ -13,14 +13,12 @@ import (
 func processRequest(request js.Value) promise.Promise {
 	resolve, reject, prom := promise.NewGo()
 
-	done := false
 	var errFunc, successFunc js.Func
 	errFunc = js.FuncOf(func(this js.Value, args []js.Value) interface{} {
 		err := request.Get("error")
 		go reject(err)
 		errFunc.Release()
 		successFunc.Release()
-		done = true
 		return nil
 	})
 	successFunc = js.FuncOf(func(this js.Value, args []js.Value) interface{} {
@@ -28,7 +26,6 @@ func processRequest(request js.Value) promise.Promise {
 		go resolve(result)
 		errFunc.Release()
 		successFunc.Release()
-		done = true
 		return nil
 	})
 	request.Call("addEventListener", "error", errFunc)
