@@ -119,7 +119,6 @@ func (fs *Fs) downloadGzipErr(r io.Reader) error {
 			fs.ps.Emit(path) // only emit for non-dirs, dirs will wait until the download completes to ensure correctness
 		}
 	}
-	log.Warn("Done overlaying tarfs")
 	return nil
 }
 
