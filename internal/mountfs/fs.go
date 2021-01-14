@@ -1,6 +1,7 @@
 package mountfs
 
 import (
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -117,15 +118,42 @@ func (m *Fs) RemoveAll(path string) error {
 
 func (m *Fs) Rename(oldname, newname string) error {
 	m.mu.RLock()
+	oldFs := m.fsForPath(oldname)
 	oldMount := m.mountForPath(oldname)
+	newFs := m.fsForPath(newname)
 	newMount := m.mountForPath(newname)
 	m.mu.RUnlock()
-	if oldMount.path != newMount.path {
-		// TODO support renames across mount paths?
-		log.Warnf("Attempted rename across mounts: %#v != %#v", oldMount, newMount)
-		return &os.PathError{Op: "rename", Path: oldname, Err: syscall.EXDEV}
+
+	oldInfo, err := oldFs.Stat(oldname)
+	if err != nil {
+		return err
 	}
-	return mountedFs{oldMount}.Rename(oldname, newname)
+	if oldInfo.IsDir() {
+		if oldMount.path != newMount.path {
+			// TODO support dir renames across mount paths?
+			log.Warnf("Attempted rename directory across mounts: %#v != %#v\nat paths: %q -> %q", oldMount, newMount, oldname, newname)
+			return &os.PathError{Op: "rename", Path: oldname, Err: syscall.EXDEV}
+		}
+		return oldFs.Rename(oldname, newname)
+	}
+
+	oldFile, err := oldFs.Open(oldname)
+	if err != nil {
+		return err
+	}
+	defer oldFile.Close()
+	newFile, err := newFs.OpenFile(newname, syscall.O_WRONLY|syscall.O_CREAT|syscall.O_TRUNC, oldInfo.Mode())
+	if err != nil {
+		return err
+	}
+	defer newFile.Close()
+	_, err = io.Copy(newFile, oldFile)
+	if err != nil {
+		return err
+	}
+
+	oldFile.Close()
+	return oldFs.Remove(oldname)
 }
 
 func (m *Fs) Stat(name string) (os.FileInfo, error) {
