@@ -108,7 +108,7 @@ func (m *Fs) Remove(name string) error {
 	if mount.path == name {
 		return &os.PathError{Op: "remove", Path: name, Err: syscall.ENOSYS}
 	}
-	return mount.fs.Remove(name)
+	return mountedFs{mount}.Remove(name)
 }
 
 func (m *Fs) RemoveAll(path string) error {
