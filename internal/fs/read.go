@@ -23,9 +23,11 @@ func (f *FileDescriptors) Read(fd FID, buffer blob.Blob, offset, length int, pos
 	if err == io.EOF {
 		err = nil
 	}
-	_, setErr := buffer.Set(readBuf, int64(offset))
-	if err == nil && setErr != nil {
-		err = setErr
+	if readBuf != nil {
+		_, setErr := buffer.Set(readBuf, int64(offset))
+		if err == nil && setErr != nil {
+			err = setErr
+		}
 	}
 	return
 }
