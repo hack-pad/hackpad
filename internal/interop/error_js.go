@@ -19,3 +19,18 @@ func WrapAsJSError(err error, message string) error {
 	})
 	return js.Error{Value: val}
 }
+
+func CatchException(err *error) {
+	r := recover()
+	if r == nil {
+		return
+	}
+	switch val := r.(type) {
+	case error:
+		*err = val
+	case js.Value:
+		*err = js.Error{Value: val}
+	default:
+		*err = errors.Errorf("%+v", val)
+	}
+}
