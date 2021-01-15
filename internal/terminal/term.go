@@ -72,10 +72,14 @@ func Open(args []js.Value) error {
 	}
 
 	f := js.FuncOf(func(this js.Value, args []js.Value) interface{} {
-		chunk := []byte(args[0].String())
-		_, err := files.Write(stdinW, chunk, 0, len(chunk), nil)
+		chunk, err := blob.NewFromJS(args[0])
 		if err != nil {
-			log.Error("Failed to write to terminal:", err)
+			log.Error("blob: Failed to write to terminal:", err)
+			return nil
+		}
+		_, err = files.Write(stdinW, chunk, 0, chunk.Len(), nil)
+		if err != nil {
+			log.Error("write: Failed to write to terminal:", err)
 		}
 		return nil
 	})
@@ -95,13 +99,13 @@ func pipe(files *fs.FileDescriptors) (r, w fs.FID) {
 }
 
 func readOutputPipes(term js.Value, files *fs.FileDescriptors, output fs.FID) {
-	buf := make([]byte, 1)
+	buf := blob.NewJSLength(1)
 	for {
-		_, err := files.Read(output, buf, 0, len(buf), nil)
+		_, err := files.Read(output, buf, 0, buf.Len(), nil)
 		if err != nil {
 			log.Error("Failed to write to terminal:", err)
 		} else {
-			term.Call("write", blob.NewFromBytes(buf))
+			term.Call("write", buf)
 		}
 	}
 }

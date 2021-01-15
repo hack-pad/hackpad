@@ -5,6 +5,7 @@ package fs
 import (
 	"syscall/js"
 
+	"github.com/johnstarich/go-wasm/internal/blob"
 	"github.com/johnstarich/go-wasm/internal/fs"
 	"github.com/johnstarich/go-wasm/internal/process"
 	"github.com/pkg/errors"
@@ -26,7 +27,10 @@ func readSyncImpl(args []js.Value) (int, js.Value, error) {
 		return 0, js.Null(), errors.Errorf("missing required args, expected 5: %+v", args)
 	}
 	fd := fs.FID(args[0].Int())
-	jsBuffer := args[1]
+	buffer, err := blob.NewFromJS(args[1])
+	if err != nil {
+		return 0, js.Null(), err
+	}
 	offset := args[2].Int()
 	length := args[3].Int()
 	var position *int64
@@ -35,9 +39,7 @@ func readSyncImpl(args []js.Value) (int, js.Value, error) {
 		*position = int64(args[4].Int())
 	}
 
-	buffer := make([]byte, length)
 	p := process.Current()
 	n, err := p.Files().Read(fd, buffer, offset, length, position)
-	js.CopyBytesToJS(jsBuffer, buffer)
-	return n, jsBuffer, err
+	return n, buffer.JSValue(), err
 }

@@ -7,6 +7,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/johnstarich/go-wasm/internal/blob"
 	"github.com/johnstarich/go-wasm/internal/common"
 	"github.com/johnstarich/go-wasm/internal/fs"
 	"github.com/johnstarich/go-wasm/log"
@@ -130,12 +131,12 @@ func (p *process) prepExecutable() (command string, err error) {
 		return "", err
 	}
 	defer fs.Close(fid)
-	buf := make([]byte, 4)
-	_, err = fs.Read(fid, buf, 0, len(buf), nil)
+	buf := blob.NewBytesLength(4)
+	_, err = fs.Read(fid, buf, 0, buf.Len(), nil)
 	if err != nil {
 		return "", err
 	}
-	magicNumber := string(buf)
+	magicNumber := string(buf.Bytes())
 	if magicNumber != "\x00asm" {
 		return "", errors.Errorf("Format error. Expected Wasm file header but found: %q", magicNumber)
 	}

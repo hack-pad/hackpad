@@ -5,6 +5,7 @@ package fs
 import (
 	"syscall/js"
 
+	"github.com/johnstarich/go-wasm/internal/blob"
 	"github.com/johnstarich/go-wasm/internal/fs"
 	"github.com/johnstarich/go-wasm/internal/process"
 	"github.com/pkg/errors"
@@ -24,12 +25,15 @@ func write(args []js.Value) ([]interface{}, error) {
 		return nil, errors.Errorf("missing required args, expected fd and buffer: %+v", args)
 	}
 	fd := fs.FID(args[0].Int())
-	jsBuffer := args[1]
+	buffer, err := blob.NewFromJS(args[1])
+	if err != nil {
+		return nil, err
+	}
 	offset := 0
 	if len(args) >= 3 {
 		offset = args[2].Int()
 	}
-	length := jsBuffer.Length()
+	length := buffer.Len()
 	if len(args) >= 4 {
 		length = args[3].Int()
 	}
@@ -39,10 +43,7 @@ func write(args []js.Value) ([]interface{}, error) {
 		*position = int64(args[4].Int())
 	}
 
-	buffer := make([]byte, length)
-	js.CopyBytesToGo(buffer, jsBuffer)
 	p := process.Current()
 	n, err := p.Files().Write(fd, buffer, offset, length, position)
-	js.CopyBytesToJS(jsBuffer, buffer)
-	return []interface{}{n, jsBuffer}, err
+	return []interface{}{n, buffer}, err
 }
