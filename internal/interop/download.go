@@ -2,7 +2,11 @@
 
 package interop
 
-import "syscall/js"
+import (
+	"syscall/js"
+
+	"github.com/johnstarich/go-wasm/internal/blob"
+)
 
 var (
 	jsBlob     = js.Global().Get("Blob")
@@ -10,13 +14,13 @@ var (
 	jsURL      = js.Global().Get("URL")
 )
 
-func StartDownload(contentType, fileName string, b []byte) {
-	jsBuf := NewByteArray(b)
-	blob := jsBlob.New([]interface{}{jsBuf}, map[string]interface{}{
+func StartDownload(contentType, fileName string, buf []byte) {
+	b := blob.NewFromBytes(buf)
+	blobInstance := jsBlob.New([]interface{}{b}, map[string]interface{}{
 		"type": contentType,
 	})
 	link := jsDocument.Call("createElement", "a")
-	link.Set("href", jsURL.Call("createObjectURL", blob))
+	link.Set("href", jsURL.Call("createObjectURL", blobInstance))
 	link.Set("download", fileName)
 	link.Call("click")
 }

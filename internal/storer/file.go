@@ -8,7 +8,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/johnstarich/go-wasm/internal/interop"
+	"github.com/johnstarich/go-wasm/internal/blob"
 	"github.com/pkg/errors"
 )
 
@@ -27,7 +27,7 @@ type fileData struct {
 }
 
 type FileRecord struct {
-	Data     interop.Blob
+	Data     blob.Blob
 	DirNames []string
 	ModTime  time.Time
 	Mode     os.FileMode
@@ -40,7 +40,7 @@ func (fs *Fs) newFile(path string, flag int, mode os.FileMode) *File {
 			storer: fs.fileStorer,
 			path:   path,
 			FileRecord: FileRecord{
-				Data:    interop.NewBlobBytes(nil),
+				Data:    blob.NewFromBytes(nil),
 				ModTime: time.Now(),
 				Mode:    mode,
 			},
@@ -83,7 +83,7 @@ func (f *File) ReadAt(p []byte, off int64) (n int, err error) {
 	return n, err
 }
 
-func (f *File) ReadBlobAt(length int, off int64) (blob interop.Blob, n int, err error) {
+func (f *File) ReadBlobAt(length int, off int64) (blob blob.Blob, n int, err error) {
 	if off >= int64(f.Data.Len()) {
 		return nil, 0, io.EOF
 	}
@@ -129,10 +129,10 @@ func (f *File) Write(p []byte) (n int, err error) {
 }
 
 func (f *File) WriteAt(p []byte, off int64) (n int, err error) {
-	return f.WriteBlobAt(interop.NewBlobBytes(p), off)
+	return f.WriteBlobAt(blob.NewFromBytes(p), off)
 }
 
-func (f *File) WriteBlobAt(p interop.Blob, off int64) (n int, err error) {
+func (f *File) WriteBlobAt(p blob.Blob, off int64) (n int, err error) {
 	if f.flag&syscall.O_APPEND != 0 {
 		off = int64(f.fileData.Data.Len())
 	}
@@ -224,7 +224,7 @@ func (f *File) Truncate(size int64) error {
 	case size < length:
 		data := f.Data.Bytes()
 		data = data[:size]
-		f.Data = interop.NewBlobBytes(data)
+		f.Data = blob.NewFromBytes(data)
 	}
 	f.updateModTime()
 	return f.save()
