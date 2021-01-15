@@ -47,12 +47,12 @@ func (e *interopErr) Code() string {
 }
 
 // errno names pulled from syscall/tables_js.go
-func mapToErrNo(err error) string {
+func mapToErrNo(err error, debugMessage string) string {
 	if err, ok := err.(Error); ok {
 		return err.Code()
 	}
 	if err, ok := err.(interface{ Unwrap() error }); ok {
-		return mapToErrNo(err.Unwrap())
+		return mapToErrNo(err.Unwrap(), debugMessage)
 	}
 	switch err {
 	case io.EOF, os.ErrNotExist, exec.ErrNotFound:
@@ -74,7 +74,7 @@ func mapToErrNo(err error) string {
 	case afero.IsDirErr(err):
 		return "EISDIR"
 	default:
-		log.Errorf("Unknown error type: (%T) %+v", err, err)
+		log.Errorf("Unknown error type: (%T) %+v\n\n%s", err, err, debugMessage)
 		return "EPERM"
 	}
 }

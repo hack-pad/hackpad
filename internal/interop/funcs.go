@@ -70,7 +70,7 @@ func setFuncHandler(name string, fn interface{}, args []js.Value) (returnedVal i
 			}()
 
 			ret, err = fn(args)
-			err = WrapAsJSError(err, name)
+			err = wrapAsJSError(err, name, args...)
 			ret = append([]interface{}{err}, ret...)
 			callback.Invoke(ret...)
 		}()
