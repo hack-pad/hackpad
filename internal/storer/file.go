@@ -12,6 +12,13 @@ import (
 	"github.com/pkg/errors"
 )
 
+var (
+	_ blob.Reader   = &File{}
+	_ blob.ReaderAt = &File{}
+	_ blob.Writer   = &File{}
+	_ blob.WriterAt = &File{}
+)
+
 type File struct {
 	*fileData
 	offset   int64
@@ -75,6 +82,12 @@ func (f *File) Read(p []byte) (n int, err error) {
 	return
 }
 
+func (f *File) ReadBlob(length int) (blob blob.Blob, n int, err error) {
+	blob, n, err = f.ReadBlobAt(length, f.offset)
+	f.offset += int64(n)
+	return
+}
+
 func (f *File) ReadAt(p []byte, off int64) (n int, err error) {
 	blob, n, err := f.ReadBlobAt(len(p), off)
 	if blob != nil {
@@ -124,6 +137,12 @@ func (f *File) Seek(offset int64, whence int) (int64, error) {
 
 func (f *File) Write(p []byte) (n int, err error) {
 	n, err = f.WriteAt(p, f.offset)
+	f.offset += int64(n)
+	return
+}
+
+func (f *File) WriteBlob(p blob.Blob) (n int, err error) {
+	n, err = f.WriteBlobAt(p, f.offset)
 	f.offset += int64(n)
 	return
 }

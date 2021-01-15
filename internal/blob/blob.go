@@ -12,11 +12,6 @@ import (
 
 var uint8Array = js.Global().Get("Uint8Array")
 
-type File interface {
-	ReadBlobAt(length int, off int64) (blob Blob, n int, err error)
-	WriteBlobAt(p Blob, off int64) (n int, err error)
-}
-
 type Blob interface {
 	js.Wrapper
 	Bytes() []byte
@@ -42,6 +37,10 @@ func NewFromBytes(buf []byte) Blob {
 	return b
 }
 
+func NewBytesLength(length int) Blob {
+	return NewFromBytes(make([]byte, length))
+}
+
 func NewFromJS(buf js.Value) (Blob, error) {
 	if !buf.Truthy() {
 		return NewFromBytes(nil), nil
@@ -54,6 +53,14 @@ func NewFromJS(buf js.Value) (Blob, error) {
 	b.jsValue.Store(buf)
 	b.length.Store(int64(buf.Length()))
 	return b, nil
+}
+
+func NewJSLength(length int) Blob {
+	buf, err := NewFromJS(uint8Array.New(length))
+	if err != nil {
+		panic("blob: New empty array of correct type was rejected: " + err.Error())
+	}
+	return buf
 }
 
 func (b *blob) Bytes() []byte {
@@ -88,9 +95,6 @@ func (b *blob) Len() int {
 func (b *blob) Slice(start, end int64) (_ Blob, returnedErr error) {
 	defer common.CatchException(&returnedErr)
 
-	if start == 0 && end == b.length.Load() {
-		return b, nil
-	}
 	if b.hasBytes.Load() {
 		buf := b.bytes.Load().([]byte)
 		return NewFromBytes(buf[start:end]), nil

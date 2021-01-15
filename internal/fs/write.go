@@ -3,10 +3,11 @@ package fs
 import (
 	"io"
 
+	"github.com/johnstarich/go-wasm/internal/blob"
 	"github.com/johnstarich/go-wasm/internal/interop"
 )
 
-func (f *FileDescriptors) Write(fd FID, buffer []byte, offset, length int, position *int64) (n int, err error) {
+func (f *FileDescriptors) Write(fd FID, buffer blob.Blob, offset, length int, position *int64) (n int, err error) {
 	fileDescriptor := f.files[fd]
 	if fileDescriptor == nil {
 		return 0, interop.BadFileNumber(fd)
@@ -19,7 +20,11 @@ func (f *FileDescriptors) Write(fd FID, buffer []byte, offset, length int, posit
 			return 0, err
 		}
 	}
-	n, err = fileDescriptor.file.Write(buffer[offset : offset+length])
+	dataToCopy, err := buffer.Slice(int64(offset), int64(offset+length))
+	if err != nil {
+		return 0, err
+	}
+	n, err = blob.Write(fileDescriptor.file, dataToCopy)
 	if err == io.EOF {
 		err = nil
 	}
