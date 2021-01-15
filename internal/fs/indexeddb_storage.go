@@ -11,6 +11,7 @@ import (
 	"syscall/js"
 	"time"
 
+	"github.com/johnstarich/go-wasm/internal/blob"
 	"github.com/johnstarich/go-wasm/internal/indexeddb"
 	"github.com/johnstarich/go-wasm/internal/interop"
 	"github.com/johnstarich/go-wasm/internal/storer"
@@ -61,7 +62,7 @@ func (i *indexedDBStorer) GetFileRecord(path string, dest *storer.FileRecord) er
 	runtime.GC()
 	log.Debug("Loading file from JS: ", path)
 	jsData := value.Get("Data")
-	dest.Data, err = interop.NewBlobJS(jsData)
+	dest.Data, err = blob.NewFromJS(jsData)
 	if err != nil {
 		return err
 	}

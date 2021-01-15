@@ -1,23 +1,18 @@
 // +build js
 
-package interop
+package blob
 
 import (
 	"syscall/js"
 
+	"github.com/johnstarich/go-wasm/internal/common"
 	"github.com/pkg/errors"
 	"go.uber.org/atomic"
 )
 
 var uint8Array = js.Global().Get("Uint8Array")
 
-func NewByteArray(b []byte) js.Value {
-	buf := uint8Array.New(len(b))
-	js.CopyBytesToJS(buf, b)
-	return buf
-}
-
-type BlobFile interface {
+type File interface {
 	ReadBlobAt(length int, off int64) (blob Blob, n int, err error)
 	WriteBlobAt(p Blob, off int64) (n int, err error)
 }
@@ -39,7 +34,7 @@ type blob struct {
 	length   atomic.Int64
 }
 
-func NewBlobBytes(buf []byte) Blob {
+func NewFromBytes(buf []byte) Blob {
 	b := &blob{}
 	b.hasBytes.Store(true)
 	b.bytes.Store(buf)
@@ -47,9 +42,9 @@ func NewBlobBytes(buf []byte) Blob {
 	return b
 }
 
-func NewBlobJS(buf js.Value) (Blob, error) {
+func NewFromJS(buf js.Value) (Blob, error) {
 	if !buf.Truthy() {
-		return NewBlobBytes(nil), nil
+		return NewFromBytes(nil), nil
 	}
 	if !buf.InstanceOf(uint8Array) {
 		return nil, errors.Errorf("Invalid JS array type: %v", buf)
@@ -78,7 +73,9 @@ func (b *blob) JSValue() js.Value {
 		return b.jsValue.Load().(js.Value)
 	}
 	buf := b.bytes.Load().([]byte)
-	jsBuf := NewByteArray(buf)
+	jsBuf := uint8Array.New(len(buf))
+	js.CopyBytesToJS(jsBuf, buf)
+
 	b.jsValue.Store(jsBuf)
 	b.hasJS.Store(true)
 	return jsBuf
@@ -89,21 +86,21 @@ func (b *blob) Len() int {
 }
 
 func (b *blob) Slice(start, end int64) (_ Blob, returnedErr error) {
-	defer CatchException(&returnedErr)
+	defer common.CatchException(&returnedErr)
 
 	if start == 0 && end == b.length.Load() {
 		return b, nil
 	}
 	if b.hasBytes.Load() {
 		buf := b.bytes.Load().([]byte)
-		return NewBlobBytes(buf[start:end]), nil
+		return NewFromBytes(buf[start:end]), nil
 	}
 	buf := b.jsValue.Load().(js.Value)
-	return NewBlobJS(buf.Call("slice", start, end))
+	return NewFromJS(buf.Call("slice", start, end))
 }
 
 func (b *blob) Set(w Blob, off int64) (n int, returnedErr error) {
-	defer CatchException(&returnedErr)
+	defer common.CatchException(&returnedErr)
 
 	// TODO need better consistency if this is to be thread-safe
 	if b.hasBytes.Load() {
@@ -119,7 +116,7 @@ func (b *blob) Set(w Blob, off int64) (n int, returnedErr error) {
 }
 
 func (b *blob) Grow(off int64) (returnedErr error) {
-	defer CatchException(&returnedErr)
+	defer common.CatchException(&returnedErr)
 
 	// TODO need better consistency if this is to be thread-safe
 	newLength := b.length.Load() + off

@@ -5,6 +5,7 @@ package terminal
 import (
 	"syscall/js"
 
+	"github.com/johnstarich/go-wasm/internal/blob"
 	"github.com/johnstarich/go-wasm/internal/fs"
 	"github.com/johnstarich/go-wasm/internal/interop"
 	"github.com/johnstarich/go-wasm/internal/process"
@@ -100,7 +101,7 @@ func readOutputPipes(term js.Value, files *fs.FileDescriptors, output fs.FID) {
 		if err != nil {
 			log.Error("Failed to write to terminal:", err)
 		} else {
-			term.Call("write", interop.NewByteArray(buf))
+			term.Call("write", blob.NewFromBytes(buf))
 		}
 	}
 }

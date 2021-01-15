@@ -8,7 +8,7 @@ import (
 	"syscall/js"
 
 	"github.com/johnstarich/go-wasm/cmd/editor/ide"
-	"github.com/johnstarich/go-wasm/internal/interop"
+	"github.com/johnstarich/go-wasm/internal/blob"
 	"github.com/johnstarich/go-wasm/log"
 )
 
@@ -91,7 +91,7 @@ func readOutputPipes(term js.Value, r io.Reader) {
 		if err != nil {
 			log.Error("Failed to write to terminal:", err)
 		} else {
-			term.Call("write", interop.NewByteArray(buf))
+			term.Call("write", blob.NewFromBytes(buf))
 		}
 	}
 }
