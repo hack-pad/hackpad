@@ -15,7 +15,7 @@ func (f FileInfo) Name() string {
 }
 
 func (f FileInfo) Size() int64 {
-	return int64(len(f.Data))
+	return int64(f.Data.Len())
 }
 
 func (f FileInfo) Mode() os.FileMode {

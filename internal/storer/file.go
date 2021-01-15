@@ -8,6 +8,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/johnstarich/go-wasm/internal/interop"
 	"github.com/pkg/errors"
 )
 
@@ -26,7 +27,7 @@ type fileData struct {
 }
 
 type FileRecord struct {
-	Data     []byte
+	Data     interop.Blob
 	DirNames []string
 	ModTime  time.Time
 	Mode     os.FileMode
@@ -39,6 +40,7 @@ func (fs *Fs) newFile(path string, flag int, mode os.FileMode) *File {
 			storer: fs.fileStorer,
 			path:   path,
 			FileRecord: FileRecord{
+				Data:    interop.NewBlobBytes(nil),
 				ModTime: time.Now(),
 				Mode:    mode,
 			},
@@ -74,19 +76,31 @@ func (f *File) Read(p []byte) (n int, err error) {
 }
 
 func (f *File) ReadAt(p []byte, off int64) (n int, err error) {
-	if off >= int64(len(f.Data)) {
-		return 0, io.EOF
+	blob, n, err := f.ReadBlobAt(len(p), off)
+	if blob != nil {
+		copy(p, blob.Bytes())
 	}
-	max := int64(len(f.Data))
-	end := off + int64(len(p))
+	return n, err
+}
+
+func (f *File) ReadBlobAt(length int, off int64) (blob interop.Blob, n int, err error) {
+	if off >= int64(f.Data.Len()) {
+		return nil, 0, io.EOF
+	}
+	max := int64(f.Data.Len())
+	end := off + int64(length)
 	if end > max {
 		end = max
 	}
-	n = copy(p, f.Data[off:end])
-	if off+int64(n) == max {
-		return n, io.EOF
+	blob, err = f.Data.Slice(off, end)
+	if err != nil {
+		return nil, 0, err
 	}
-	return n, nil
+	n = blob.Len()
+	if off+int64(n) == max {
+		return blob, n, io.EOF
+	}
+	return blob, n, nil
 }
 
 func (f *File) Seek(offset int64, whence int) (int64, error) {
@@ -97,7 +111,7 @@ func (f *File) Seek(offset int64, whence int) (int64, error) {
 	case io.SeekCurrent:
 		newOffset += offset
 	case io.SeekEnd:
-		newOffset = int64(len(f.Data)) + offset
+		newOffset = int64(f.Data.Len()) + offset
 	default:
 		return 0, errors.Errorf("Unknown seek type: %d", whence)
 	}
@@ -115,15 +129,25 @@ func (f *File) Write(p []byte) (n int, err error) {
 }
 
 func (f *File) WriteAt(p []byte, off int64) (n int, err error) {
+	return f.WriteBlobAt(interop.NewBlobBytes(p), off)
+}
+
+func (f *File) WriteBlobAt(p interop.Blob, off int64) (n int, err error) {
 	if f.flag&syscall.O_APPEND != 0 {
-		off = int64(len(f.fileData.Data))
+		off = int64(f.fileData.Data.Len())
 	}
 
-	endIndex := off + int64(len(p))
-	if int64(len(f.Data)) < endIndex {
-		f.Data = append(f.Data, make([]byte, endIndex-int64(len(f.Data)))...)
+	endIndex := off + int64(p.Len())
+	if int64(f.Data.Len()) < endIndex {
+		err := f.Data.Grow(endIndex - int64(f.Data.Len()))
+		if err != nil {
+			return 0, err
+		}
 	}
-	n = copy(f.Data[off:], p)
+	n, err = f.Data.Set(p, off)
+	if err != nil {
+		return n, err
+	}
 	if n != 0 {
 		f.updateModTime()
 	}
@@ -186,16 +210,21 @@ func (f *File) Sync() error {
 }
 
 func (f *File) Truncate(size int64) error {
-	length := int64(len(f.Data))
+	length := int64(f.Data.Len())
 	switch {
 	case size < 0:
 		return os.ErrInvalid
 	case size == length:
 		return nil
 	case size > length:
-		f.Data = append(f.Data, make([]byte, size-length)...)
+		err := f.Data.Grow(size - length)
+		if err != nil {
+			return err
+		}
 	case size < length:
-		f.Data = f.Data[:size]
+		data := f.Data.Bytes()
+		data = data[:size]
+		f.Data = interop.NewBlobBytes(data)
 	}
 	f.updateModTime()
 	return f.save()

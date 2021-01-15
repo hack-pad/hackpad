@@ -61,13 +61,13 @@ func (i *indexedDBStorer) GetFileRecord(path string, dest *storer.FileRecord) er
 	runtime.GC()
 	log.Debug("Loading file from JS: ", path)
 	jsData := value.Get("Data")
-	log.Debug("Copying ", jsData.Length(), " bytes")
-	dest.Data = make([]byte, jsData.Length())
-	n := js.CopyBytesToGo(dest.Data, jsData)
+	dest.Data, err = interop.NewBlobJS(jsData)
+	if err != nil {
+		return err
+	}
 	dest.DirNames = interop.StringsFromJSValue(value.Get("DirNames"))
 	dest.ModTime = time.Unix(int64(value.Get("ModTime").Int()), 0)
 	dest.Mode = os.FileMode(value.Get("Mode").Int())
-	log.Debug("Copied ", n, " bytes")
 	return nil
 }
 
@@ -139,7 +139,7 @@ func (i *indexedDBStorer) setFile(path string, data *storer.FileRecord) (deleted
 		return false, err
 	}
 	err = store.Put(js.ValueOf(path), js.ValueOf(map[string]interface{}{
-		"Data":     interop.NewByteArray(data.Data),
+		"Data":     data.Data,
 		"DirNames": interop.SliceFromStrings(data.DirNames),
 		"ModTime":  data.ModTime.Unix(),
 		"Mode":     uint32(data.Mode),
