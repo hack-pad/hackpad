@@ -32,7 +32,7 @@ func main() {
 		log.Error("Process:\n", process.Dump(), "\n\nFiles:\n", fs.Dump(basePath))
 		return nil
 	}))
-	global.Set("profile", js.FuncOf(interop.MemoryProfile))
+	global.Set("profile", js.FuncOf(interop.ProfileJS))
 	global.Set("install", js.FuncOf(installFunc))
 	interop.SetInitialized()
 	select {}
