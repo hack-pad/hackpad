@@ -37,7 +37,7 @@ func main() {
 	app := document.Call("querySelector", "#"+*editorID)
 	app.Set("className", "ide")
 	globalEditorProps := js.Global().Get("editor")
-	globalEditorProps.Set("profile", js.FuncOf(interop.MemoryProfile))
+	globalEditorProps.Set("profile", js.FuncOf(interop.ProfileJS))
 	newEditor := globalEditorProps.Get("newEditor")
 	var editorBuilder ide.EditorBuilder = editorJSFunc(newEditor)
 	if !newEditor.Truthy() {

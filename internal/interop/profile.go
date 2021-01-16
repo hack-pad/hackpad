@@ -8,17 +8,34 @@ import (
 	"runtime"
 	"runtime/pprof"
 	"syscall/js"
+	"time"
+
+	"github.com/johnstarich/go-wasm/log"
 )
 
-func MemoryProfile(this js.Value, args []js.Value) interface{} {
+func ProfileJS(this js.Value, args []js.Value) interface{} {
+	MemoryProfileJS(this, args)
+	//StartCPUProfileJS(this, args) // Re-enable once CPU profiles actually work in the browser. Currently produces 0 samples.
+	return nil
+}
+
+func MemoryProfile() ([]byte, error) {
 	var buf bytes.Buffer
 	runtime.GC()
 	err := pprof.WriteHeapProfile(&buf)
 	if err != nil {
-		return err
+		return nil, err
 	}
+	return buf.Bytes(), nil
+}
 
-	StartDownload("application/octet-stream", "go-wasm-mem.pprof", buf.Bytes())
+func MemoryProfileJS(this js.Value, args []js.Value) interface{} {
+	buf, err := MemoryProfile()
+	if err != nil {
+		log.Error("Failed to create memory profile: ", err)
+		return nil
+	}
+	StartDownload("application/octet-stream", "go-wasm-mem.pprof", buf)
 	return nil
 }
 
@@ -34,5 +51,22 @@ func StartCPUProfile(ctx context.Context) error {
 		pprof.StopCPUProfile()
 		StartDownload("application/octet-stream", "go-wasm-cpu.pprof", buf.Bytes())
 	}()
+	return nil
+}
+
+func StartCPUProfileDuration(d time.Duration) error {
+	ctx, _ := context.WithTimeout(context.Background(), d)
+	return StartCPUProfile(ctx)
+}
+
+func StartCPUProfileJS(this js.Value, args []js.Value) interface{} {
+	duration := 30 * time.Second
+	if len(args) > 0 && args[0].Truthy() {
+		duration = time.Duration(args[0].Float() * float64(time.Second))
+	}
+	err := StartCPUProfileDuration(duration)
+	if err != nil {
+		log.Error("Failed to start CPU profile: ", err)
+	}
 	return nil
 }
