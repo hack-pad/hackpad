@@ -3,7 +3,6 @@
 package indexeddb
 
 import (
-	"runtime"
 	"syscall/js"
 
 	"github.com/johnstarich/go-wasm/internal/promise"
@@ -34,7 +33,6 @@ func processRequest(request js.Value) promise.Promise {
 }
 
 func await(prom promise.Promise) (js.Value, error) {
-	runtime.Gosched()
 	val, err := prom.Await()
 	if err != nil {
 		return js.Value{}, err
