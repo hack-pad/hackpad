@@ -5,7 +5,6 @@ package fs
 import (
 	"os"
 	"path/filepath"
-	"runtime"
 	"sort"
 	"syscall"
 	"syscall/js"
@@ -59,7 +58,6 @@ func (i *indexedDBStorer) GetFileRecord(path string, dest *storer.FileRecord) er
 	if err != nil {
 		return err
 	}
-	runtime.GC()
 	log.Debug("Loading file from JS: ", path)
 	jsData := value.Get("Data")
 	dest.Data, err = blob.NewFromJS(jsData)
@@ -145,7 +143,6 @@ func (i *indexedDBStorer) setFile(path string, data *storer.FileRecord) (deleted
 		"ModTime":  data.ModTime.Unix(),
 		"Mode":     uint32(data.Mode),
 	}))
-	runtime.GC()
 	return false, err
 }
 
