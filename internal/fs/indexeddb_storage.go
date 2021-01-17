@@ -39,7 +39,8 @@ func NewIndexedDBFs(name string) (_ *IndexedDBFs, err error) {
 }
 
 type indexedDBStorer struct {
-	db *indexeddb.DB
+	db        *indexeddb.DB
+	jsStrings interop.StringCache
 }
 
 func (i *indexedDBStorer) GetFileRecord(path string, dest *storer.FileRecord) error {
@@ -51,7 +52,7 @@ func (i *indexedDBStorer) GetFileRecord(path string, dest *storer.FileRecord) er
 	if err != nil {
 		return err
 	}
-	value, err := files.Get(js.ValueOf(path))
+	value, err := files.Get(i.jsStrings.Value(path))
 	if value.IsUndefined() {
 		return os.ErrNotExist
 	}
@@ -118,7 +119,7 @@ func (i *indexedDBStorer) setFile(path string, data *storer.FileRecord) (deleted
 		if err != nil {
 			return false, err
 		}
-		return true, store.Delete(js.ValueOf(path))
+		return true, store.Delete(i.jsStrings.Value(path))
 	}
 
 	dir := filepath.Dir(path)
@@ -137,7 +138,7 @@ func (i *indexedDBStorer) setFile(path string, data *storer.FileRecord) (deleted
 	if err != nil {
 		return false, err
 	}
-	err = store.Put(js.ValueOf(path), js.ValueOf(map[string]interface{}{
+	err = store.Put(i.jsStrings.Value(path), js.ValueOf(map[string]interface{}{
 		"Data":     data.Data,
 		"DirNames": interop.SliceFromStrings(data.DirNames),
 		"ModTime":  data.ModTime.Unix(),
