@@ -81,6 +81,7 @@ func (fs *Fs) downloadGzipErr(r io.Reader) error {
 	defer compressor.Close()
 
 	archive := tar.NewReader(compressor)
+	copyBuf := make([]byte, 20<<20) // 20 Mebibytes
 	for {
 		header, err := archive.Next()
 		if err == io.EOF {
@@ -115,7 +116,7 @@ func (fs *Fs) downloadGzipErr(r io.Reader) error {
 			if err != nil {
 				return errors.Wrap(err, "opening destination file")
 			}
-			_, err = io.Copy(f, archive)
+			_, err = io.CopyBuffer(f, fullReader{archive}, copyBuf) // fullReader: call f.Write as few times as possible, since large files are expensive
 			if err != nil {
 				f.Close()
 				return errors.Wrap(err, "copying file")
@@ -125,6 +126,18 @@ func (fs *Fs) downloadGzipErr(r io.Reader) error {
 		}
 	}
 	return nil
+}
+
+type fullReader struct {
+	io.Reader
+}
+
+func (f fullReader) Read(p []byte) (n int, err error) {
+	n, err = io.ReadFull(f.Reader, p)
+	if err == io.ErrUnexpectedEOF {
+		err = io.EOF
+	}
+	return
 }
 
 func (fs *Fs) ensurePath(path string) (normalizedPath string, err error) {
