@@ -15,16 +15,16 @@ func processRequest(request js.Value) promise.Promise {
 	var errFunc, successFunc js.Func
 	errFunc = js.FuncOf(func(this js.Value, args []js.Value) interface{} {
 		err := request.Get("error")
-		go reject(err)
 		errFunc.Release()
 		successFunc.Release()
+		reject(err)
 		return nil
 	})
 	successFunc = js.FuncOf(func(this js.Value, args []js.Value) interface{} {
 		result := request.Get("result")
-		go resolve(result)
 		errFunc.Release()
 		successFunc.Release()
+		resolve(result)
 		return nil
 	})
 	request.Call("addEventListener", "error", errFunc)

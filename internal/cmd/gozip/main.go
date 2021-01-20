@@ -35,7 +35,7 @@ func archiveGo(goRoot string, w io.Writer) error {
 		return err
 	}
 
-	stats, err := walkGo(goRoot, func(path string, info os.FileInfo) error {
+	doFile := func(path string, info os.FileInfo) error {
 		header, err := tar.FileInfoHeader(info, "")
 		if err != nil {
 			return err
@@ -55,7 +55,19 @@ func archiveGo(goRoot string, w io.Writer) error {
 		defer f.Close()
 		_, err = io.Copy(archive, f)
 		return err
-	})
+	}
+
+	goBinary := filepath.Join(goRoot, "bin", "js_wasm", "go")
+	goBinaryInfo, err := os.Stat(goBinary)
+	if err != nil {
+		return err
+	}
+	err = doFile(goBinary, goBinaryInfo)
+	if err != nil {
+		return err
+	}
+
+	stats, err := walkGo(goRoot, doFile)
 	fmt.Fprintf(os.Stderr, "Stats: %+v\n", stats)
 	if err != nil {
 		return err
@@ -97,6 +109,8 @@ func walkGo(goRoot string, do func(string, os.FileInfo) error) (Stats, error) {
 			stats.SkippedDirs++
 			return filepath.SkipDir // explicitly skip all of these contents
 		case matchPath(path, goRoot, "pkg", "tool", "js_wasm", "cgo"),
+			matchPath(path, goRoot, "bin", "js_wasm", "go"), // handled specially above
+			strings.HasSuffix(path, ".a"),
 			strings.HasSuffix(path, "_test.go"):
 			return nil // skip specific files
 		case matchPathPrefix(path, goRoot, "bin", "js_wasm"),

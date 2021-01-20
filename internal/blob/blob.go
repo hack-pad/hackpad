@@ -19,6 +19,7 @@ type Blob interface {
 	Slice(start, end int64) (Blob, error)
 	Set(w Blob, off int64) (n int, err error)
 	Grow(off int64) error
+	Truncate(size int64)
 }
 
 type blob struct {
@@ -137,4 +138,21 @@ func (b *blob) Grow(off int64) (returnedErr error) {
 	}
 	b.length.Store(newLength)
 	return nil
+}
+
+func (b *blob) Truncate(size int64) {
+	if b.length.Load() < size {
+		return
+	}
+
+	if b.hasBytes.Load() {
+		buf := b.bytes.Load().([]byte)
+		b.bytes.Store(buf[:size])
+	}
+	if b.hasJS.Load() {
+		buf := b.jsValue.Load().(js.Value)
+		smallerBuf := buf.Call("slice", 0, size)
+		b.jsValue.Store(smallerBuf)
+	}
+	b.length.Store(size)
 }

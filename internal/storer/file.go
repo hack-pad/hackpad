@@ -5,11 +5,13 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"sync"
 	"syscall"
 	"time"
 
 	"github.com/johnstarich/go-wasm/internal/blob"
 	"github.com/pkg/errors"
+	"go.uber.org/atomic"
 )
 
 var (
@@ -34,10 +36,34 @@ type fileData struct {
 }
 
 type FileRecord struct {
-	Data     blob.Blob
-	DirNames []string
-	ModTime  time.Time
-	Mode     os.FileMode
+	dataOnce sync.Once
+	dataDone atomic.Bool
+	data     blob.Blob
+	DataFn   func() (blob.Blob, error)
+
+	DirNames    []string
+	InitialSize int64 // fallback size, enables lazy-loaded Data
+	ModTime     time.Time
+	Mode        os.FileMode
+}
+
+func (f *FileRecord) Data() blob.Blob {
+	var err error
+	f.dataOnce.Do(func() {
+		f.data, err = f.DataFn()
+	})
+	if err != nil {
+		panic(err) // data fn should never fail. IDB data will only fail if types are wrong
+	}
+	f.dataDone.Store(true)
+	return f.data
+}
+
+func (f *FileRecord) Size() int64 {
+	if f.dataDone.Load() {
+		return int64(f.data.Len())
+	}
+	return f.InitialSize
 }
 
 func (fs *Fs) newFile(path string, flag int, mode os.FileMode) *File {
@@ -47,7 +73,9 @@ func (fs *Fs) newFile(path string, flag int, mode os.FileMode) *File {
 			storer: fs.fileStorer,
 			path:   path,
 			FileRecord: FileRecord{
-				Data:    blob.NewFromBytes(nil),
+				DataFn: func() (blob.Blob, error) {
+					return blob.NewFromBytes(nil), nil
+				},
 				ModTime: time.Now(),
 				Mode:    mode,
 			},
@@ -97,15 +125,15 @@ func (f *File) ReadAt(p []byte, off int64) (n int, err error) {
 }
 
 func (f *File) ReadBlobAt(length int, off int64) (blob blob.Blob, n int, err error) {
-	if off >= int64(f.Data.Len()) {
+	if off >= int64(f.Size()) {
 		return nil, 0, io.EOF
 	}
-	max := int64(f.Data.Len())
+	max := int64(f.Size())
 	end := off + int64(length)
 	if end > max {
 		end = max
 	}
-	blob, err = f.Data.Slice(off, end)
+	blob, err = f.Data().Slice(off, end)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -124,7 +152,7 @@ func (f *File) Seek(offset int64, whence int) (int64, error) {
 	case io.SeekCurrent:
 		newOffset += offset
 	case io.SeekEnd:
-		newOffset = int64(f.Data.Len()) + offset
+		newOffset = int64(f.Size()) + offset
 	default:
 		return 0, errors.Errorf("Unknown seek type: %d", whence)
 	}
@@ -153,17 +181,17 @@ func (f *File) WriteAt(p []byte, off int64) (n int, err error) {
 
 func (f *File) WriteBlobAt(p blob.Blob, off int64) (n int, err error) {
 	if f.flag&syscall.O_APPEND != 0 {
-		off = int64(f.fileData.Data.Len())
+		off = int64(f.fileData.Size())
 	}
 
 	endIndex := off + int64(p.Len())
-	if int64(f.Data.Len()) < endIndex {
-		err := f.Data.Grow(endIndex - int64(f.Data.Len()))
+	if int64(f.Size()) < endIndex {
+		err := f.Data().Grow(endIndex - int64(f.Size()))
 		if err != nil {
 			return 0, err
 		}
 	}
-	n, err = f.Data.Set(p, off)
+	n, err = f.Data().Set(p, off)
 	if err != nil {
 		return n, err
 	}
@@ -229,21 +257,19 @@ func (f *File) Sync() error {
 }
 
 func (f *File) Truncate(size int64) error {
-	length := int64(f.Data.Len())
+	length := int64(f.Size())
 	switch {
 	case size < 0:
 		return os.ErrInvalid
 	case size == length:
 		return nil
 	case size > length:
-		err := f.Data.Grow(size - length)
+		err := f.Data().Grow(size - length)
 		if err != nil {
 			return err
 		}
 	case size < length:
-		data := f.Data.Bytes()
-		data = data[:size]
-		f.Data = blob.NewFromBytes(data)
+		f.Data().Truncate(size)
 	}
 	f.updateModTime()
 	return f.save()
