@@ -15,7 +15,7 @@ func (f FileInfo) Name() string {
 }
 
 func (f FileInfo) Size() int64 {
-	return int64(f.Data.Len())
+	return f.fileData.Size()
 }
 
 func (f FileInfo) Mode() os.FileMode {
@@ -27,7 +27,7 @@ func (f FileInfo) ModTime() time.Time {
 }
 
 func (f FileInfo) IsDir() bool {
-	return f.fileData.Mode&os.ModeDir == os.ModeDir
+	return f.fileData.Mode.IsDir()
 }
 
 func (f FileInfo) Sys() interface{} {

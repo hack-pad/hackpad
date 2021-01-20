@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/johnstarich/go-wasm/internal/blob"
+	"github.com/johnstarich/go-wasm/internal/common"
 	"github.com/johnstarich/go-wasm/internal/indexeddb"
 	"github.com/johnstarich/go-wasm/internal/interop"
 	"github.com/johnstarich/go-wasm/internal/storer"
@@ -18,8 +19,9 @@ import (
 )
 
 const (
-	idbVersion    = 1
-	idbFilesStore = "files"
+	idbVersion           = 1
+	idbFileContentsStore = "contents"
+	idbFileInfoStore     = "info"
 )
 
 type IndexedDBFs struct {
@@ -28,7 +30,11 @@ type IndexedDBFs struct {
 
 func NewIndexedDBFs(name string) (_ *IndexedDBFs, err error) {
 	db, err := indexeddb.New(name, idbVersion, func(db *indexeddb.DB, oldVersion, newVersion int) error {
-		_, err := db.CreateObjectStore(idbFilesStore, indexeddb.ObjectStoreOptions{})
+		_, err := db.CreateObjectStore(idbFileContentsStore, indexeddb.ObjectStoreOptions{})
+		if err != nil {
+			return err
+		}
+		_, err = db.CreateObjectStore(idbFileInfoStore, indexeddb.ObjectStoreOptions{})
 		return err
 	})
 	if err != nil {
@@ -43,40 +49,75 @@ type indexedDBStorer struct {
 	jsStrings interop.StringCache
 }
 
-func (i *indexedDBStorer) GetFileRecord(path string, dest *storer.FileRecord) error {
-	txn, err := i.db.Transaction(idbFilesStore, indexeddb.TransactionReadOnly)
+func (i *indexedDBStorer) GetFileRecord(path string, dest *storer.FileRecord) (err error) {
+	defer common.CatchException(&err)
+	txn, err := i.db.Transaction(indexeddb.TransactionReadOnly, idbFileInfoStore)
 	if err != nil {
 		return err
 	}
-	files, err := txn.ObjectStore(idbFilesStore)
+	files, err := txn.ObjectStore(idbFileInfoStore)
 	if err != nil {
 		return err
 	}
+	log.Debug("Loading file info from JS: ", path)
 	value, err := files.Get(i.jsStrings.Value(path))
 	if value.IsUndefined() {
+		log.Debug("File does not exist: ", path)
 		return os.ErrNotExist
 	}
 	if err != nil {
+		log.Debug("Error loading file record: ", path)
 		return err
 	}
-	log.Debug("Loading file from JS: ", path)
-	jsData := value.Get("Data")
-	dest.Data, err = blob.NewFromJS(jsData)
-	if err != nil {
-		return err
-	}
+	dest.InitialSize = int64(value.Get("Size").Int())
 	dest.DirNames = interop.StringsFromJSValue(value.Get("DirNames"))
 	dest.ModTime = time.Unix(int64(value.Get("ModTime").Int()), 0)
 	dest.Mode = os.FileMode(value.Get("Mode").Int())
+	if dest.Mode.IsDir() {
+		log.Debug("Setting no-op directory data fetcher for path ", path)
+		dest.DataFn = func() (blob.Blob, error) {
+			return blob.NewFromBytes(nil), nil
+		}
+	} else {
+		log.Debug("Setting file data fetcher for path ", path)
+		dest.DataFn = i.getFileData(path)
+	}
+	log.Debug("File loaded: ", path)
 	return nil
 }
 
-func (i *indexedDBStorer) readWriteTxnStore() (*indexeddb.ObjectStore, error) {
-	txn, err := i.db.Transaction(idbFilesStore, indexeddb.TransactionReadWrite)
-	if err != nil {
-		return nil, err
+func (i *indexedDBStorer) getFileData(path string) func() (blob.Blob, error) {
+	return func() (blob.Blob, error) {
+		txn, err := i.db.Transaction(indexeddb.TransactionReadOnly, idbFileContentsStore)
+		if err != nil {
+			return nil, err
+		}
+		files, err := txn.ObjectStore(idbFileContentsStore)
+		if err != nil {
+			return nil, err
+		}
+		log.Debug("Loading file contents from JS: ", path)
+		value, err := files.Get(i.jsStrings.Value(path))
+		if value.IsUndefined() {
+			return nil, os.ErrNotExist
+		}
+		if err != nil {
+			return nil, err
+		}
+		return blob.NewFromJS(value)
 	}
-	return txn.ObjectStore(idbFilesStore)
+}
+
+func (i *indexedDBStorer) readWriteTxnStore() (info, contents *indexeddb.ObjectStore, err error) {
+	txn, err := i.db.Transaction(indexeddb.TransactionReadWrite, idbFileInfoStore, idbFileContentsStore)
+	if err != nil {
+		return nil, nil, err
+	}
+	info, err = txn.ObjectStore(idbFileInfoStore)
+	if err == nil {
+		contents, err = txn.ObjectStore(idbFileContentsStore)
+	}
+	return
 }
 
 func (i *indexedDBStorer) SetFileRecord(path string, data *storer.FileRecord) error {
@@ -115,11 +156,13 @@ func (i *indexedDBStorer) SetFileRecord(path string, data *storer.FileRecord) er
 
 func (i *indexedDBStorer) setFile(path string, data *storer.FileRecord) (deleted bool, err error) {
 	if data == nil {
-		store, err := i.readWriteTxnStore()
-		if err != nil {
-			return false, err
-		}
-		return true, store.Delete(i.jsStrings.Value(path))
+		_, err = i.db.BatchTransaction(
+			indexeddb.TransactionReadWrite,
+			[]string{idbFileInfoStore, idbFileContentsStore},
+			indexeddb.BatchDelete(idbFileInfoStore, i.jsStrings.Value(path)),
+			indexeddb.BatchDelete(idbFileContentsStore, i.jsStrings.Value(path)),
+		)
+		return true, err
 	}
 
 	dir := filepath.Dir(path)
@@ -134,16 +177,28 @@ func (i *indexedDBStorer) setFile(path string, data *storer.FileRecord) (deleted
 		}
 	}
 
-	store, err := i.readWriteTxnStore()
-	if err != nil {
-		return false, err
+	var v []func(*indexeddb.Transaction) js.Value
+	if !data.Mode.IsDir() {
+		v = append(v, indexeddb.BatchPut(
+			idbFileContentsStore,
+			i.jsStrings.Value(path), data.Data().JSValue(),
+		))
 	}
-	err = store.Put(i.jsStrings.Value(path), js.ValueOf(map[string]interface{}{
-		"Data":     data.Data,
-		"DirNames": interop.SliceFromStrings(data.DirNames),
-		"ModTime":  data.ModTime.Unix(),
-		"Mode":     uint32(data.Mode),
-	}))
+	v = append(v, indexeddb.BatchPut(
+		idbFileInfoStore,
+		i.jsStrings.Value(path),
+		js.ValueOf(map[string]interface{}{
+			"DirNames": interop.SliceFromStrings(data.DirNames),
+			"ModTime":  data.ModTime.Unix(),
+			"Mode":     uint32(data.Mode),
+			"Size":     data.Size(),
+		}),
+	))
+	_, err = i.db.BatchTransaction(
+		indexeddb.TransactionReadWrite,
+		[]string{idbFileContentsStore, idbFileInfoStore},
+		v...,
+	)
 	return false, err
 }
 

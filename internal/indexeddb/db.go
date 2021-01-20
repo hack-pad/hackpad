@@ -76,7 +76,7 @@ func (db *DB) CreateObjectStore(name string, options ObjectStoreOptions) (_ *Obj
 		jsOptions["keyPath"] = options.KeyPath
 	}
 	jsObjectStore := db.jsDB.Call("createObjectStore", name, jsOptions)
-	return &ObjectStore{jsObjectStore: jsObjectStore}, nil
+	return newObjectStore(jsObjectStore), nil
 }
 
 func (db *DB) DeleteObjectStore(name string) (err error) {
@@ -91,8 +91,8 @@ func (db *DB) Close() (err error) {
 	return nil
 }
 
-func (db *DB) Transaction(objectStoreName string, mode TransactionMode) (_ *Transaction, err error) {
+func (db *DB) Transaction(mode TransactionMode, objectStoreNames ...string) (_ *Transaction, err error) {
 	defer catch(&err)
-	jsTxn := db.jsDB.Call("transaction", objectStoreName, mode.String())
+	jsTxn := db.jsDB.Call("transaction", interop.SliceFromStrings(objectStoreNames), mode.String())
 	return wrapTransaction(jsTxn), nil
 }
