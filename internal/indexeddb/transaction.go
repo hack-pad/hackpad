@@ -27,20 +27,6 @@ type Transaction struct {
 }
 
 func wrapTransaction(jsTransaction js.Value) *Transaction {
-	var funcs []js.Func
-	newFunc := func(name string) js.Func {
-		f := js.FuncOf(func(_ js.Value, args []js.Value) interface{} {
-			for _, fn := range funcs {
-				fn.Release()
-			}
-			return nil
-		})
-		funcs = append(funcs, f)
-		return f
-	}
-	jsTransaction.Call("addEventListener", "abort", newFunc("abort"))
-	jsTransaction.Call("addEventListener", "complete", newFunc("complete"))
-	jsTransaction.Call("addEventListener", "error", newFunc("error"))
 	return &Transaction{jsTransaction: jsTransaction}
 }
 
