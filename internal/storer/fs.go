@@ -59,7 +59,7 @@ func (fs *Fs) MkdirAll(path string, perm os.FileMode) error {
 	}
 	for i := len(missingDirs) - 1; i >= 0; i-- { // missingDirs are in reverse order
 		err := fs.Mkdir(missingDirs[i], perm)
-		if err != nil {
+		if err != nil && !os.IsExist(err) {
 			return err
 		}
 	}
