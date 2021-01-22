@@ -45,8 +45,9 @@ func NewIndexedDBFs(name string) (_ *IndexedDBFs, err error) {
 }
 
 type indexedDBStorer struct {
-	db        *indexeddb.DB
-	jsStrings interop.StringCache
+	db           *indexeddb.DB
+	jsPaths      interop.StringCache
+	jsProperties interop.StringCache
 }
 
 func (i *indexedDBStorer) GetFileRecord(path string, dest *storer.FileRecord) (err error) {
@@ -60,7 +61,7 @@ func (i *indexedDBStorer) GetFileRecord(path string, dest *storer.FileRecord) (e
 		return err
 	}
 	log.Debug("Loading file info from JS: ", path)
-	value, err := files.Get(i.jsStrings.Value(path))
+	value, err := files.Get(i.jsPaths.Value(path))
 	if value.IsUndefined() {
 		log.Debug("File does not exist: ", path)
 		return os.ErrNotExist
@@ -69,10 +70,10 @@ func (i *indexedDBStorer) GetFileRecord(path string, dest *storer.FileRecord) (e
 		log.Debug("Error loading file record: ", path)
 		return err
 	}
-	dest.InitialSize = int64(i.jsStrings.GetProperty(value, "Size").Int())
-	dest.DirNames = interop.StringsFromJSValue(i.jsStrings.GetProperty(value, "DirNames"))
-	dest.ModTime = time.Unix(int64(i.jsStrings.GetProperty(value, "ModTime").Int()), 0)
-	dest.Mode = os.FileMode(i.jsStrings.GetProperty(value, "Mode").Int())
+	dest.InitialSize = int64(i.jsProperties.GetProperty(value, "Size").Int())
+	dest.DirNames = interop.StringsFromJSValue(i.jsProperties.GetProperty(value, "DirNames"))
+	dest.ModTime = time.Unix(int64(i.jsProperties.GetProperty(value, "ModTime").Int()), 0)
+	dest.Mode = os.FileMode(i.jsProperties.GetProperty(value, "Mode").Int())
 	if dest.Mode.IsDir() {
 		log.Debug("Setting no-op directory data fetcher for path ", path)
 		dest.DataFn = func() (blob.Blob, error) {
@@ -97,7 +98,7 @@ func (i *indexedDBStorer) getFileData(path string) func() (blob.Blob, error) {
 			return nil, err
 		}
 		log.Debug("Loading file contents from JS: ", path)
-		value, err := files.Get(i.jsStrings.Value(path))
+		value, err := files.Get(i.jsPaths.Value(path))
 		if value.IsUndefined() {
 			return nil, os.ErrNotExist
 		}
@@ -159,8 +160,8 @@ func (i *indexedDBStorer) setFile(path string, data *storer.FileRecord) (deleted
 		_, err = i.db.BatchTransaction(
 			indexeddb.TransactionReadWrite,
 			[]string{idbFileInfoStore, idbFileContentsStore},
-			indexeddb.BatchDelete(idbFileInfoStore, i.jsStrings.Value(path)),
-			indexeddb.BatchDelete(idbFileContentsStore, i.jsStrings.Value(path)),
+			indexeddb.BatchDelete(idbFileInfoStore, i.jsPaths.Value(path)),
+			indexeddb.BatchDelete(idbFileContentsStore, i.jsPaths.Value(path)),
 		)
 		return true, err
 	}
@@ -181,12 +182,12 @@ func (i *indexedDBStorer) setFile(path string, data *storer.FileRecord) (deleted
 	if !data.Mode.IsDir() {
 		v = append(v, indexeddb.BatchPut(
 			idbFileContentsStore,
-			i.jsStrings.Value(path), data.Data().JSValue(),
+			i.jsPaths.Value(path), data.Data().JSValue(),
 		))
 	}
 	v = append(v, indexeddb.BatchPut(
 		idbFileInfoStore,
-		i.jsStrings.Value(path),
+		i.jsPaths.Value(path),
 		js.ValueOf(map[string]interface{}{
 			"DirNames": interop.SliceFromStrings(data.DirNames),
 			"ModTime":  data.ModTime.Unix(),
