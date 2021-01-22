@@ -103,7 +103,6 @@ func (fs *Fs) Open(name string) (afero.File, error) {
 }
 
 func (fs *Fs) OpenFile(name string, flag int, perm os.FileMode) (afFile afero.File, retErr error) {
-	name = fsutil.NormalizePath(name)
 	storerFile, err := fs.fileStorer.GetFile(name)
 	switch {
 	case err == nil:

@@ -10,9 +10,8 @@ import (
 func NormalizePath(path string) string {
 	if !strings.HasPrefix(path, afero.FilePathSeparator) {
 		path = filepath.Join(afero.FilePathSeparator, path) // prepend "/" to ensure "/tmp" and "tmp" are identical files
-	} else {
-		path = filepath.Clean(path)
 	}
+	path = filepath.Clean(path)
 
 	switch path {
 	case ".":
