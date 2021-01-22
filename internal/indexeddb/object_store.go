@@ -25,13 +25,16 @@ func newObjectStore(transaction *Transaction, jsObjectStore js.Value) *ObjectSto
 
 func (o *ObjectStore) Add(key, value js.Value) (err error) {
 	defer catch(&err)
-	_, err = await(processRequest(o.jsObjectStore.Call("add", value, key)))
+	req := o.jsObjectStore.Call("add", value, key)
+	o.transaction.Commit()
+	_, err = await(processRequest(req))
 	return err
 }
 
 func (o *ObjectStore) Clear() (err error) {
 	defer catch(&err)
 	req := o.jsObjectStore.Call("clear")
+	o.transaction.Commit()
 	_, err = await(processRequest(req))
 	return err
 }
@@ -39,6 +42,7 @@ func (o *ObjectStore) Clear() (err error) {
 func (o *ObjectStore) Count() (count int, err error) {
 	defer catch(&err)
 	req := o.jsObjectStore.Call("count")
+	o.transaction.Commit()
 	jsCount, err := await(processRequest(req))
 	if err == nil {
 		count = jsCount.Int()
@@ -80,6 +84,7 @@ func (o *ObjectStore) Get(key js.Value) (val js.Value, err error) {
 func (o *ObjectStore) GetKey(value js.Value) (val js.Value, err error) {
 	defer catch(&err)
 	req := o.jsObjectStore.Call("getKey", value)
+	o.transaction.Commit()
 	return await(processRequest(req))
 }
 
