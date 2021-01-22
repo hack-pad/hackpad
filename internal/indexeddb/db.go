@@ -76,7 +76,7 @@ func (db *DB) CreateObjectStore(name string, options ObjectStoreOptions) (_ *Obj
 		jsOptions["keyPath"] = options.KeyPath
 	}
 	jsObjectStore := db.jsDB.Call("createObjectStore", name, jsOptions)
-	return newObjectStore(jsObjectStore), nil
+	return newObjectStore(nil, jsObjectStore), nil
 }
 
 func (db *DB) DeleteObjectStore(name string) (err error) {

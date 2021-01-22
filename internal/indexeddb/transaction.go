@@ -39,7 +39,7 @@ func (t *Transaction) Abort() (err error) {
 func (t *Transaction) ObjectStore(name string) (_ *ObjectStore, err error) {
 	defer catch(&err)
 	jsObjectStore := t.jsTransaction.Call("objectStore", name)
-	return newObjectStore(jsObjectStore), nil
+	return newObjectStore(t, jsObjectStore), nil
 }
 
 func (t *Transaction) Commit() (err error) {
