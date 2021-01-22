@@ -6,6 +6,10 @@ import (
 	"syscall/js"
 )
 
+var (
+	jsReflectGet = js.Global().Get("Reflect").Get("get")
+)
+
 type cacher struct {
 	cache map[string]js.Value
 }
@@ -28,6 +32,11 @@ type StringCache struct {
 
 func (c *StringCache) Value(s string) js.Value {
 	return c.value(s, identityStringGetter{s}.value)
+}
+
+func (c *StringCache) GetProperty(obj js.Value, key string) js.Value {
+	jsKey := c.Value(key)
+	return jsReflectGet.Invoke(obj, jsKey)
 }
 
 // CallCache caches a member function by name, then runs Invoke instead of Call.
