@@ -12,10 +12,12 @@ import (
 
 	"github.com/johnstarich/go-wasm/internal/blob"
 	"github.com/johnstarich/go-wasm/internal/common"
+	"github.com/johnstarich/go-wasm/internal/fsutil"
 	"github.com/johnstarich/go-wasm/internal/indexeddb"
 	"github.com/johnstarich/go-wasm/internal/interop"
 	"github.com/johnstarich/go-wasm/internal/storer"
 	"github.com/johnstarich/go-wasm/log"
+	"github.com/spf13/afero"
 )
 
 const (
@@ -51,6 +53,7 @@ type indexedDBStorer struct {
 }
 
 func (i *indexedDBStorer) GetFileRecord(path string, dest *storer.FileRecord) (err error) {
+	path = fsutil.NormalizePath(path)
 	defer common.CatchException(&err)
 	txn, err := i.db.Transaction(indexeddb.TransactionReadOnly, idbFileInfoStore)
 	if err != nil {
@@ -109,21 +112,9 @@ func (i *indexedDBStorer) getFileData(path string) func() (blob.Blob, error) {
 	}
 }
 
-func (i *indexedDBStorer) readWriteTxnStore() (info, contents *indexeddb.ObjectStore, err error) {
-	txn, err := i.db.Transaction(indexeddb.TransactionReadWrite, idbFileInfoStore, idbFileContentsStore)
-	if err != nil {
-		return nil, nil, err
-	}
-	info, err = txn.ObjectStore(idbFileInfoStore)
-	if err == nil {
-		contents, err = txn.ObjectStore(idbFileContentsStore)
-	}
-	return
-}
-
 func (i *indexedDBStorer) SetFileRecord(path string, data *storer.FileRecord) error {
-	path = filepath.Clean(path)
-	isRoot := path == "." || path == string(filepath.Separator)
+	path = fsutil.NormalizePath(path)
+	isRoot := path == "." || path == afero.FilePathSeparator
 	if data == nil && isRoot {
 		return syscall.ENOSYS // cannot delete root dir
 	}
@@ -138,7 +129,7 @@ func (i *indexedDBStorer) SetFileRecord(path string, data *storer.FileRecord) er
 	}
 	dir := filepath.Dir(path)
 	if dir == "." {
-		dir = string(filepath.Separator)
+		dir = afero.FilePathSeparator
 	}
 	base := filepath.Base(path)
 	var parentData storer.FileRecord
@@ -167,7 +158,7 @@ func (i *indexedDBStorer) setFile(path string, data *storer.FileRecord) (deleted
 	}
 
 	dir := filepath.Dir(path)
-	if dir != "" && dir != string(filepath.Separator) {
+	if dir != "" && dir != afero.FilePathSeparator {
 		var parentData storer.FileRecord
 		err := i.GetFileRecord(dir, &parentData)
 		if err != nil {
