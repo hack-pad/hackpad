@@ -69,10 +69,10 @@ func (i *indexedDBStorer) GetFileRecord(path string, dest *storer.FileRecord) (e
 		log.Debug("Error loading file record: ", path)
 		return err
 	}
-	dest.InitialSize = int64(value.Get("Size").Int())
-	dest.DirNames = interop.StringsFromJSValue(value.Get("DirNames"))
-	dest.ModTime = time.Unix(int64(value.Get("ModTime").Int()), 0)
-	dest.Mode = os.FileMode(value.Get("Mode").Int())
+	dest.InitialSize = int64(i.jsStrings.GetProperty(value, "Size").Int())
+	dest.DirNames = interop.StringsFromJSValue(i.jsStrings.GetProperty(value, "DirNames"))
+	dest.ModTime = time.Unix(int64(i.jsStrings.GetProperty(value, "ModTime").Int()), 0)
+	dest.Mode = os.FileMode(i.jsStrings.GetProperty(value, "Mode").Int())
 	if dest.Mode.IsDir() {
 		log.Debug("Setting no-op directory data fetcher for path ", path)
 		dest.DataFn = func() (blob.Blob, error) {
