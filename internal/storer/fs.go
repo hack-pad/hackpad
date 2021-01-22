@@ -45,11 +45,15 @@ func (fs *Fs) Mkdir(name string, perm os.FileMode) error {
 	case err == nil:
 		return &os.PathError{Op: "mkdir", Path: name, Err: os.ErrExist}
 	case os.IsNotExist(err):
-		file := fs.newFile(name, 0, os.ModeDir|(perm&os.ModePerm))
+		file := fs.newDir(name, perm)
 		return fs.wrapperErr("mkdir", name, file.save())
 	default:
 		return &os.PathError{Op: "mkdir", Path: name, Err: err}
 	}
+}
+
+func (fs *Fs) newDir(name string, perm os.FileMode) *File {
+	return fs.newFile(name, 0, os.ModeDir|(perm&os.ModePerm))
 }
 
 func (fs *Fs) MkdirAll(path string, perm os.FileMode) error {
@@ -58,7 +62,10 @@ func (fs *Fs) MkdirAll(path string, perm os.FileMode) error {
 		return err
 	}
 	for i := len(missingDirs) - 1; i >= 0; i-- { // missingDirs are in reverse order
-		err := fs.Mkdir(missingDirs[i], perm)
+		name := missingDirs[i]
+		file := fs.newDir(name, perm)
+		err := file.save()
+		err = fs.wrapperErr("mkdirall", name, err)
 		if err != nil && !os.IsExist(err) {
 			return err
 		}
