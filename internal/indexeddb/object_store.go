@@ -15,11 +15,12 @@ type ObjectStoreOptions struct {
 }
 
 type ObjectStore struct {
+	transaction   *Transaction
 	jsObjectStore js.Value
 }
 
-func newObjectStore(jsObjectStore js.Value) *ObjectStore {
-	return &ObjectStore{jsObjectStore: jsObjectStore}
+func newObjectStore(transaction *Transaction, jsObjectStore js.Value) *ObjectStore {
+	return &ObjectStore{transaction: transaction, jsObjectStore: jsObjectStore}
 }
 
 func (o *ObjectStore) Add(key, value js.Value) (err error) {
@@ -57,6 +58,7 @@ func (o *ObjectStore) CreateIndex(name string, keyPath js.Value, options IndexOp
 func (o *ObjectStore) Delete(key js.Value) (err error) {
 	defer catch(&err)
 	req := o.jsObjectStore.Call("delete", key)
+	o.transaction.Commit()
 	_, err = await(processRequest(req))
 	return err
 }
@@ -70,6 +72,7 @@ func (o *ObjectStore) DeleteIndex(name string) (err error) {
 func (o *ObjectStore) Get(key js.Value) (val js.Value, err error) {
 	defer catch(&err)
 	req := o.jsObjectStore.Call("get", key)
+	o.transaction.Commit()
 	prom := processRequest(req)
 	return await(prom)
 }
@@ -102,6 +105,7 @@ func (o *ObjectStore) OpenKeyCursor(keyRange KeyRange, direction CursorDirection
 func (o *ObjectStore) Put(key, value js.Value) (err error) {
 	defer catch(&err)
 	req := o.jsObjectStore.Call("put", value, key)
+	o.transaction.Commit()
 	_, err = await(processRequest(req))
 	return err
 }
@@ -140,15 +144,19 @@ func (db *DB) BatchTransaction(
 	for i := len(calls) - 1; i >= 0; i-- {
 		prevFn := fn
 		call := calls[i]
+		lastCall := i == len(calls)-1
 		fn = func(_ js.Value) {
 			request := call(txn)
+			if lastCall {
+				txn.Commit()
+			}
 
 			var errFunc, successFunc js.Func
 			errFunc = js.FuncOf(func(this js.Value, args []js.Value) interface{} {
 				errFunc.Release()
 				successFunc.Release()
-				request.Get("transaction").Call("abort")
-				err := js.Error{request.Get("error")}
+				txn.jsTransaction.Call("abort")
+				err := js.Error{Value: request.Get("error")}
 				log.Error("Error batching: ", err)
 				reject(err)
 				return nil
