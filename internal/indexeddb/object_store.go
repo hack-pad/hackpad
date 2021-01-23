@@ -5,8 +5,7 @@ package indexeddb
 import (
 	"syscall/js"
 
-	"github.com/johnstarich/go-wasm/internal/promise"
-	"github.com/johnstarich/go-wasm/log"
+	"github.com/johnstarich/go-wasm/internal/interop"
 )
 
 type ObjectStoreOptions struct {
@@ -25,18 +24,15 @@ func newObjectStore(transaction *Transaction, jsObjectStore js.Value) *ObjectSto
 
 func (o *ObjectStore) Add(key, value js.Value) (err error) {
 	defer catch(&err)
-	req := o.jsObjectStore.Call("add", value, key)
+	o.jsObjectStore.Call("add", value, key)
 	o.transaction.Commit()
-	_, err = await(processRequest(req))
-	return err
+	return o.transaction.Await()
 }
 
 func (o *ObjectStore) Clear() (err error) {
 	defer catch(&err)
-	req := o.jsObjectStore.Call("clear")
-	o.transaction.Commit()
-	_, err = await(processRequest(req))
-	return err
+	o.jsObjectStore.Call("clear")
+	return o.transaction.Await()
 }
 
 func (o *ObjectStore) Count() (count int, err error) {
@@ -61,10 +57,9 @@ func (o *ObjectStore) CreateIndex(name string, keyPath js.Value, options IndexOp
 
 func (o *ObjectStore) Delete(key js.Value) (err error) {
 	defer catch(&err)
-	req := o.jsObjectStore.Call("delete", key)
+	o.jsObjectStore.Call("delete", key)
 	o.transaction.Commit()
-	_, err = await(processRequest(req))
-	return err
+	return o.transaction.Await()
 }
 
 func (o *ObjectStore) DeleteIndex(name string) (err error) {
@@ -109,10 +104,9 @@ func (o *ObjectStore) OpenKeyCursor(keyRange KeyRange, direction CursorDirection
 
 func (o *ObjectStore) Put(key, value js.Value) (err error) {
 	defer catch(&err)
-	req := o.jsObjectStore.Call("put", value, key)
+	o.jsObjectStore.Call("put", value, key)
 	o.transaction.Commit()
-	_, err = await(processRequest(req))
-	return err
+	return o.transaction.Await()
 }
 
 func BatchPut(objectStore string, key, value js.Value) func(*Transaction) js.Value {
@@ -139,43 +133,28 @@ func (db *DB) BatchTransaction(
 	mode TransactionMode,
 	objectStoreNames []string,
 	calls ...func(*Transaction) (request js.Value),
-) (interface{}, error) {
+) error {
 	txn, err := db.Transaction(mode, objectStoreNames...)
 	if err != nil {
-		return nil, err
+		return err
 	}
-	resolve, reject, prom := promise.NewGo()
-	fn := func(result js.Value) { resolve(result) }
+	fn := func() {}
 	for i := len(calls) - 1; i >= 0; i-- {
 		prevFn := fn
 		call := calls[i]
 		lastCall := i == len(calls)-1
-		fn = func(_ js.Value) {
+		fn = func() {
 			request := call(txn)
 			if lastCall {
 				txn.Commit()
+			} else {
+				request.Call("addEventListener", "success", interop.SingleUseFunc(func(this js.Value, args []js.Value) interface{} {
+					prevFn()
+					return nil
+				}))
 			}
-
-			var errFunc, successFunc js.Func
-			errFunc = js.FuncOf(func(this js.Value, args []js.Value) interface{} {
-				errFunc.Release()
-				successFunc.Release()
-				txn.jsTransaction.Call("abort")
-				err := js.Error{Value: request.Get("error")}
-				log.Error("Error batching: ", err)
-				reject(err)
-				return nil
-			})
-			successFunc = js.FuncOf(func(this js.Value, args []js.Value) interface{} {
-				errFunc.Release()
-				successFunc.Release()
-				prevFn(request.Get("result"))
-				return nil
-			})
-			request.Call("addEventListener", "error", errFunc)
-			request.Call("addEventListener", "success", successFunc)
 		}
 	}
-	fn(js.Null())
-	return prom.Await()
+	fn()
+	return txn.Await()
 }
