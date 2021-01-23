@@ -4,6 +4,8 @@ package indexeddb
 
 import (
 	"syscall/js"
+
+	"github.com/johnstarich/go-wasm/internal/promise"
 )
 
 type TransactionMode int
@@ -46,4 +48,32 @@ func (t *Transaction) Commit() (err error) {
 	defer catch(&err)
 	t.jsTransaction.Call("commit")
 	return nil
+}
+
+func (t *Transaction) Await() error {
+	_, err := t.prepareAwait().Await()
+	return err
+}
+
+func (t *Transaction) prepareAwait() promise.Promise {
+	resolve, reject, prom := promise.NewGo()
+
+	var errFunc, completeFunc js.Func
+	errFunc = js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+		err := t.jsTransaction.Get("error")
+		t.jsTransaction.Call("abort")
+		errFunc.Release()
+		completeFunc.Release()
+		reject(err)
+		return nil
+	})
+	completeFunc = js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+		errFunc.Release()
+		completeFunc.Release()
+		resolve(nil)
+		return nil
+	})
+	t.jsTransaction.Call("addEventListener", "error", errFunc)
+	t.jsTransaction.Call("addEventListener", "complete", completeFunc)
+	return prom
 }

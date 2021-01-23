@@ -148,7 +148,7 @@ func (i *indexedDBStorer) SetFileRecord(path string, data *storer.FileRecord) er
 
 func (i *indexedDBStorer) setFile(path string, data *storer.FileRecord) (deleted bool, err error) {
 	if data == nil {
-		_, err = i.db.BatchTransaction(
+		err = i.db.BatchTransaction(
 			indexeddb.TransactionReadWrite,
 			[]string{idbFileInfoStore, idbFileContentsStore},
 			indexeddb.BatchDelete(idbFileInfoStore, i.jsPaths.Value(path)),
@@ -186,7 +186,7 @@ func (i *indexedDBStorer) setFile(path string, data *storer.FileRecord) (deleted
 			"Size":     data.Size(),
 		}),
 	))
-	_, err = i.db.BatchTransaction(
+	err = i.db.BatchTransaction(
 		indexeddb.TransactionReadWrite,
 		[]string{idbFileContentsStore, idbFileInfoStore},
 		v...,
