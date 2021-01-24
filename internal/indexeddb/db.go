@@ -93,6 +93,6 @@ func (db *DB) Close() (err error) {
 
 func (db *DB) Transaction(mode TransactionMode, objectStoreNames ...string) (_ *Transaction, err error) {
 	defer catch(&err)
-	jsTxn := db.jsDB.Call("transaction", interop.SliceFromStrings(objectStoreNames), mode.String())
+	jsTxn := db.jsDB.Call("transaction", interop.SliceFromStrings(objectStoreNames), mode)
 	return wrapTransaction(jsTxn), nil
 }

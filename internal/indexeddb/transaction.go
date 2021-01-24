@@ -5,6 +5,7 @@ package indexeddb
 import (
 	"syscall/js"
 
+	"github.com/johnstarich/go-wasm/internal/interop"
 	"github.com/johnstarich/go-wasm/internal/promise"
 )
 
@@ -15,6 +16,8 @@ const (
 	TransactionReadWrite
 )
 
+var modeCache interop.StringCache
+
 func (m TransactionMode) String() string {
 	switch m {
 	case TransactionReadWrite:
@@ -22,6 +25,10 @@ func (m TransactionMode) String() string {
 	default:
 		return "readonly"
 	}
+}
+
+func (m TransactionMode) JSValue() js.Value {
+	return modeCache.Value(m.String())
 }
 
 type Transaction struct {
