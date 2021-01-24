@@ -1,11 +1,13 @@
 package main
 
 import (
+	"fmt"
 	"io"
 	"io/ioutil"
 	"os"
 	"os/exec"
 	"strings"
+	"time"
 
 	"github.com/johnstarich/go-wasm/internal/console"
 	"github.com/pkg/errors"
@@ -137,11 +139,22 @@ func runCommand(term console.Console, line string, stmt *syntax.Stmt, isPipe boo
 			return errors.Errorf("Unknown binary operator: %v", node.Op)
 		}
 
-	case *syntax.IfClause, *syntax.WhileClause, *syntax.ForClause, *syntax.CaseClause, *syntax.Block, *syntax.Subshell, *syntax.FuncDecl, *syntax.ArithmCmd, *syntax.TestClause, *syntax.DeclClause, *syntax.LetClause, *syntax.TimeClause, *syntax.CoprocClause:
+	case *syntax.TimeClause:
+		start := time.Now()
+		err := runCommand(term, line, node.Stmt, false)
+		duration := time.Since(start)
+		fmt.Fprintf(term.Stdout(), "\n%s\t %v total\n", formatStmt(line, node.Stmt), duration)
+		return err
+
+	case *syntax.IfClause, *syntax.WhileClause, *syntax.ForClause, *syntax.CaseClause, *syntax.Block, *syntax.Subshell, *syntax.FuncDecl, *syntax.ArithmCmd, *syntax.TestClause, *syntax.DeclClause, *syntax.LetClause, *syntax.CoprocClause:
 		return errors.Errorf("Unimplemented statement type: %T %v", stmt.Cmd, stmt.Cmd)
 	default:
 		return errors.Errorf("Unknown statement type: %T %v", stmt.Cmd, stmt.Cmd)
 	}
+}
+
+func formatStmt(source string, s *syntax.Stmt) string {
+	return source[s.Pos().Offset():s.End().Offset()]
 }
 
 type cmdOptions struct {
