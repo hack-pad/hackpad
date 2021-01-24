@@ -15,6 +15,7 @@ import (
 
 	"github.com/fatih/color"
 	"github.com/johnstarich/go-wasm/internal/console"
+	"github.com/johnstarich/go/datasize"
 	"github.com/pkg/errors"
 )
 
@@ -101,24 +102,19 @@ func printFileNames(term console.Console, dir string, longForm bool) error {
 		return nil
 	}
 
-	maxBytesWidth := 0
+	var t table
+	t.Align(leftAlign, rightAlign)
 	for _, info := range infos {
-		width := len(strconv.FormatInt(info.Size(), 10))
-		if width > maxBytesWidth {
-			maxBytesWidth = width
-		}
+		value, units := formatBytes(datasize.Bytes(info.Size()))
+		t.Add(info.Mode(), value, units, info.ModTime().Format(time.Stamp), info.Name())
 	}
-	maxWidthStr := strconv.FormatInt(int64(maxBytesWidth), 10)
-	for _, info := range infos {
-		fmt.Fprintf(term.Stdout(),
-			"%s %"+maxWidthStr+"d %s %s\n",
-			info.Mode(),
-			info.Size(),
-			info.ModTime().Format(time.Stamp),
-			info.Name(),
-		)
-	}
+	fmt.Fprint(term.Stdout(), t)
 	return nil
+}
+
+func formatBytes(b datasize.Size) (string, string) {
+	value, unit := b.FormatSI()
+	return strings.TrimSuffix(fmt.Sprintf("%.1f", value), ".0"), unit
 }
 
 func cd(term console.Console, args ...string) error {
