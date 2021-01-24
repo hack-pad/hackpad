@@ -3,6 +3,7 @@
 package fs
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"sort"
@@ -65,6 +66,10 @@ func (i *indexedDBStorer) GetFileRecord(path string, dest *storer.FileRecord) (e
 	}
 	log.Debug("Loading file info from JS: ", path)
 	value, err := files.Get(i.jsPaths.Value(path))
+	return i.extractFileRecord(path, value, err, dest)
+}
+
+func (i *indexedDBStorer) extractFileRecord(path string, value js.Value, err error, dest *storer.FileRecord) error {
 	if value.IsUndefined() {
 		log.Debug("File does not exist: ", path)
 		return os.ErrNotExist
@@ -112,6 +117,32 @@ func (i *indexedDBStorer) getFileData(path string) func() (blob.Blob, error) {
 	}
 }
 
+func (i *indexedDBStorer) GetFileRecords(paths []string, dest []*storer.FileRecord) (errs []error) {
+	if len(paths) != len(dest) {
+		panic(fmt.Sprintf("indexedDBStorer: Paths and dest lengths must be equal: %d != %d", len(paths), len(dest)))
+	}
+	errs = make([]error, len(paths))
+	defer common.CatchException(&errs[0])
+
+	calls := make([]func(*indexeddb.Transaction) js.Value, len(paths))
+	for ix := range paths {
+		calls[ix] = indexeddb.BatchGet(idbFileInfoStore, i.jsPaths.Value(paths[ix]))
+	}
+
+	log.Debug("Loading file infos from JS: ", paths)
+	infos, err := i.db.BatchTransaction(indexeddb.TransactionReadOnly, []string{idbFileInfoStore}, calls...)
+	if err != nil {
+		// error running batch txn, return it in first error slot
+		errs[0] = err
+		return errs
+	}
+
+	for ix := range paths {
+		errs[ix] = i.extractFileRecord(paths[ix], infos[ix], nil, dest[ix])
+	}
+	return errs
+}
+
 func (i *indexedDBStorer) SetFileRecord(path string, data *storer.FileRecord) error {
 	path = fsutil.NormalizePath(path)
 	isRoot := path == "." || path == afero.FilePathSeparator
@@ -148,7 +179,7 @@ func (i *indexedDBStorer) SetFileRecord(path string, data *storer.FileRecord) er
 
 func (i *indexedDBStorer) setFile(path string, data *storer.FileRecord) (deleted bool, err error) {
 	if data == nil {
-		err = i.db.BatchTransaction(
+		_, err = i.db.BatchTransaction(
 			indexeddb.TransactionReadWrite,
 			[]string{idbFileInfoStore, idbFileContentsStore},
 			indexeddb.BatchDelete(idbFileInfoStore, i.jsPaths.Value(path)),
@@ -186,7 +217,7 @@ func (i *indexedDBStorer) setFile(path string, data *storer.FileRecord) (deleted
 			"Size":     data.Size(),
 		}),
 	))
-	err = i.db.BatchTransaction(
+	_, err = i.db.BatchTransaction(
 		indexeddb.TransactionReadWrite,
 		[]string{idbFileContentsStore, idbFileInfoStore},
 		v...,

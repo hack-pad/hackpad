@@ -57,6 +57,10 @@ func (fs *Fs) newDir(name string, perm os.FileMode) *File {
 }
 
 func (fs *Fs) MkdirAll(path string, perm os.FileMode) error {
+	if info, err := fs.Stat(path); err == nil && info.IsDir() {
+		// fast track the exists path
+		return nil
+	}
 	missingDirs, err := fs.findMissingDirs(path)
 	if err != nil {
 		return err
@@ -76,26 +80,51 @@ func (fs *Fs) MkdirAll(path string, perm os.FileMode) error {
 // findMissingDirs returns all paths that must be created, in reverse order
 func (fs *Fs) findMissingDirs(path string) ([]string, error) {
 	path = fsutil.NormalizePath(path)
-	var missingDirs []string
+	var paths []string
+	var files []*FileRecord
 	for currentPath := path; currentPath != afero.FilePathSeparator; currentPath = filepath.Dir(currentPath) {
-		info, err := fs.Stat(currentPath)
-		switch {
-		case os.IsNotExist(err):
-			missingDirs = append(missingDirs, currentPath)
-		case err != nil:
+		paths = append(paths, currentPath)
+		files = append(files, new(FileRecord))
+	}
+	paths = append(paths, afero.FilePathSeparator)
+	files = append(files, new(FileRecord))
+
+	infos := make([]os.FileInfo, len(files))
+	errs := GetFileRecords(fs.Storer, paths, files)
+	for i := range files {
+		infos[i] = FileInfo{Record: files[i], Path: paths[i]}
+	}
+
+	var missingDirs []string
+	for i := range paths {
+		missing, err := isMissingDir(paths[i], infos[i], errs[i])
+		if err != nil {
 			return nil, err
-		case info.IsDir():
-			// found a directory in the chain, return early
+		}
+		if missing {
+			missingDirs = append(missingDirs, paths[i])
+		} else {
 			return missingDirs, nil
-		case !info.IsDir():
-			// a file is found where we want a directory, fail with ENOTDIR
-			return nil, &os.PathError{Op: "mkdirall", Path: currentPath, Err: afero.ErrNotDir}
 		}
 	}
-	if _, err := fs.Stat(afero.FilePathSeparator); os.IsNotExist(err) {
-		missingDirs = append(missingDirs, afero.FilePathSeparator)
-	}
 	return missingDirs, nil
+}
+
+func isMissingDir(path string, info os.FileInfo, err error) (missing bool, returnedErr error) {
+	switch {
+	case os.IsNotExist(err):
+		return true, nil
+	case err != nil:
+		return false, err
+	case info.IsDir():
+		// found a directory in the chain, return early
+		return false, nil
+	case !info.IsDir():
+		// a file is found where we want a directory, fail with ENOTDIR
+		return true, &os.PathError{Op: "mkdirall", Path: path, Err: afero.ErrNotDir}
+	default:
+		return false, nil
+	}
 }
 
 func (fs *Fs) Open(name string) (afero.File, error) {

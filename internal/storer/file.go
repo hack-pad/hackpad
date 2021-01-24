@@ -87,8 +87,8 @@ func (f *fileData) save() error {
 	return f.storer.SetFile(f.path, f)
 }
 
-func (f fileData) info() os.FileInfo {
-	return &FileInfo{f}
+func (f *fileData) info() os.FileInfo {
+	return &FileInfo{Record: &f.FileRecord, Path: f.path}
 }
 
 func (f *File) Close() error {
@@ -248,7 +248,7 @@ func (f *File) Readdirnames(count int) ([]string, error) {
 }
 
 func (f *File) Stat() (os.FileInfo, error) {
-	return FileInfo{*f.fileData}, nil
+	return FileInfo{Record: &f.FileRecord, Path: f.path}, nil
 }
 
 func (f *File) Sync() error {

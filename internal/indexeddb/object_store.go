@@ -109,6 +109,16 @@ func (o *ObjectStore) Put(key, value js.Value) (err error) {
 	return o.transaction.Await()
 }
 
+func BatchGet(objectStore string, key js.Value) func(*Transaction) js.Value {
+	return func(txn *Transaction) js.Value {
+		o, err := txn.ObjectStore(objectStore)
+		if err != nil {
+			panic(err)
+		}
+		return o.jsObjectStore.Call("get", key)
+	}
+}
+
 func BatchPut(objectStore string, key, value js.Value) func(*Transaction) js.Value {
 	return func(txn *Transaction) js.Value {
 		o, err := txn.ObjectStore(objectStore)
@@ -133,11 +143,12 @@ func (db *DB) BatchTransaction(
 	mode TransactionMode,
 	objectStoreNames []string,
 	calls ...func(*Transaction) (request js.Value),
-) error {
+) ([]js.Value, error) {
 	txn, err := db.Transaction(mode, objectStoreNames...)
 	if err != nil {
-		return err
+		return nil, err
 	}
+	results := make(chan js.Value, len(calls))
 	fn := func() {}
 	for i := len(calls) - 1; i >= 0; i-- {
 		prevFn := fn
@@ -147,14 +158,22 @@ func (db *DB) BatchTransaction(
 			request := call(txn)
 			if lastCall {
 				txn.Commit()
-			} else {
-				request.Call("addEventListener", "success", interop.SingleUseFunc(func(this js.Value, args []js.Value) interface{} {
-					prevFn()
-					return nil
-				}))
 			}
+			request.Call("addEventListener", "success", interop.SingleUseFunc(func(this js.Value, args []js.Value) interface{} {
+				results <- args[0].Get("result")
+				prevFn()
+				return nil
+			}))
 		}
 	}
 	fn()
-	return txn.Await()
+	err = txn.Await()
+	var resultSlice []js.Value
+	if err == nil {
+		resultSlice = make([]js.Value, len(calls))
+		for i := range resultSlice {
+			resultSlice[i] = <-results
+		}
+	}
+	return resultSlice, err
 }

@@ -7,27 +7,28 @@ import (
 )
 
 type FileInfo struct {
-	fileData
+	Record *FileRecord
+	Path   string
 }
 
 func (f FileInfo) Name() string {
-	return filepath.Base(f.path)
+	return filepath.Base(f.Path)
 }
 
 func (f FileInfo) Size() int64 {
-	return f.fileData.Size()
+	return f.Record.Size()
 }
 
 func (f FileInfo) Mode() os.FileMode {
-	return f.fileData.Mode
+	return f.Record.Mode
 }
 
 func (f FileInfo) ModTime() time.Time {
-	return f.fileData.ModTime
+	return f.Record.ModTime
 }
 
 func (f FileInfo) IsDir() bool {
-	return f.fileData.Mode.IsDir()
+	return f.Record.Mode.IsDir()
 }
 
 func (f FileInfo) Sys() interface{} {
