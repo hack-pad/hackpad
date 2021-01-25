@@ -8,9 +8,12 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"runtime"
+	"sync"
 	"syscall"
 	"time"
 
+	"github.com/johnstarich/go-wasm/internal/bufferpool"
 	"github.com/johnstarich/go-wasm/internal/fsutil"
 	"github.com/johnstarich/go-wasm/internal/pubsub"
 	"github.com/johnstarich/go-wasm/log"
@@ -81,8 +84,28 @@ func (fs *Fs) downloadGzipErr(r io.Reader) error {
 	defer compressor.Close()
 
 	archive := tar.NewReader(compressor)
-	copyBuf := make([]byte, 20<<20) // 20 Mebibytes
+	const (
+		mebibyte       = 1 << 20
+		maxMemory      = 64 * mebibyte
+		bigBufMemory   = 16 * mebibyte
+		smallBufMemory = 1 * mebibyte
+
+		// at least 1 big and small buffer, then most of memory goes to the small ones
+		bigBufCount   = 2
+		smallBufCount = (maxMemory - bigBufCount*bigBufMemory) / smallBufMemory
+	)
+	smallPool := bufferpool.New(smallBufMemory, smallBufCount)
+	bigPool := bufferpool.New(bigBufMemory, bigBufCount)
+	defer runtime.GC() // forcefully clean up memory pools
+
+	var wg sync.WaitGroup
+	errs := make(chan error, 1)
 	for {
+		select {
+		case err := <-errs:
+			return err
+		default:
+		}
 		header, err := archive.Next()
 		if err == io.EOF {
 			break
@@ -114,20 +137,74 @@ func (fs *Fs) downloadGzipErr(r io.Reader) error {
 				}
 			}
 		} else {
-			f, err := fs.underlyingFs.OpenFile(path, syscall.O_WRONLY|syscall.O_CREAT|syscall.O_TRUNC, info.Mode())
-			if err != nil {
-				return errors.Wrap(err, "opening destination file")
+			reader := fullReader{archive} // fullReader: call f.Write as few times as possible, since large files are expensive
+			// read once. if we reached EOF, then write it to fs asynchronously
+			smallBuf := smallPool.Wait()
+			n, err := reader.Read(smallBuf.Data)
+			switch err {
+			case io.EOF:
+				wg.Add(1)
+				go func() {
+					err := fs.writeFile(path, info, smallBuf, n, nil, nil)
+					smallBuf.Done()
+					if err != nil {
+						errs <- err
+					}
+					wg.Done()
+				}()
+			case nil:
+				bigBuf := bigPool.Wait()
+				err := fs.writeFile(path, info, smallBuf, n, reader, bigBuf)
+				bigBuf.Done()
+				smallBuf.Done()
+				if err != nil {
+					return err
+				}
+			default:
+				return err
 			}
-			_, err = io.CopyBuffer(f, fullReader{archive}, copyBuf) // fullReader: call f.Write as few times as possible, since large files are expensive
-			if err != nil {
-				f.Close()
-				return errors.Wrap(err, "copying file")
-			}
-			f.Close()
-			fs.ps.Emit(path) // only emit for non-dirs, dirs will wait until the download completes to ensure correctness
 		}
 	}
-	return nil
+	done := make(chan struct{})
+	go func() {
+		wg.Wait()
+		close(done)
+	}()
+	for {
+		select {
+		case err := <-errs:
+			return err
+		case <-done:
+			return nil
+		}
+	}
+}
+
+func (fs *Fs) writeFile(path string, info os.FileInfo, initialBuf *bufferpool.Buffer, n int, r io.Reader, copyBuf *bufferpool.Buffer) (returnedErr error) {
+	f, err := fs.underlyingFs.OpenFile(path, syscall.O_WRONLY|syscall.O_CREAT|syscall.O_TRUNC, info.Mode())
+	if err != nil {
+		return errors.Wrap(err, "opening destination file")
+	}
+	defer func() {
+		f.Close()
+		if returnedErr == nil {
+			fs.ps.Emit(path) // only emit for non-dirs, dirs will wait until the download completes to ensure correctness
+		}
+	}()
+
+	_, err = f.Write(initialBuf.Data[:n])
+	if err != nil {
+		return errors.Wrap(err, "write: copying file")
+	}
+
+	if r == nil {
+		// a nil reader signals we already did a read of N bytes and hit EOF,
+		// so the above copy is sufficient, return now
+		return nil
+	}
+
+	_, err = io.CopyBuffer(f, r, copyBuf.Data)
+	return errors.Wrap(err, "copybuf: copying file")
 }
 
 type fullReader struct {
