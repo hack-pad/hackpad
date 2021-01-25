@@ -162,23 +162,38 @@ func OverlayTarGzip(args []js.Value) error {
 
 func wrapProgress(r io.ReadCloser, contentLength int64, setProgress func(float64)) io.ReadCloser {
 	progressR := progress.NewReader(r)
+	ctx, wrapper := newReadCloseWrapper(progressR, r)
 	go func() {
 		progressChan := progress.NewTicker(context.Background(), progressR, contentLength, 100*time.Millisecond)
 		for p := range progressChan {
-			setProgress(p.Percent())
+			select {
+			case <-ctx.Done():
+				setProgress(100)
+				return
+			default:
+				setProgress(p.Percent())
+			}
 		}
 	}()
-	return newReadCloseWrapper(progressR, r)
+	return wrapper
 }
 
 type readCloseWrapper struct {
 	io.Reader
-	io.Closer
+	closer io.Closer
+	cancel context.CancelFunc
 }
 
-func newReadCloseWrapper(r io.Reader, closer io.Closer) io.ReadCloser {
-	return &readCloseWrapper{
+func newReadCloseWrapper(r io.Reader, closer io.Closer) (context.Context, io.ReadCloser) {
+	ctx, cancel := context.WithCancel(context.Background())
+	return ctx, &readCloseWrapper{
 		Reader: r,
-		Closer: closer,
+		closer: closer,
+		cancel: cancel,
 	}
+}
+
+func (r *readCloseWrapper) Close() error {
+	r.cancel()
+	return r.closer.Close()
 }
