@@ -148,20 +148,28 @@ func (db *DB) BatchTransaction(
 	if err != nil {
 		return nil, err
 	}
-	results := make(chan js.Value, len(calls))
+	type indexedResult struct {
+		int
+		js.Value
+	}
+	results := make(chan indexedResult, len(calls))
 	fn := func() {}
 	for i := len(calls) - 1; i >= 0; i-- {
+		index := i
 		prevFn := fn
 		call := calls[i]
 		lastCall := i == len(calls)-1
 		fn = func() {
 			request := call(txn)
 			if lastCall {
-				txn.Commit()
+				go txn.Commit()
 			}
 			request.Call("addEventListener", "success", interop.SingleUseFunc(func(this js.Value, args []js.Value) interface{} {
-				results <- args[0].Get("result")
-				prevFn()
+				go func() {
+					result := args[0].Get("result")
+					results <- indexedResult{index, result}
+				}()
+				prevFn() // must not run prevFn as async, otherwise txn will commit early
 				return nil
 			}))
 		}
@@ -171,8 +179,9 @@ func (db *DB) BatchTransaction(
 	var resultSlice []js.Value
 	if err == nil {
 		resultSlice = make([]js.Value, len(calls))
-		for i := range resultSlice {
-			resultSlice[i] = <-results
+		for range resultSlice {
+			result := <-results
+			resultSlice[result.int] = result.Value
 		}
 	}
 	return resultSlice, err
