@@ -55,11 +55,11 @@ func newTerminal() *terminal {
 }
 
 func (t *terminal) Stdout() io.Writer {
-	return &carriageReturnWriter{os.Stdout}
+	return os.Stdout
 }
 
 func (t *terminal) Stderr() io.Writer {
-	return &carriageReturnWriter{os.Stderr}
+	return os.Stderr
 }
 
 func (t *terminal) Note() io.Writer {

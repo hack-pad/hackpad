@@ -17,6 +17,15 @@ func main() {
 	} else {
 		reader = newRuneReader(os.Stdin)
 	}
+	var err error
+	os.Stdout, err = newCarriageReturnWriter(os.Stdout)
+	if err != nil {
+		panic(err)
+	}
+	os.Stderr, err = newCarriageReturnWriter(os.Stderr)
+	if err != nil {
+		panic(err)
+	}
 	term := newTerminal()
 
 	term.ReadEvalPrintLoop(reader)

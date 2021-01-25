@@ -220,11 +220,11 @@ func (c *redirectConsole) Stdin() io.Reader {
 }
 
 func (c *redirectConsole) Stdout() io.Writer {
-	return &carriageReturnWriter{c.stdout}
+	return c.stdout
 }
 
 func (c *redirectConsole) Stderr() io.Writer {
-	return &carriageReturnWriter{c.stderr}
+	return c.stderr
 }
 
 func (c *redirectConsole) Note() io.Writer {
