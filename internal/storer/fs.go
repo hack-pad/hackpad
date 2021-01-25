@@ -77,23 +77,29 @@ func (fs *Fs) MkdirAll(path string, perm os.FileMode) error {
 	return nil
 }
 
+func statAll(storer Storer, paths []string) ([]os.FileInfo, []error) {
+	files := make([]*FileRecord, len(paths))
+	for i := range files {
+		files[i] = new(FileRecord)
+	}
+
+	infos := make([]os.FileInfo, len(files))
+	errs := GetFileRecords(storer, paths, files)
+	for i := range files {
+		infos[i] = FileInfo{Record: files[i], Path: paths[i]}
+	}
+	return infos, errs
+}
+
 // findMissingDirs returns all paths that must be created, in reverse order
 func (fs *Fs) findMissingDirs(path string) ([]string, error) {
 	path = fsutil.NormalizePath(path)
 	var paths []string
-	var files []*FileRecord
 	for currentPath := path; currentPath != afero.FilePathSeparator; currentPath = filepath.Dir(currentPath) {
 		paths = append(paths, currentPath)
-		files = append(files, new(FileRecord))
 	}
 	paths = append(paths, afero.FilePathSeparator)
-	files = append(files, new(FileRecord))
-
-	infos := make([]os.FileInfo, len(files))
-	errs := GetFileRecords(fs.Storer, paths, files)
-	for i := range files {
-		infos[i] = FileInfo{Record: files[i], Path: paths[i]}
-	}
+	infos, errs := statAll(fs.Storer, paths)
 
 	var missingDirs []string
 	for i := range paths {

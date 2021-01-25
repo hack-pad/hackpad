@@ -212,14 +212,15 @@ func (f *File) Readdir(count int) ([]os.FileInfo, error) {
 		return nil, err
 	}
 
-	var infos []os.FileInfo
-	for _, name := range names {
-		path := filepath.Join(f.path, name)
-		info, err := f.storer.fs.Stat(path)
+	paths := make([]string, len(names))
+	for i, name := range names {
+		paths[i] = filepath.Join(f.path, name)
+	}
+	infos, errs := statAll(f.storer, paths)
+	for _, err := range errs {
 		if err != nil {
 			return nil, err
 		}
-		infos = append(infos, info)
 	}
 	return infos, nil
 }
