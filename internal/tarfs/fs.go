@@ -102,14 +102,16 @@ func (fs *Fs) downloadGzipErr(r io.Reader) error {
 		}
 
 		if info.IsDir() {
-			destInfo, err := fs.underlyingFs.Stat(path)
-			if err == nil && destInfo.IsDir() {
-				err = fs.underlyingFs.Chmod(path, info.Mode())
-			} else {
-				err = fs.underlyingFs.Mkdir(path, info.Mode())
-			}
+			// assume dir does not exist yet, then chmod if it does exist
+			err = fs.underlyingFs.Mkdir(path, info.Mode())
 			if err != nil {
-				return errors.Wrap(err, "copying dir")
+				if !os.IsExist(err) {
+					return errors.Wrap(err, "copying dir")
+				}
+				err = fs.underlyingFs.Chmod(path, info.Mode())
+				if err != nil {
+					return errors.Wrap(err, "copying dir")
+				}
 			}
 		} else {
 			f, err := fs.underlyingFs.OpenFile(path, syscall.O_WRONLY|syscall.O_CREAT|syscall.O_TRUNC, info.Mode())
