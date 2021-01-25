@@ -67,7 +67,10 @@ func (h *history) Push(command string) error {
 }
 
 func (h *history) mostRecentCommand() string {
-	return h.lines[len(h.lines)-1]
+	if len(h.lines) > 0 {
+		return h.lines[len(h.lines)-1]
+	}
+	return ""
 }
 
 func (h *history) Previous() (command string, ok bool) {
