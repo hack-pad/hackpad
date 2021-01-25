@@ -52,7 +52,7 @@ func loadHistoryFile() ([]string, error) {
 func (h *history) Push(command string) error {
 	command = strings.TrimSpace(command)
 	h.lastIndex = 0
-	if command == "" {
+	if command == "" || command == h.mostRecentCommand() {
 		return nil
 	}
 
@@ -64,6 +64,10 @@ func (h *history) Push(command string) error {
 	defer f.Close()
 	_, err = f.WriteString(command + "\n")
 	return err
+}
+
+func (h *history) mostRecentCommand() string {
+	return h.lines[len(h.lines)-1]
 }
 
 func (h *history) Previous() (command string, ok bool) {
