@@ -69,15 +69,19 @@ func (t *Transaction) prepareAwait() promise.Promise {
 	errFunc = js.FuncOf(func(this js.Value, args []js.Value) interface{} {
 		err := t.jsTransaction.Get("error")
 		t.jsTransaction.Call("abort")
-		errFunc.Release()
-		completeFunc.Release()
-		reject(err)
+		go func() {
+			errFunc.Release()
+			completeFunc.Release()
+			reject(err)
+		}()
 		return nil
 	})
 	completeFunc = js.FuncOf(func(this js.Value, args []js.Value) interface{} {
-		errFunc.Release()
-		completeFunc.Release()
-		resolve(nil)
+		go func() {
+			errFunc.Release()
+			completeFunc.Release()
+			resolve(nil)
+		}()
 		return nil
 	})
 	t.jsTransaction.Call("addEventListener", "error", errFunc)
