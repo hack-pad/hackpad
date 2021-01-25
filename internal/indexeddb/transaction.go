@@ -32,11 +32,15 @@ func (m TransactionMode) JSValue() js.Value {
 }
 
 type Transaction struct {
-	jsTransaction js.Value
+	jsTransaction  js.Value
+	jsObjectStores map[string]*ObjectStore
 }
 
 func wrapTransaction(jsTransaction js.Value) *Transaction {
-	return &Transaction{jsTransaction: jsTransaction}
+	return &Transaction{
+		jsTransaction:  jsTransaction,
+		jsObjectStores: make(map[string]*ObjectStore),
+	}
 }
 
 func (t *Transaction) Abort() (err error) {
@@ -46,9 +50,14 @@ func (t *Transaction) Abort() (err error) {
 }
 
 func (t *Transaction) ObjectStore(name string) (_ *ObjectStore, err error) {
+	if store, ok := t.jsObjectStores[name]; ok {
+		return store, nil
+	}
 	defer catch(&err)
 	jsObjectStore := t.jsTransaction.Call("objectStore", name)
-	return newObjectStore(t, jsObjectStore), nil
+	store := newObjectStore(t, jsObjectStore)
+	t.jsObjectStores[name] = store
+	return store, nil
 }
 
 func (t *Transaction) Commit() (err error) {
