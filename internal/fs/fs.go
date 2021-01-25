@@ -2,13 +2,13 @@ package fs
 
 import (
 	"archive/zip"
-	"fmt"
 	"io"
 	"os"
 
 	"github.com/johnstarich/go-wasm/internal/mountfs"
 	"github.com/johnstarich/go-wasm/internal/storer"
 	"github.com/johnstarich/go-wasm/internal/tarfs"
+	"github.com/johnstarich/go/datasize"
 	"github.com/spf13/afero"
 	"github.com/spf13/afero/zipfs"
 )
@@ -73,5 +73,5 @@ func Dump(basePath string) interface{} {
 	if err != nil {
 		return err
 	}
-	return fmt.Sprintf("%d bytes", total)
+	return datasize.Bytes(total).String()
 }
