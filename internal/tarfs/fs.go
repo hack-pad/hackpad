@@ -99,6 +99,18 @@ func (fs *Fs) downloadGzipErr(r io.Reader) error {
 	bigPool := bufferpool.New(bigBufMemory, bigBufCount)
 	defer runtime.GC() // forcefully clean up memory pools
 
+	mkdirCache := make(map[string]bool)
+	cachedMkdirAll := func(path string, perm os.FileMode) error {
+		if _, ok := mkdirCache[path]; ok {
+			return nil
+		}
+		err := fs.underlyingFs.MkdirAll(path, perm)
+		if err == nil {
+			mkdirCache[path] = true
+		}
+		return err
+	}
+
 	var wg sync.WaitGroup
 	errs := make(chan error, 1)
 	for {
@@ -120,7 +132,7 @@ func (fs *Fs) downloadGzipErr(r io.Reader) error {
 		info := header.FileInfo()
 
 		dir := fsutil.NormalizePath(filepath.Dir(path))
-		err = fs.underlyingFs.MkdirAll(dir, 0700)
+		err = cachedMkdirAll(dir, 0700)
 		if err != nil {
 			return errors.Wrap(err, "prepping base dir")
 		}

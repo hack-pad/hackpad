@@ -57,10 +57,6 @@ func (fs *Fs) newDir(name string, perm os.FileMode) *File {
 }
 
 func (fs *Fs) MkdirAll(path string, perm os.FileMode) error {
-	if info, err := fs.Stat(path); err == nil && info.IsDir() {
-		// fast track the exists path
-		return nil
-	}
 	missingDirs, err := fs.findMissingDirs(path)
 	if err != nil {
 		return err
