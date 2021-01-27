@@ -86,12 +86,13 @@ func (fs *Fs) downloadGzipErr(r io.Reader) error {
 	archive := tar.NewReader(compressor)
 	const (
 		mebibyte       = 1 << 20
-		maxMemory      = 64 * mebibyte
-		bigBufMemory   = 16 * mebibyte
-		smallBufMemory = 1 * mebibyte
+		kibibyte       = 1 << 10
+		maxMemory      = 20 * mebibyte
+		bigBufMemory   = 4 * mebibyte
+		smallBufMemory = 150 * kibibyte
 
-		// at least 1 big and small buffer, then most of memory goes to the small ones
-		bigBufCount   = 2
+		// at least a couple big and small buffers, then a large quantity of small ones make up the remainder
+		bigBufCount   = maxMemory/bigBufMemory - 2
 		smallBufCount = (maxMemory - bigBufCount*bigBufMemory) / smallBufMemory
 	)
 	smallPool := bufferpool.New(smallBufMemory, smallBufCount)
