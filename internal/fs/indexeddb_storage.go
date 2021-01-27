@@ -168,7 +168,8 @@ func (i *indexedDBStorer) GetFileRecords(paths []string, dest []*storer.FileReco
 
 	calls := make([]func(*indexeddb.Transaction) js.Value, len(paths))
 	for ix := range paths {
-		calls[ix] = indexeddb.BatchGet(idbFileInfoStore, i.jsPaths.Value(paths[ix]))
+		p := fsutil.NormalizePath(paths[ix])
+		calls[ix] = indexeddb.BatchGet(idbFileInfoStore, i.jsPaths.Value(p))
 	}
 
 	log.Debug("Loading file infos from JS: ", paths)
