@@ -41,7 +41,11 @@ type FileRecord struct {
 	data     blob.Blob
 	DataFn   func() (blob.Blob, error)
 
-	DirNames    []string
+	dirNamesOnce sync.Once
+	dirNamesDone atomic.Bool
+	dirNames     []string
+	DirNamesFn   func() ([]string, error)
+
 	InitialSize int64 // fallback size, enables lazy-loaded Data
 	ModTime     time.Time
 	Mode        os.FileMode
@@ -57,6 +61,18 @@ func (f *FileRecord) Data() blob.Blob {
 	}
 	f.dataDone.Store(true)
 	return f.data
+}
+
+func (f *FileRecord) DirNames() []string {
+	var err error
+	f.dirNamesOnce.Do(func() {
+		f.dirNames, err = f.DirNamesFn()
+	})
+	if err != nil {
+		panic(err) // dirNames fn should never fail. IDB dirNames will only fail if types are wrong
+	}
+	f.dirNamesDone.Store(true)
+	return f.dirNames
 }
 
 func (f *FileRecord) Size() int64 {
@@ -226,23 +242,23 @@ func (f *File) Readdir(count int) ([]os.FileInfo, error) {
 }
 
 func (f *File) Readdirnames(count int) ([]string, error) {
-	if count > 0 && f.dirCount == len(f.DirNames) {
+	if count > 0 && f.dirCount == len(f.DirNames()) {
 		return nil, io.EOF
 	}
 
 	endCount := f.dirCount + count
-	if count <= 0 || endCount > len(f.DirNames) {
-		endCount = len(f.DirNames)
+	if count <= 0 || endCount > len(f.DirNames()) {
+		endCount = len(f.DirNames())
 	}
 
 	// create sorted copy of dir child names
-	allNames := make([]string, len(f.DirNames))
-	copy(allNames, f.DirNames)
+	allNames := make([]string, len(f.DirNames()))
+	copy(allNames, f.DirNames())
 	sort.Strings(allNames)
 
 	names := allNames[f.dirCount:endCount]
 	f.dirCount = endCount
-	if count > 0 && f.dirCount == len(f.DirNames) {
+	if count > 0 && f.dirCount == len(f.DirNames()) {
 		return names, io.EOF
 	}
 	return names, nil

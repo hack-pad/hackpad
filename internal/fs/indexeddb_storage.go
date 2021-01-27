@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime/debug"
 	"sort"
 	"syscall"
 	"syscall/js"
@@ -25,6 +26,7 @@ const (
 	idbVersion           = 1
 	idbFileContentsStore = "contents"
 	idbFileInfoStore     = "info"
+	idbParentKey         = "Parent"
 )
 
 type IndexedDBFs struct {
@@ -37,7 +39,11 @@ func NewIndexedDBFs(name string) (_ *IndexedDBFs, err error) {
 		if err != nil {
 			return err
 		}
-		_, err = db.CreateObjectStore(idbFileInfoStore, indexeddb.ObjectStoreOptions{})
+		infos, err := db.CreateObjectStore(idbFileInfoStore, indexeddb.ObjectStoreOptions{})
+		if err != nil {
+			return err
+		}
+		_, err = infos.CreateIndex(idbParentKey, js.ValueOf(idbParentKey), indexeddb.IndexOptions{})
 		return err
 	})
 	if err != nil {
@@ -79,17 +85,20 @@ func (i *indexedDBStorer) extractFileRecord(path string, value js.Value, err err
 		return err
 	}
 	dest.InitialSize = int64(i.jsProperties.GetProperty(value, "Size").Int())
-	dest.DirNames = interop.StringsFromJSValue(i.jsProperties.GetProperty(value, "DirNames"))
 	dest.ModTime = time.Unix(int64(i.jsProperties.GetProperty(value, "ModTime").Int()), 0)
 	dest.Mode = os.FileMode(i.jsProperties.GetProperty(value, "Mode").Int())
 	if dest.Mode.IsDir() {
-		log.Debug("Setting no-op directory data fetcher for path ", path)
+		log.Debug("Setting directory data fetchers for path ", path)
 		dest.DataFn = func() (blob.Blob, error) {
 			return blob.NewFromBytes(nil), nil
 		}
+		dest.DirNamesFn = i.getDirNames(path)
 	} else {
-		log.Debug("Setting file data fetcher for path ", path)
+		log.Debug("Setting file data fetchers for path ", path)
 		dest.DataFn = i.getFileData(path)
+		dest.DirNamesFn = func() ([]string, error) {
+			return nil, nil
+		}
 	}
 	log.Debug("File loaded: ", path)
 	return nil
@@ -114,6 +123,39 @@ func (i *indexedDBStorer) getFileData(path string) func() (blob.Blob, error) {
 			return nil, err
 		}
 		return blob.NewFromJS(value)
+	}
+}
+
+func (i *indexedDBStorer) getDirNames(path string) func() ([]string, error) {
+	return func() (_ []string, err error) {
+		defer func() {
+			common.CatchException(&err)
+			if err != nil {
+				log.Error(err, "\n", string(debug.Stack()))
+			}
+		}()
+		txn, err := i.db.Transaction(indexeddb.TransactionReadOnly, idbFileInfoStore)
+		if err != nil {
+			return nil, err
+		}
+		files, err := txn.ObjectStore(idbFileInfoStore)
+		if err != nil {
+			return nil, err
+		}
+
+		parentIndex, err := files.Index(idbParentKey)
+		if err != nil {
+			return nil, err
+		}
+		jsKeys, err := parentIndex.GetAllKeys(i.jsPaths.Value(path))
+		var keys []string
+		if err == nil {
+			keys = interop.StringsFromJSValue(jsKeys)
+			for i := range keys {
+				keys[i] = filepath.Base(keys[i])
+			}
+		}
+		return keys, err
 	}
 }
 
@@ -149,31 +191,7 @@ func (i *indexedDBStorer) SetFileRecord(path string, data *storer.FileRecord) er
 	if data == nil && isRoot {
 		return syscall.ENOSYS // cannot delete root dir
 	}
-	deleted, err := i.setFile(path, data)
-	if err != nil {
-		return err
-	}
-
-	// update parent dir's entries
-	if isRoot {
-		return nil // root directory does not have a parent dir
-	}
-	dir := filepath.Dir(path)
-	if dir == "." {
-		dir = afero.FilePathSeparator
-	}
-	base := filepath.Base(path)
-	var parentData storer.FileRecord
-	err = i.GetFileRecord(dir, &parentData)
-	if err != nil || !parentData.Mode.IsDir() {
-		return err
-	}
-	if deleted {
-		parentData.DirNames = removePath(parentData.DirNames, base)
-	} else {
-		parentData.DirNames = addPath(parentData.DirNames, base)
-	}
-	_, err = i.setFile(dir, &parentData)
+	_, err := i.setFile(path, data)
 	return err
 }
 
@@ -207,15 +225,18 @@ func (i *indexedDBStorer) setFile(path string, data *storer.FileRecord) (deleted
 			i.jsPaths.Value(path), data.Data().JSValue(),
 		))
 	}
+	fileInfo := map[string]interface{}{
+		"ModTime": data.ModTime.Unix(),
+		"Mode":    uint32(data.Mode),
+		"Size":    data.Size(),
+	}
+	if path != afero.FilePathSeparator {
+		fileInfo[idbParentKey] = filepath.Dir(path)
+	}
 	v = append(v, indexeddb.BatchPut(
 		idbFileInfoStore,
 		i.jsPaths.Value(path),
-		js.ValueOf(map[string]interface{}{
-			"DirNames": interop.SliceFromStrings(data.DirNames),
-			"ModTime":  data.ModTime.Unix(),
-			"Mode":     uint32(data.Mode),
-			"Size":     data.Size(),
-		}),
+		js.ValueOf(fileInfo),
 	))
 	_, err = i.db.BatchTransaction(
 		indexeddb.TransactionReadWrite,
