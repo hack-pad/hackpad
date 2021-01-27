@@ -182,7 +182,7 @@ func (fs *Fs) Remove(name string) error {
 		return fs.wrapperErr("remove", name, err)
 	}
 
-	if file.Mode.IsDir() && len(file.DirNames) != 0 {
+	if file.Mode.IsDir() && len(file.DirNames()) != 0 {
 		return &os.PathError{Op: "remove", Path: name, Err: syscall.ENOTEMPTY}
 	}
 	return fs.fileStorer.SetFile(name, nil)

@@ -52,7 +52,7 @@ func (o *ObjectStore) CreateIndex(name string, keyPath js.Value, options IndexOp
 		"unique":     options.Unique,
 		"multiEntry": options.MultiEntry,
 	})
-	return &Index{jsIndex: jsIndex}, nil
+	return wrapIndex(o.transaction, jsIndex), nil
 }
 
 func (o *ObjectStore) Delete(key js.Value) (err error) {
@@ -76,6 +76,14 @@ func (o *ObjectStore) Get(key js.Value) (val js.Value, err error) {
 	return await(prom)
 }
 
+func (o *ObjectStore) GetAllKeys(query js.Value) (vals js.Value, err error) {
+	defer catch(&err)
+	req := o.jsObjectStore.Call("getAllKeys", query)
+	o.transaction.Commit()
+	prom := processRequest(req)
+	return await(prom)
+}
+
 func (o *ObjectStore) GetKey(value js.Value) (val js.Value, err error) {
 	defer catch(&err)
 	req := o.jsObjectStore.Call("getKey", value)
@@ -86,7 +94,7 @@ func (o *ObjectStore) GetKey(value js.Value) (val js.Value, err error) {
 func (o *ObjectStore) Index(name string) (index *Index, err error) {
 	defer catch(&err)
 	jsIndex := o.jsObjectStore.Call("index", name)
-	return &Index{jsIndex: jsIndex}, nil
+	return wrapIndex(o.transaction, jsIndex), nil
 }
 
 func (o *ObjectStore) OpenCursor(key js.Value, direction CursorDirection) (cursor *Cursor, err error) {
