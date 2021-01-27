@@ -251,8 +251,9 @@ func touch(term console.Console, args ...string) error {
 	if len(args) == 0 {
 		return errors.New("Not enough args")
 	}
+	now := time.Now()
 	for _, path := range args {
-		_, err := os.Stat(path)
+		err := os.Chtimes(path, now, now)
 		if err != nil && !os.IsNotExist(err) {
 			return err
 		}
