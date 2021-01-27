@@ -7,7 +7,10 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
+
+	"github.com/johnstarich/go/datasize"
 )
 
 func main() {
@@ -68,7 +71,7 @@ func archiveGo(goRoot string, w io.Writer) error {
 	}
 
 	stats, err := walkGo(goRoot, doFile)
-	fmt.Fprintf(os.Stderr, "Stats: %+v\n", stats)
+	fmt.Fprintf(os.Stderr, "Stats: %s\n", stats)
 	if err != nil {
 		return err
 	}
@@ -80,10 +83,38 @@ func archiveGo(goRoot string, w io.Writer) error {
 	return compressor.Close()
 }
 
+type Int64Slice []int64
+
+func (p Int64Slice) Len() int           { return len(p) }
+func (p Int64Slice) Less(i, j int) bool { return p[i] < p[j] }
+func (p Int64Slice) Swap(i, j int)      { p[i], p[j] = p[j], p[i] }
+
 type Stats struct {
 	Visited      int
 	SkippedDirs  int
 	IgnoredFiles int
+
+	sizes []int64
+}
+
+func (s Stats) SizeMetrics() (mean, median, max float64) {
+	sort.Sort(Int64Slice(s.sizes))
+	var total float64
+	for _, num := range s.sizes {
+		total += float64(num)
+		if n := float64(num); n > max {
+			max = n
+		}
+	}
+	return total / float64(len(s.sizes)), float64(s.sizes[len(s.sizes)/2]), max
+}
+
+func (s Stats) String() string {
+	mean, median, max := s.SizeMetrics()
+	size := func(i int64) string {
+		return datasize.Bytes(int64(i)).String()
+	}
+	return fmt.Sprintf("mean=%v, median=%v, max=%v, 90th%%=%v, 99th%%=%v, visited=%v, skipped dirs=%v ignored files=%v", size(int64(mean)), size(int64(median)), size(int64(max)), size(s.sizes[len(s.sizes)*90/100]), size(s.sizes[len(s.sizes)*99/100]), s.Visited, s.SkippedDirs, s.IgnoredFiles)
 }
 
 // walkGo walks through a Go sources directory root and runs 'do' on files to archive.
@@ -94,6 +125,8 @@ func walkGo(goRoot string, do func(string, os.FileInfo) error) (Stats, error) {
 		if err != nil {
 			return err
 		}
+
+		stats.sizes = append(stats.sizes, info.Size())
 
 		switch {
 		case path == ".":
