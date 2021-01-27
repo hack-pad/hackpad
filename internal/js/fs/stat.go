@@ -40,7 +40,7 @@ func jsStat(info os.FileInfo) interface{} {
 		return nil
 	}
 	const blockSize = 4096 // TODO find useful value for blksize
-	modTime := info.ModTime().UnixNano() / 1000
+	modTime := info.ModTime().UnixNano() / 1e6
 	return map[string]interface{}{
 		"dev":     0,
 		"ino":     0,
