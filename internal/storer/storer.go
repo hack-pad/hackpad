@@ -43,11 +43,27 @@ func (f *fileStorer) GetFile(path string) (*File, error) {
 
 // SetFile write the 'file' data to the store at 'path'. If 'file' is nil, the file is deleted.
 func (f *fileStorer) SetFile(path string, file *fileData) error {
-	path = fsutil.NormalizePath(path)
 	if file == nil {
 		return f.SetFileRecord(path, nil)
 	}
 	return f.SetFileRecord(path, &file.FileRecord)
+}
+
+func (f *fileStorer) GetFiles(paths ...string) ([]*File, []error) {
+	fileRecords := make([]*FileRecord, len(paths))
+	files := make([]*File, len(paths))
+	for i := range files {
+		path := fsutil.NormalizePath(paths[i])
+		files[i] = &File{
+			fileData: &fileData{
+				path:   path,
+				storer: f,
+			},
+		}
+		fileRecords[i] = &files[i].FileRecord
+	}
+	errs := GetFileRecords(f.Storer, paths, fileRecords)
+	return files, errs
 }
 
 func GetFileRecords(s Storer, paths []string, dest []*FileRecord) []error {

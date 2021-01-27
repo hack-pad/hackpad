@@ -134,7 +134,12 @@ func (fs *Fs) Open(name string) (afero.File, error) {
 }
 
 func (fs *Fs) OpenFile(name string, flag int, perm os.FileMode) (afFile afero.File, retErr error) {
-	storerFile, err := fs.fileStorer.GetFile(name)
+	paths := []string{name}
+	if flag&os.O_CREATE != 0 {
+		paths = append(paths, filepath.Dir(name))
+	}
+	files, errs := fs.fileStorer.GetFiles(paths...)
+	storerFile, err := files[0], errs[0]
 	switch {
 	case err == nil:
 		if storerFile.info().IsDir() && flag&os.O_WRONLY != 0 {
@@ -144,7 +149,7 @@ func (fs *Fs) OpenFile(name string, flag int, perm os.FileMode) (afFile afero.Fi
 		storerFile.flag = flag
 	case os.IsNotExist(err) && flag&os.O_CREATE != 0:
 		// require parent directory
-		_, err := fs.fileStorer.GetFile(filepath.Dir(name))
+		err := errs[1]
 		if err != nil {
 			return nil, fs.wrapperErr("stat", name, err)
 		}
