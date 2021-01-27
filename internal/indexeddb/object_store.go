@@ -153,28 +153,21 @@ func (db *DB) BatchTransaction(
 		js.Value
 	}
 	results := make(chan indexedResult, len(calls))
-	fn := func() {}
-	for i := len(calls) - 1; i >= 0; i-- {
+	for i, call := range calls {
 		index := i
-		prevFn := fn
-		call := calls[i]
-		lastCall := i == len(calls)-1
-		fn = func() {
-			request := call(txn)
-			if lastCall {
-				go txn.Commit()
-			}
-			request.Call("addEventListener", "success", interop.SingleUseFunc(func(this js.Value, args []js.Value) interface{} {
-				go func() {
-					result := args[0].Get("result")
-					results <- indexedResult{index, result}
-				}()
-				prevFn() // must not run prevFn as async, otherwise txn will commit early
-				return nil
-			}))
-		}
+		request := call(txn)
+		request.Call("addEventListener", "success", interop.SingleUseFunc(func(this js.Value, args []js.Value) interface{} {
+			go func() {
+				result := request.Get("result")
+				results <- indexedResult{index, result}
+			}()
+			return nil
+		}))
 	}
-	fn()
+	err = txn.Commit()
+	if err != nil {
+		return nil, err
+	}
 	err = txn.Await()
 	var resultSlice []js.Value
 	if err == nil {
