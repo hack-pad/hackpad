@@ -219,8 +219,10 @@ func (i *indexedDBStorer) setFile(path string, data *storer.FileRecord) (deleted
 		}
 	}
 
+	objStores := []string{idbFileInfoStore}
 	var v []func(*indexeddb.Transaction) js.Value
 	if !data.Mode.IsDir() {
+		objStores = append(objStores, idbFileContentsStore)
 		v = append(v, indexeddb.BatchPut(
 			idbFileContentsStore,
 			i.jsPaths.Value(path), data.Data().JSValue(),
@@ -241,7 +243,7 @@ func (i *indexedDBStorer) setFile(path string, data *storer.FileRecord) (deleted
 	))
 	_, err = i.db.BatchTransaction(
 		indexeddb.TransactionReadWrite,
-		[]string{idbFileContentsStore, idbFileInfoStore},
+		objStores,
 		v...,
 	)
 	return false, err
