@@ -86,7 +86,7 @@ func (i *indexedDBStorer) extractFileRecord(path string, value js.Value, err err
 	}
 	dest.InitialSize = int64(i.jsProperties.GetProperty(value, "Size").Int())
 	dest.ModTime = time.Unix(int64(i.jsProperties.GetProperty(value, "ModTime").Int()), 0)
-	dest.Mode = os.FileMode(i.jsProperties.GetProperty(value, "Mode").Int())
+	dest.Mode = i.getMode(value)
 	if dest.Mode.IsDir() {
 		log.Debug("Setting directory data fetchers for path ", path)
 		dest.DataFn = func() (blob.Blob, error) {
@@ -159,6 +159,11 @@ func (i *indexedDBStorer) getDirNames(path string) func() ([]string, error) {
 	}
 }
 
+func (i *indexedDBStorer) getMode(fileRecord js.Value) os.FileMode {
+	mode := i.jsProperties.GetProperty(fileRecord, "Mode")
+	return os.FileMode(mode.Int())
+}
+
 func (i *indexedDBStorer) GetFileRecords(paths []string, dest []*storer.FileRecord) (errs []error) {
 	if len(paths) != len(dest) {
 		panic(fmt.Sprintf("indexedDBStorer: Paths and dest lengths must be equal: %d != %d", len(paths), len(dest)))
@@ -207,21 +212,17 @@ func (i *indexedDBStorer) setFile(path string, data *storer.FileRecord) (deleted
 		return true, err
 	}
 
-	dir := filepath.Dir(path)
-	if dir != "" && dir != afero.FilePathSeparator {
-		var parentData storer.FileRecord
-		err := i.GetFileRecord(dir, &parentData)
-		if err != nil {
-			return false, err
-		}
-		if !parentData.Mode.IsDir() {
-			return false, syscall.ENOTDIR
-		}
-	}
-
 	objStores := []string{idbFileInfoStore}
 	var v []func(*indexeddb.Transaction) js.Value
+
+	// verify a parent directory exists (except for root dir)
+	dir := filepath.Dir(path)
+	if dir != "" && dir != afero.FilePathSeparator {
+		v = append(v, i.batchRequireDir(dir))
+	}
+
 	if !data.Mode.IsDir() {
+		// this is a file, so include file contents
 		objStores = append(objStores, idbFileContentsStore)
 		v = append(v, indexeddb.BatchPut(
 			idbFileContentsStore,
@@ -236,6 +237,7 @@ func (i *indexedDBStorer) setFile(path string, data *storer.FileRecord) (deleted
 	if path != afero.FilePathSeparator {
 		fileInfo[idbParentKey] = filepath.Dir(path)
 	}
+	// include metadata update
 	v = append(v, indexeddb.BatchPut(
 		idbFileInfoStore,
 		i.jsPaths.Value(path),
@@ -246,6 +248,12 @@ func (i *indexedDBStorer) setFile(path string, data *storer.FileRecord) (deleted
 		objStores,
 		v...,
 	)
+	if err != nil {
+		// TODO Verify if AbortError type. If it isn't, then don't replace with syscall.ENOTDIR.
+		// Should be the only reason for an abort. Later use an error handling mechanism in indexeddb pkg.
+		log.Error("Aborted set file: ", err)
+		err = syscall.ENOTDIR
+	}
 	return false, err
 }
 
@@ -269,4 +277,23 @@ func addPath(paths []string, path string) []string {
 	paths = append(paths, path)
 	sort.Strings(paths)
 	return paths
+}
+
+func (i *indexedDBStorer) batchRequireDir(path string) func(*indexeddb.Transaction) js.Value {
+	batchGet := indexeddb.BatchGet(idbFileInfoStore, i.jsPaths.Value(path))
+	return func(txn *indexeddb.Transaction) js.Value {
+		req := batchGet(txn)
+		req.Call("addEventListener", "success", interop.SingleUseFunc(func(this js.Value, args []js.Value) interface{} {
+			result := req.Get("result")
+			mode := i.getMode(result)
+			if !mode.IsDir() {
+				err := txn.Abort()
+				if err != nil {
+					panic(err)
+				}
+			}
+			return nil
+		}))
+		return req
+	}
 }
