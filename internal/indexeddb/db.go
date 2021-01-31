@@ -15,7 +15,8 @@ var (
 )
 
 type DB struct {
-	jsDB js.Value
+	jsDB    js.Value
+	jsFuncs interop.CallCache
 }
 
 func DeleteDatabase(name string) error {
@@ -93,6 +94,6 @@ func (db *DB) Close() (err error) {
 
 func (db *DB) Transaction(mode TransactionMode, objectStoreNames ...string) (_ *Transaction, err error) {
 	defer catch(&err)
-	jsTxn := db.jsDB.Call("transaction", interop.SliceFromStrings(objectStoreNames), mode)
+	jsTxn := db.jsFuncs.Call(db.jsDB, "transaction", interop.SliceFromStrings(objectStoreNames), mode)
 	return wrapTransaction(jsTxn), nil
 }
