@@ -92,7 +92,7 @@ func (fs *Fs) downloadGzipErr(r io.Reader) error {
 		smallBufMemory = 150 * kibibyte
 
 		// at least a couple big and small buffers, then a large quantity of small ones make up the remainder
-		bigBufCount   = maxMemory/bigBufMemory - 2
+		bigBufCount   = 2
 		smallBufCount = (maxMemory - bigBufCount*bigBufMemory) / smallBufMemory
 	)
 	smallPool := bufferpool.New(smallBufMemory, smallBufCount)
@@ -139,16 +139,22 @@ func (fs *Fs) downloadGzipErr(r io.Reader) error {
 
 		if info.IsDir() {
 			// assume dir does not exist yet, then chmod if it does exist
-			err = fs.underlyingFs.Mkdir(path, info.Mode())
-			if err != nil {
-				if !os.IsExist(err) {
-					return errors.Wrap(err, "copying dir")
-				}
-				err = fs.underlyingFs.Chmod(path, info.Mode())
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				err := fs.underlyingFs.Mkdir(path, info.Mode())
 				if err != nil {
-					return errors.Wrap(err, "copying dir")
+					if !os.IsExist(err) {
+						errs <- errors.Wrap(err, "copying dir")
+						return
+					}
+					err = fs.underlyingFs.Chmod(path, info.Mode())
+					if err != nil {
+						errs <- errors.Wrap(err, "copying dir")
+						return
+					}
 				}
-			}
+			}()
 		} else {
 			reader := fullReader{archive} // fullReader: call f.Write as few times as possible, since large files are expensive
 			// read once. if we reached EOF, then write it to fs asynchronously
@@ -178,6 +184,7 @@ func (fs *Fs) downloadGzipErr(r io.Reader) error {
 			}
 		}
 	}
+
 	done := make(chan struct{})
 	go func() {
 		wg.Wait()
