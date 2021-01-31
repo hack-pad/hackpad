@@ -40,16 +40,8 @@ func (fs *Fs) Create(name string) (afero.File, error) {
 }
 
 func (fs *Fs) Mkdir(name string, perm os.FileMode) error {
-	_, err := fs.fileStorer.GetFile(name)
-	switch {
-	case err == nil:
-		return &os.PathError{Op: "mkdir", Path: name, Err: os.ErrExist}
-	case os.IsNotExist(err):
-		file := fs.newDir(name, perm)
-		return fs.wrapperErr("mkdir", name, file.save())
-	default:
-		return &os.PathError{Op: "mkdir", Path: name, Err: err}
-	}
+	file := fs.newDir(name, perm)
+	return fs.wrapperErr("mkdir", name, file.save())
 }
 
 func (fs *Fs) newDir(name string, perm os.FileMode) *File {
