@@ -4,8 +4,6 @@ package indexeddb
 
 import (
 	"syscall/js"
-
-	"github.com/johnstarich/go-wasm/internal/interop"
 )
 
 type ObjectStoreOptions struct {
@@ -156,21 +154,9 @@ func (db *DB) BatchTransaction(
 	if err != nil {
 		return nil, err
 	}
-	type indexedResult struct {
-		int
-		js.Value
-	}
-	results := make(chan indexedResult, len(calls))
+	requests := make([]js.Value, len(calls))
 	for i, call := range calls {
-		index := i
-		request := call(txn)
-		request.Call("addEventListener", "success", interop.SingleUseFunc(func(this js.Value, args []js.Value) interface{} {
-			go func() {
-				result := request.Get("result")
-				results <- indexedResult{index, result}
-			}()
-			return nil
-		}))
+		requests[i] = call(txn)
 	}
 	err = txn.Commit()
 	if err != nil {
@@ -180,9 +166,8 @@ func (db *DB) BatchTransaction(
 	var resultSlice []js.Value
 	if err == nil {
 		resultSlice = make([]js.Value, len(calls))
-		for range resultSlice {
-			result := <-results
-			resultSlice[result.int] = result.Value
+		for i := range resultSlice {
+			resultSlice[i] = requests[i].Get("result")
 		}
 	}
 	return resultSlice, err
