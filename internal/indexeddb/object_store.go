@@ -114,33 +114,3 @@ func (o *ObjectStore) Put(key, value js.Value) (err error) {
 	o.transaction.Commit()
 	return o.transaction.Await()
 }
-
-func BatchGet(objectStore string, key js.Value) func(*Transaction) js.Value {
-	return func(txn *Transaction) js.Value {
-		o, err := txn.ObjectStore(objectStore)
-		if err != nil {
-			panic(err)
-		}
-		return o.jsObjectStore.Call("get", key)
-	}
-}
-
-func BatchPut(objectStore string, key, value js.Value) func(*Transaction) js.Value {
-	return func(txn *Transaction) js.Value {
-		o, err := txn.ObjectStore(objectStore)
-		if err != nil {
-			panic(err)
-		}
-		return o.jsObjectStore.Call("put", value, key)
-	}
-}
-
-func BatchDelete(objectStore string, key js.Value) func(*Transaction) js.Value {
-	return func(txn *Transaction) js.Value {
-		o, err := txn.ObjectStore(objectStore)
-		if err != nil {
-			panic(err)
-		}
-		return o.jsObjectStore.Call("delete", key)
-	}
-}
