@@ -12,7 +12,7 @@ type Queue struct {
 	ops chan opRunner
 }
 
-type Op = func(*indexeddb.Transaction) js.Value
+type Op = func(*indexeddb.Transaction) *indexeddb.Request
 
 func New(size int) *Queue {
 	return &Queue{
@@ -63,7 +63,7 @@ func (q *Queue) Do(db *indexeddb.DB) ([]js.Value, error) {
 	if err == nil {
 		results = make([]js.Value, len(requests))
 		for i := range runners {
-			result := requests[i].Get("result")
+			result := requests[i].Result()
 			runners[i].result <- result
 			results[i] = result
 		}
@@ -88,7 +88,7 @@ func (q *Queue) readOps() []opRunner {
 	}
 }
 
-func runOps(db *indexeddb.DB, mode indexeddb.TransactionMode, storeNames []string, runners []opRunner) (requests []js.Value, err error) {
+func runOps(db *indexeddb.DB, mode indexeddb.TransactionMode, storeNames []string, runners []opRunner) (requests []*indexeddb.Request, err error) {
 	txn, err := db.Transaction(mode, storeNames...)
 	if err != nil {
 		return nil, err

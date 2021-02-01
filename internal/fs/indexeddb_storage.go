@@ -274,12 +274,12 @@ func addPath(paths []string, path string) []string {
 	return paths
 }
 
-func (i *indexedDBStorer) batchRequireDir(path string) func(*indexeddb.Transaction) js.Value {
+func (i *indexedDBStorer) batchRequireDir(path string) func(*indexeddb.Transaction) *indexeddb.Request {
 	batchGet := indexeddb.BatchGet(idbFileInfoStore, i.jsPaths.Value(path))
-	return func(txn *indexeddb.Transaction) js.Value {
+	return func(txn *indexeddb.Transaction) *indexeddb.Request {
 		req := batchGet(txn)
-		req.Call("addEventListener", "success", interop.SingleUseFunc(func(this js.Value, args []js.Value) interface{} {
-			result := req.Get("result")
+		req.ListenSuccess(func() {
+			result := req.Result()
 			mode := i.getMode(result)
 			if !mode.IsDir() {
 				err := txn.Abort()
@@ -287,8 +287,7 @@ func (i *indexedDBStorer) batchRequireDir(path string) func(*indexeddb.Transacti
 					panic(err)
 				}
 			}
-			return nil
-		}))
+		})
 		return req
 	}
 }
