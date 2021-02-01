@@ -144,31 +144,3 @@ func BatchDelete(objectStore string, key js.Value) func(*Transaction) js.Value {
 		return o.jsObjectStore.Call("delete", key)
 	}
 }
-
-func (db *DB) BatchTransaction(
-	mode TransactionMode,
-	objectStoreNames []string,
-	calls ...func(*Transaction) (request js.Value),
-) ([]js.Value, error) {
-	txn, err := db.Transaction(mode, objectStoreNames...)
-	if err != nil {
-		return nil, err
-	}
-	requests := make([]js.Value, len(calls))
-	for i, call := range calls {
-		requests[i] = call(txn)
-	}
-	err = txn.Commit()
-	if err != nil {
-		return nil, err
-	}
-	err = txn.Await()
-	var resultSlice []js.Value
-	if err == nil {
-		resultSlice = make([]js.Value, len(calls))
-		for i := range resultSlice {
-			resultSlice[i] = requests[i].Get("result")
-		}
-	}
-	return resultSlice, err
-}

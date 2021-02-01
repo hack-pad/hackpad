@@ -16,6 +16,7 @@ import (
 	"github.com/johnstarich/go-wasm/internal/common"
 	"github.com/johnstarich/go-wasm/internal/fsutil"
 	"github.com/johnstarich/go-wasm/internal/indexeddb"
+	"github.com/johnstarich/go-wasm/internal/indexeddb/queue"
 	"github.com/johnstarich/go-wasm/internal/interop"
 	"github.com/johnstarich/go-wasm/internal/storer"
 	"github.com/johnstarich/go-wasm/log"
@@ -171,14 +172,17 @@ func (i *indexedDBStorer) GetFileRecords(paths []string, dest []*storer.FileReco
 	errs = make([]error, len(paths))
 	defer common.CatchException(&errs[0])
 
-	calls := make([]func(*indexeddb.Transaction) js.Value, len(paths))
+	q := queue.New(len(paths))
 	for ix := range paths {
 		p := fsutil.NormalizePath(paths[ix])
-		calls[ix] = indexeddb.BatchGet(idbFileInfoStore, i.jsPaths.Value(p))
+		q.Push(
+			indexeddb.TransactionReadOnly,
+			[]string{idbFileInfoStore},
+			indexeddb.BatchGet(idbFileInfoStore, i.jsPaths.Value(p)))
 	}
 
 	log.Debug("Loading file infos from JS: ", paths)
-	infos, err := i.db.BatchTransaction(indexeddb.TransactionReadOnly, []string{idbFileInfoStore}, calls...)
+	infos, err := q.Do(i.db)
 	if err != nil {
 		// error running batch txn, return it in first error slot
 		errs[0] = err
@@ -202,29 +206,24 @@ func (i *indexedDBStorer) SetFileRecord(path string, data *storer.FileRecord) er
 }
 
 func (i *indexedDBStorer) setFile(path string, data *storer.FileRecord) (deleted bool, err error) {
+	const maxQueue = 8 // arbitrarily large. only expect 2-3 operations
+	q := queue.New(maxQueue)
 	if data == nil {
-		_, err = i.db.BatchTransaction(
-			indexeddb.TransactionReadWrite,
-			[]string{idbFileInfoStore, idbFileContentsStore},
-			indexeddb.BatchDelete(idbFileInfoStore, i.jsPaths.Value(path)),
-			indexeddb.BatchDelete(idbFileContentsStore, i.jsPaths.Value(path)),
-		)
+		q.Push(indexeddb.TransactionReadWrite, []string{idbFileInfoStore}, indexeddb.BatchDelete(idbFileInfoStore, i.jsPaths.Value(path)))
+		q.Push(indexeddb.TransactionReadWrite, []string{idbFileContentsStore}, indexeddb.BatchDelete(idbFileContentsStore, i.jsPaths.Value(path)))
+		_, err := q.Do(i.db)
 		return true, err
 	}
-
-	objStores := []string{idbFileInfoStore}
-	var v []func(*indexeddb.Transaction) js.Value
 
 	// verify a parent directory exists (except for root dir)
 	dir := filepath.Dir(path)
 	if dir != "" && dir != afero.FilePathSeparator {
-		v = append(v, i.batchRequireDir(dir))
+		q.Push(indexeddb.TransactionReadOnly, []string{idbFileInfoStore}, i.batchRequireDir(dir))
 	}
 
 	if !data.Mode.IsDir() {
 		// this is a file, so include file contents
-		objStores = append(objStores, idbFileContentsStore)
-		v = append(v, indexeddb.BatchPut(
+		q.Push(indexeddb.TransactionReadWrite, []string{idbFileContentsStore}, indexeddb.BatchPut(
 			idbFileContentsStore,
 			i.jsPaths.Value(path), data.Data().JSValue(),
 		))
@@ -238,16 +237,12 @@ func (i *indexedDBStorer) setFile(path string, data *storer.FileRecord) (deleted
 		fileInfo[idbParentKey] = filepath.Dir(path)
 	}
 	// include metadata update
-	v = append(v, indexeddb.BatchPut(
+	q.Push(indexeddb.TransactionReadWrite, []string{idbFileInfoStore}, indexeddb.BatchPut(
 		idbFileInfoStore,
 		i.jsPaths.Value(path),
 		js.ValueOf(fileInfo),
 	))
-	_, err = i.db.BatchTransaction(
-		indexeddb.TransactionReadWrite,
-		objStores,
-		v...,
-	)
+	_, err = q.Do(i.db)
 	if err != nil {
 		// TODO Verify if AbortError type. If it isn't, then don't replace with syscall.ENOTDIR.
 		// Should be the only reason for an abort. Later use an error handling mechanism in indexeddb pkg.
