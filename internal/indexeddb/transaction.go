@@ -9,6 +9,8 @@ import (
 	"github.com/johnstarich/go-wasm/internal/promise"
 )
 
+var supportsTransactionCommit = js.Global().Get("IDBTransaction").Get("prototype").Get("commit").Truthy()
+
 type TransactionMode int
 
 const (
@@ -61,6 +63,10 @@ func (t *Transaction) ObjectStore(name string) (_ *ObjectStore, err error) {
 }
 
 func (t *Transaction) Commit() (err error) {
+	if !supportsTransactionCommit {
+		return nil
+	}
+
 	defer catch(&err)
 	t.jsTransaction.Call("commit")
 	return nil
