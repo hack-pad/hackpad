@@ -3,13 +3,17 @@
 package queue
 
 import (
+	"context"
+	"sync"
 	"syscall/js"
+	"time"
 
 	"github.com/johnstarich/go-wasm/internal/indexeddb"
 )
 
 type Queue struct {
-	ops chan opRunner
+	ops       chan opRunner
+	startOnce sync.Once
 }
 
 type Op = func(*indexeddb.Transaction) *indexeddb.Request
@@ -89,6 +93,9 @@ func (q *Queue) readOps() []opRunner {
 }
 
 func runOps(db *indexeddb.DB, mode indexeddb.TransactionMode, storeNames []string, runners []opRunner) (requests []*indexeddb.Request, err error) {
+	if len(runners) == 0 {
+		return nil, nil
+	}
 	txn, err := db.Transaction(mode, storeNames...)
 	if err != nil {
 		return nil, err
@@ -104,4 +111,53 @@ func runOps(db *indexeddb.DB, mode indexeddb.TransactionMode, storeNames []strin
 	}
 	err = txn.Await()
 	return requests, err
+}
+
+func (q *Queue) StartAsync(ctx context.Context, interval time.Duration, db *indexeddb.DB) {
+	q.startOnce.Do(func() {
+		go q.runDoLoop(ctx, interval, db)
+	})
+}
+
+func (q *Queue) runDoLoop(ctx context.Context, interval time.Duration, db *indexeddb.DB) {
+	maxSize := float64(cap(q.ops))
+	timer := time.NewTimer(interval)
+	prevInterval := interval
+
+	const (
+		minWaitPercent = 0.2 // must wait at least this long %-wise. needed to refill the queue
+		maxWaitPercent = 100 // max wait, for responsiveness
+	)
+	minInterval := time.Duration(float64(interval) * minWaitPercent)
+	maxInterval := time.Duration(float64(interval) * maxWaitPercent)
+	for {
+		select {
+		case <-ctx.Done():
+			timer.Stop()
+			return
+		case <-timer.C:
+			fillSize := len(q.ops)
+			_, _ = q.Do(db) // errors handled by returned channels from q.Push()
+
+			/*
+				Reduce busy-wait with wait time multiplier:
+
+				use fill % to calculate next wait interval
+
+				low %:    0% filled -> 1.05-0.00 -> 1.05x prev wait
+				         25% filled -> 1.05-0.25 -> 0.80x prev wait
+				         75% filled -> 1.05-0.75 -> 0.30x prev wait
+				high %: 100% filled -> 1.05-1.00 -> 0.05x prev wait
+			*/
+			adjust := 1.05 - float64(fillSize)/maxSize
+			prevInterval = time.Duration(float64(prevInterval) * adjust)
+
+			if prevInterval < minInterval {
+				prevInterval = minInterval
+			} else if prevInterval > maxInterval {
+				prevInterval = maxInterval
+			}
+			timer.Reset(prevInterval)
+		}
+	}
 }

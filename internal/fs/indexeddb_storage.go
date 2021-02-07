@@ -3,6 +3,7 @@
 package fs
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -30,6 +31,11 @@ const (
 	idbParentKey         = "Parent"
 )
 
+const (
+	maxSetQueue      = 64
+	setQueueInterval = 20 * time.Millisecond
+)
+
 type IndexedDBFs struct {
 	*storer.Fs
 }
@@ -50,7 +56,12 @@ func NewIndexedDBFs(name string) (_ *IndexedDBFs, err error) {
 	if err != nil {
 		return nil, err
 	}
-	fs := storer.New(&indexedDBStorer{db: db})
+	setQueue := queue.New(maxSetQueue)
+	setQueue.StartAsync(context.Background(), setQueueInterval, db)
+	fs := storer.New(&indexedDBStorer{
+		db:       db,
+		setQueue: setQueue,
+	})
 	return &IndexedDBFs{fs}, nil
 }
 
@@ -58,6 +69,7 @@ type indexedDBStorer struct {
 	db           *indexeddb.DB
 	jsPaths      interop.StringCache
 	jsProperties interop.StringCache
+	setQueue     *queue.Queue
 }
 
 func (i *indexedDBStorer) GetFileRecord(path string, dest *storer.FileRecord) (err error) {
@@ -195,30 +207,47 @@ func (i *indexedDBStorer) GetFileRecords(paths []string, dest []*storer.FileReco
 	return errs
 }
 
+func (i *indexedDBStorer) QueueSetFileRecord(path string, data *storer.FileRecord) <-chan error {
+	path = fsutil.NormalizePath(path)
+	isRoot := path == "." || path == afero.FilePathSeparator
+	if data == nil && isRoot {
+		// cannot delete root dir
+		err := make(chan error, 1)
+		err <- syscall.ENOSYS
+		close(err)
+		return err
+	}
+	return i.queueSetFile(i.setQueue, path, data)
+}
+
 func (i *indexedDBStorer) SetFileRecord(path string, data *storer.FileRecord) error {
 	path = fsutil.NormalizePath(path)
 	isRoot := path == "." || path == afero.FilePathSeparator
 	if data == nil && isRoot {
 		return syscall.ENOSYS // cannot delete root dir
 	}
-	_, err := i.setFile(path, data)
+	return i.setFile(path, data)
+}
+
+func (i *indexedDBStorer) setFile(path string, data *storer.FileRecord) error {
+	const maxQueue = 8 // arbitrarily large for a single file. only expect 2-3 operations
+	q := queue.New(maxQueue)
+	_ = i.queueSetFile(q, path, data)
+	_, err := q.Do(i.db)
+	if err != nil {
+		// TODO Verify if AbortError type. If it isn't, then don't replace with syscall.ENOTDIR.
+		// Should be the only reason for an abort. Later use an error handling mechanism in indexeddb pkg.
+		log.Error("Aborted set file: ", err)
+		err = syscall.ENOTDIR
+	}
 	return err
 }
 
-func (i *indexedDBStorer) setFile(path string, data *storer.FileRecord) (deleted bool, err error) {
-	const maxQueue = 8 // arbitrarily large. only expect 2-3 operations
-	q := queue.New(maxQueue)
+func (i *indexedDBStorer) queueSetFile(q *queue.Queue, path string, data *storer.FileRecord) <-chan error {
 	if data == nil {
 		q.Push(indexeddb.TransactionReadWrite, []string{idbFileInfoStore}, indexeddb.BatchDelete(idbFileInfoStore, i.jsPaths.Value(path)))
-		q.Push(indexeddb.TransactionReadWrite, []string{idbFileContentsStore}, indexeddb.BatchDelete(idbFileContentsStore, i.jsPaths.Value(path)))
-		_, err := q.Do(i.db)
-		return true, err
-	}
-
-	// verify a parent directory exists (except for root dir)
-	dir := filepath.Dir(path)
-	if dir != "" && dir != afero.FilePathSeparator {
-		q.Push(indexeddb.TransactionReadOnly, []string{idbFileInfoStore}, i.batchRequireDir(dir))
+		_, err := q.Push(indexeddb.TransactionReadWrite, []string{idbFileContentsStore}, indexeddb.BatchDelete(idbFileContentsStore, i.jsPaths.Value(path)))
+		return err
 	}
 
 	if !data.Mode.IsDir() {
@@ -237,19 +266,18 @@ func (i *indexedDBStorer) setFile(path string, data *storer.FileRecord) (deleted
 		fileInfo[idbParentKey] = filepath.Dir(path)
 	}
 	// include metadata update
-	q.Push(indexeddb.TransactionReadWrite, []string{idbFileInfoStore}, indexeddb.BatchPut(
+	_, err := q.Push(indexeddb.TransactionReadWrite, []string{idbFileInfoStore}, indexeddb.BatchPut(
 		idbFileInfoStore,
 		i.jsPaths.Value(path),
 		js.ValueOf(fileInfo),
 	))
-	_, err = q.Do(i.db)
-	if err != nil {
-		// TODO Verify if AbortError type. If it isn't, then don't replace with syscall.ENOTDIR.
-		// Should be the only reason for an abort. Later use an error handling mechanism in indexeddb pkg.
-		log.Error("Aborted set file: ", err)
-		err = syscall.ENOTDIR
+
+	// verify a parent directory exists (except for root dir)
+	dir := filepath.Dir(path)
+	if dir != "" && dir != afero.FilePathSeparator {
+		_, err = q.Push(indexeddb.TransactionReadOnly, []string{idbFileInfoStore}, i.batchRequireDir(dir))
 	}
-	return false, err
+	return err
 }
 
 func removePath(paths []string, path string) []string {

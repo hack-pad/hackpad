@@ -17,7 +17,7 @@ type Storer interface {
 	SetFileRecord(path string, src *FileRecord) error
 }
 
-type Batcher interface {
+type BatchGetter interface {
 	GetFileRecords(paths []string, dest []*FileRecord) []error
 }
 
@@ -44,9 +44,9 @@ func (f *fileStorer) GetFile(path string) (*File, error) {
 // SetFile write the 'file' data to the store at 'path'. If 'file' is nil, the file is deleted.
 func (f *fileStorer) SetFile(path string, file *fileData) error {
 	if file == nil {
-		return f.SetFileRecord(path, nil)
+		return <-QueueSetFileRecord(f.Storer, path, nil)
 	}
-	return f.SetFileRecord(path, &file.FileRecord)
+	return <-QueueSetFileRecord(f.Storer, path, &file.FileRecord)
 }
 
 func (f *fileStorer) GetFiles(paths ...string) ([]*File, []error) {
@@ -70,7 +70,7 @@ func GetFileRecords(s Storer, paths []string, dest []*FileRecord) []error {
 	if len(paths) != len(dest) {
 		panic(fmt.Sprintf("GetFileRecords: Paths and dest lengths must be equal: %d != %d", len(paths), len(dest)))
 	}
-	if batcher, ok := s.(Batcher); ok {
+	if batcher, ok := s.(BatchGetter); ok {
 		return batcher.GetFileRecords(paths, dest)
 	}
 
