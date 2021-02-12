@@ -17,7 +17,9 @@ func newCarriageReturnWriter(dest io.Writer) (*os.File, error) {
 	}
 	dest = &carriageReturnWriter{dest}
 
-	go io.CopyBuffer(dest, r, make([]byte, 1))
+	go func() {
+		_, _ = io.CopyBuffer(dest, r, make([]byte, 1))
+	}()
 	return w, nil
 }
 

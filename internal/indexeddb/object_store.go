@@ -23,7 +23,10 @@ func newObjectStore(transaction *Transaction, jsObjectStore js.Value) *ObjectSto
 func (o *ObjectStore) Add(key, value js.Value) (err error) {
 	defer catch(&err)
 	o.jsObjectStore.Call("add", value, key)
-	o.transaction.Commit()
+	err = o.transaction.Commit()
+	if err != nil {
+		return
+	}
 	return o.transaction.Await()
 }
 
@@ -36,7 +39,10 @@ func (o *ObjectStore) Clear() (err error) {
 func (o *ObjectStore) Count() (count int, err error) {
 	defer catch(&err)
 	req := o.jsObjectStore.Call("count")
-	o.transaction.Commit()
+	err = o.transaction.Commit()
+	if err != nil {
+		return
+	}
 	jsCount, err := await(processRequest(req))
 	if err == nil {
 		count = jsCount.Int()
@@ -56,7 +62,10 @@ func (o *ObjectStore) CreateIndex(name string, keyPath js.Value, options IndexOp
 func (o *ObjectStore) Delete(key js.Value) (err error) {
 	defer catch(&err)
 	o.jsObjectStore.Call("delete", key)
-	o.transaction.Commit()
+	err = o.transaction.Commit()
+	if err != nil {
+		return
+	}
 	return o.transaction.Await()
 }
 
@@ -69,7 +78,10 @@ func (o *ObjectStore) DeleteIndex(name string) (err error) {
 func (o *ObjectStore) Get(key js.Value) (val js.Value, err error) {
 	defer catch(&err)
 	req := o.jsObjectStore.Call("get", key)
-	o.transaction.Commit()
+	err = o.transaction.Commit()
+	if err != nil {
+		return
+	}
 	prom := processRequest(req)
 	return await(prom)
 }
@@ -77,7 +89,10 @@ func (o *ObjectStore) Get(key js.Value) (val js.Value, err error) {
 func (o *ObjectStore) GetAllKeys(query js.Value) (vals js.Value, err error) {
 	defer catch(&err)
 	req := o.jsObjectStore.Call("getAllKeys", query)
-	o.transaction.Commit()
+	err = o.transaction.Commit()
+	if err != nil {
+		return
+	}
 	prom := processRequest(req)
 	return await(prom)
 }
@@ -85,7 +100,10 @@ func (o *ObjectStore) GetAllKeys(query js.Value) (vals js.Value, err error) {
 func (o *ObjectStore) GetKey(value js.Value) (val js.Value, err error) {
 	defer catch(&err)
 	req := o.jsObjectStore.Call("getKey", value)
-	o.transaction.Commit()
+	err = o.transaction.Commit()
+	if err != nil {
+		return
+	}
 	return await(processRequest(req))
 }
 
@@ -111,6 +129,9 @@ func (o *ObjectStore) OpenKeyCursor(keyRange KeyRange, direction CursorDirection
 func (o *ObjectStore) Put(key, value js.Value) (err error) {
 	defer catch(&err)
 	o.jsObjectStore.Call("put", value, key)
-	o.transaction.Commit()
+	err = o.transaction.Commit()
+	if err != nil {
+		return
+	}
 	return o.transaction.Await()
 }

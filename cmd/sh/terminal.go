@@ -181,7 +181,10 @@ func (t *terminal) ReadEvalPrint(reader io.RuneReader) error {
 	case controlSigTStop:
 		t.line = nil
 		t.cursor = 0
-		t.history.Push("")
+		err := t.history.Push("") // resets history index, no error should be possible
+		if err != nil {
+			panic(err)
+		}
 		t.lastExitCode = 1
 		t.Print("^C\n\r")
 		t.Print(prompt(t))

@@ -6,7 +6,9 @@ import (
 	"encoding/json"
 	"os"
 	"syscall/js"
+	"time"
 
+	"github.com/johnstarich/go-wasm/internal/blob"
 	"github.com/johnstarich/go-wasm/internal/interop"
 	"github.com/johnstarich/go-wasm/internal/storer"
 	"github.com/johnstarich/go-wasm/log"
@@ -35,6 +37,13 @@ type localStorer struct {
 	getItem, setItem, removeItem js.Value
 }
 
+type jsonFileRecord struct {
+	Data     []byte
+	DirNames []string
+	ModTime  time.Time
+	Mode     os.FileMode
+}
+
 func (l *localStorer) GetFileRecord(path string, dest *storer.FileRecord) error {
 	defer interop.PanicLogger()
 	log.Warn("Getting data ", path, l)
@@ -44,7 +53,19 @@ func (l *localStorer) GetFileRecord(path string, dest *storer.FileRecord) error 
 		return os.ErrNotExist
 	}
 	log.Warn("Got data ", value.Length())
-	return json.Unmarshal([]byte(value.String()), dest)
+	var jDest jsonFileRecord
+	err := json.Unmarshal([]byte(value.String()), &jDest)
+
+	dest.DataFn = func() (blob.Blob, error) {
+		return blob.NewFromBytes(jDest.Data), nil
+	}
+	dest.InitialSize = int64(len(jDest.Data))
+	dest.DirNamesFn = func() ([]string, error) {
+		return jDest.DirNames, nil
+	}
+	dest.ModTime = jDest.ModTime
+	dest.Mode = jDest.Mode
+	return err
 }
 
 func (l *localStorer) SetFileRecord(path string, data *storer.FileRecord) error {
@@ -54,7 +75,13 @@ func (l *localStorer) SetFileRecord(path string, data *storer.FileRecord) error 
 		l.removeItem.Invoke(localStorageKeyPrefix + path)
 		return nil
 	}
-	buf, err := json.Marshal(data)
+	jFileRecord := jsonFileRecord{
+		Data:     data.Data().Bytes(),
+		DirNames: data.DirNames(),
+		ModTime:  data.ModTime,
+		Mode:     data.Mode,
+	}
+	buf, err := json.Marshal(jFileRecord)
 	if err == nil {
 		l.setItem.Invoke(localStorageKeyPrefix+path, string(buf))
 	}
