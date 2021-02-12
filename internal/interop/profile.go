@@ -55,7 +55,7 @@ func StartCPUProfile(ctx context.Context) error {
 }
 
 func StartCPUProfileDuration(d time.Duration) error {
-	ctx, _ := context.WithTimeout(context.Background(), d)
+	ctx, _ := context.WithTimeout(context.Background(), d) // nolint:lostcancel // This func is only called while debugging. We don't want to cancel the context in this scope, so discard it.
 	return StartCPUProfile(ctx)
 }
 

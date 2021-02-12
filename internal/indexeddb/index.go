@@ -48,7 +48,10 @@ func (i *Index) GetKey(value js.Value) (_ js.Value, err error) {
 func (i *Index) GetAllKeys(query js.Value) (vals js.Value, err error) {
 	defer catch(&err)
 	req := i.jsIndex.Call("getAllKeys", query)
-	i.transaction.Commit()
+	err = i.transaction.Commit()
+	if err != nil {
+		return
+	}
 	prom := processRequest(req)
 	return await(prom)
 }

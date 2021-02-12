@@ -8,7 +8,6 @@ import (
 	"os"
 	"path/filepath"
 	"runtime/debug"
-	"sort"
 	"syscall"
 	"syscall/js"
 	"time"
@@ -278,28 +277,6 @@ func (i *indexedDBStorer) queueSetFile(q *queue.Queue, path string, data *storer
 		_, err = q.Push(indexeddb.TransactionReadOnly, []string{idbFileInfoStore}, i.batchRequireDir(dir))
 	}
 	return err
-}
-
-func removePath(paths []string, path string) []string {
-	for i := range paths {
-		if paths[i] == path {
-			var newPaths []string
-			newPaths = append(newPaths, paths[:i]...)
-			return append(newPaths, paths[i+1:]...)
-		}
-	}
-	return paths
-}
-
-func addPath(paths []string, path string) []string {
-	for _, p := range paths {
-		if p == path {
-			return paths
-		}
-	}
-	paths = append(paths, path)
-	sort.Strings(paths)
-	return paths
 }
 
 func (i *indexedDBStorer) batchRequireDir(path string) func(*indexeddb.Transaction) *indexeddb.Request {
