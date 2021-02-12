@@ -26,21 +26,26 @@ type wasmCacheValue struct {
 }
 
 func cacheAllowed(path string) bool {
-	return strings.HasPrefix(path, "/go/")
+	return strings.HasPrefix(path, "/usr/local/go/")
 }
 
-func (p *process) loadWasmModule(path string) (js.Value, error) {
+func (p *process) newWasmInstance(path string, importObject js.Value) (js.Value, error) {
 	allowCache := cacheAllowed(path)
 	var info os.FileInfo
+	var err error
 	if allowCache {
-		var err error
 		info, err = p.Files().Stat(path)
 		if err != nil {
 			return js.Value{}, err
 		}
 		val, ok := wasmCache[path]
 		if ok && info.ModTime() == val.modTime {
-			return val.module, nil
+			instantiatePromise := promise.From(jsWasm.Call("instantiate", val.module, importObject))
+			instanceInterface, err := instantiatePromise.Await()
+			if err != nil {
+				return js.Value{}, err
+			}
+			return instanceInterface.(js.Value), nil
 		}
 	}
 
@@ -50,20 +55,22 @@ func (p *process) loadWasmModule(path string) (js.Value, error) {
 		return js.Value{}, err
 	}
 	b := blob.NewFromBytes(wasm)
-	compilePromise := promise.From(jsWasm.Call("compile", b))
-	module, err := compilePromise.Await()
+	instantiatePromise := promise.From(jsWasm.Call("instantiate", b, importObject))
+	instantiateResult, err := instantiatePromise.Await()
 	if err != nil {
 		return js.Value{}, err
 	}
-	jsModule := module.(js.Value)
+	jsInstantiate := instantiateResult.(js.Value)
+	module := jsInstantiate.Get("module")
+	instance := jsInstantiate.Get("instance")
 
 	if allowCache {
 		wasmCache[path] = wasmCacheValue{
 			modTime: info.ModTime(),
-			module:  jsModule,
+			module:  module,
 		}
 	}
-	return jsModule, nil
+	return instance, nil
 }
 
 func (p *process) run(path string) {
@@ -79,11 +86,6 @@ func (p *process) run(path string) {
 }
 
 func (p *process) startWasmPromise(path string, exitChan chan<- int) (promise.Promise, error) {
-	module, err := p.loadWasmModule(path)
-	if err != nil {
-		return nil, err
-	}
-
 	p.state = stateCompiling
 	goInstance := jsGo.New()
 	goInstance.Set("argv", interop.SliceFromStrings(p.args))
@@ -109,14 +111,12 @@ func (p *process) startWasmPromise(path string, exitChan chan<- int) (promise.Pr
 		}
 		return nil
 	}))
-
 	importObject := goInstance.Get("importObject")
-	instantiatePromise := promise.From(jsWasm.Call("instantiate", module, importObject))
-	instanceInterface, err := instantiatePromise.Await()
+
+	instance, err := p.newWasmInstance(path, importObject)
 	if err != nil {
 		return nil, err
 	}
-	instance := instanceInterface.(js.Value)
 
 	exports := instance.Get("exports")
 
