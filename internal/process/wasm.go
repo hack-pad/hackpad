@@ -4,6 +4,7 @@ package process
 
 import (
 	"os"
+	"runtime"
 	"strings"
 	"syscall/js"
 	"time"
@@ -74,6 +75,10 @@ func (p *process) newWasmInstance(path string, importObject js.Value) (js.Value,
 }
 
 func (p *process) run(path string) {
+	defer func() {
+		go runtime.GC()
+	}()
+
 	exitChan := make(chan int, 1)
 	runPromise, err := p.startWasmPromise(path, exitChan)
 	if err != nil {
