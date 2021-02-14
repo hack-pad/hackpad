@@ -43,7 +43,7 @@ func OverlayTarGzip(mountPath string, r io.ReadCloser, persist bool) error {
 
 	const tarfsDoneMarker = ".tarfs-complete"
 
-	underlyingFs, err := NewIndexedDBFs(mountPath)
+	underlyingFs, err := newPersistDB(mountPath)
 	if err != nil {
 		return err
 	}
