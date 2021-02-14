@@ -22,33 +22,26 @@ func newObjectStore(transaction *Transaction, jsObjectStore js.Value) *ObjectSto
 	return &ObjectStore{transaction: transaction, jsObjectStore: jsObjectStore}
 }
 
-func (o *ObjectStore) Add(key, value js.Value) (err error) {
+func (o *ObjectStore) Add(key, value js.Value) (_ *Request, err error) {
 	defer common.CatchException(&err)
-	o.jsObjectStore.Call("add", value, key)
-	err = o.transaction.Commit()
-	if err != nil {
-		return
-	}
-	return o.transaction.Await()
+	return newRequest(o.jsObjectStore.Call("add", value, key)), nil
 }
 
-func (o *ObjectStore) Clear() (err error) {
+func (o *ObjectStore) Clear() (_ *Request, err error) {
 	defer common.CatchException(&err)
-	o.jsObjectStore.Call("clear")
-	return
+	return newRequest(o.jsObjectStore.Call("clear")), nil
 }
 
-func (o *ObjectStore) Count() (count int, err error) {
+func (o *ObjectStore) Count() (_ <-chan int, err error) {
 	defer common.CatchException(&err)
+	count := make(chan int)
 	req := newRequest(o.jsObjectStore.Call("count"))
-	err = o.transaction.Commit()
-	if err != nil {
-		return
-	}
-	jsCount, err := req.Await()
-	if err == nil {
-		count = jsCount.Int()
-	}
+	req.Listen(func() {
+		count <- req.Result().Int()
+		close(count)
+	}, func() {
+		close(count)
+	})
 	return count, err
 }
 
@@ -61,50 +54,29 @@ func (o *ObjectStore) CreateIndex(name string, keyPath js.Value, options IndexOp
 	return wrapIndex(o.transaction, jsIndex), nil
 }
 
-func (o *ObjectStore) Delete(key js.Value) (err error) {
+func (o *ObjectStore) Delete(key js.Value) (_ *Request, err error) {
 	defer common.CatchException(&err)
-	o.jsObjectStore.Call("delete", key)
-	err = o.transaction.Commit()
-	if err != nil {
-		return
-	}
-	return o.transaction.Await()
+	return newRequest(o.jsObjectStore.Call("delete", key)), nil
 }
 
-func (o *ObjectStore) DeleteIndex(name string) (err error) {
+func (o *ObjectStore) DeleteIndex(name string) (_ *Request, err error) {
 	defer common.CatchException(&err)
-	o.jsObjectStore.Call("deleteIndex", name)
-	return nil
+	return newRequest(o.jsObjectStore.Call("deleteIndex", name)), nil
 }
 
-func (o *ObjectStore) Get(key js.Value) (val js.Value, err error) {
+func (o *ObjectStore) Get(key js.Value) (_ *Request, err error) {
 	defer common.CatchException(&err)
-	req := newRequest(o.jsObjectStore.Call("get", key))
-	err = o.transaction.Commit()
-	if err != nil {
-		return
-	}
-	return req.Await()
+	return newRequest(o.jsObjectStore.Call("get", key)), nil
 }
 
-func (o *ObjectStore) GetAllKeys(query js.Value) (vals js.Value, err error) {
+func (o *ObjectStore) GetAllKeys(query js.Value) (vals *Request, err error) {
 	defer common.CatchException(&err)
-	req := newRequest(o.jsObjectStore.Call("getAllKeys", query))
-	err = o.transaction.Commit()
-	if err != nil {
-		return
-	}
-	return req.Await()
+	return newRequest(o.jsObjectStore.Call("getAllKeys", query)), nil
 }
 
-func (o *ObjectStore) GetKey(value js.Value) (val js.Value, err error) {
+func (o *ObjectStore) GetKey(value js.Value) (_ *Request, err error) {
 	defer common.CatchException(&err)
-	req := newRequest(o.jsObjectStore.Call("getKey", value))
-	err = o.transaction.Commit()
-	if err != nil {
-		return
-	}
-	return req.Await()
+	return newRequest(o.jsObjectStore.Call("getKey", value)), nil
 }
 
 func (o *ObjectStore) Index(name string) (index *Index, err error) {
@@ -113,11 +85,17 @@ func (o *ObjectStore) Index(name string) (index *Index, err error) {
 	return wrapIndex(o.transaction, jsIndex), nil
 }
 
-func (o *ObjectStore) OpenCursor(key js.Value, direction CursorDirection) (cursor *Cursor, err error) {
+func (o *ObjectStore) OpenCursor(key js.Value, direction CursorDirection) (_ <-chan *Cursor, err error) {
 	defer common.CatchException(&err)
+	cursor := make(chan *Cursor)
 	req := newRequest(o.jsObjectStore.Call("openCursor", key, direction.String()))
-	jsCursor, err := req.Await()
-	return &Cursor{jsCursor: jsCursor}, err
+	req.Listen(func() {
+		cursor <- &Cursor{jsCursor: req.Result()}
+		close(cursor)
+	}, func() {
+		close(cursor)
+	})
+	return cursor, nil
 }
 
 /*
@@ -126,12 +104,7 @@ func (o *ObjectStore) OpenKeyCursor(keyRange KeyRange, direction CursorDirection
 }
 */
 
-func (o *ObjectStore) Put(key, value js.Value) (err error) {
+func (o *ObjectStore) Put(key, value js.Value) (_ *Request, err error) {
 	defer common.CatchException(&err)
-	o.jsObjectStore.Call("put", value, key)
-	err = o.transaction.Commit()
-	if err != nil {
-		return
-	}
-	return o.transaction.Await()
+	return newRequest(o.jsObjectStore.Call("put", value, key)), nil
 }
