@@ -126,62 +126,9 @@ func (fs *Fs) downloadGzipErr(r io.Reader) error {
 		if err != nil {
 			return errors.Wrap(err, "next tar file")
 		}
-
-		originalName := header.Name
-		path := fsutil.NormalizePath(originalName)
-		info := header.FileInfo()
-
-		dir := fsutil.NormalizePath(filepath.Dir(path))
-		err = cachedMkdirAll(dir, 0700)
+		err = fs.initProcessFile(header, archive, &wg, errs, cachedMkdirAll, bigPool, smallPool)
 		if err != nil {
-			return errors.Wrap(err, "prepping base dir")
-		}
-
-		if info.IsDir() {
-			// assume dir does not exist yet, then chmod if it does exist
-			wg.Add(1)
-			go func() {
-				defer wg.Done()
-				err := fs.underlyingFs.Mkdir(path, info.Mode())
-				if err != nil {
-					if !os.IsExist(err) {
-						errs <- errors.Wrap(err, "copying dir")
-						return
-					}
-					err = fs.underlyingFs.Chmod(path, info.Mode())
-					if err != nil {
-						errs <- errors.Wrap(err, "copying dir")
-						return
-					}
-				}
-			}()
-		} else {
-			reader := fullReader{archive} // fullReader: call f.Write as few times as possible, since large files are expensive
-			// read once. if we reached EOF, then write it to fs asynchronously
-			smallBuf := smallPool.Wait()
-			n, err := reader.Read(smallBuf.Data)
-			switch err {
-			case io.EOF:
-				wg.Add(1)
-				go func() {
-					err := fs.writeFile(path, info, smallBuf, n, nil, nil)
-					smallBuf.Done()
-					if err != nil {
-						errs <- err
-					}
-					wg.Done()
-				}()
-			case nil:
-				bigBuf := bigPool.Wait()
-				err := fs.writeFile(path, info, smallBuf, n, reader, bigBuf)
-				bigBuf.Done()
-				smallBuf.Done()
-				if err != nil {
-					return err
-				}
-			default:
-				return err
-			}
+			return err
 		}
 	}
 
@@ -190,13 +137,75 @@ func (fs *Fs) downloadGzipErr(r io.Reader) error {
 		wg.Wait()
 		close(done)
 	}()
-	for {
-		select {
-		case err := <-errs:
-			return err
-		case <-done:
-			return nil
-		}
+	select {
+	case err := <-errs:
+		return err
+	case <-done:
+		return nil
+	}
+}
+
+func (fs *Fs) initProcessFile(
+	header *tar.Header, r io.Reader,
+	wg *sync.WaitGroup, errs chan error,
+	mkdirAll func(string, os.FileMode) error,
+	bigPool, smallPool *bufferpool.Pool,
+) error {
+	originalName := header.Name
+	path := fsutil.NormalizePath(originalName)
+	info := header.FileInfo()
+
+	dir := fsutil.NormalizePath(filepath.Dir(path))
+	err := mkdirAll(dir, 0700)
+	if err != nil {
+		return errors.Wrap(err, "prepping base dir")
+	}
+
+	if info.IsDir() {
+		// assume dir does not exist yet, then chmod if it does exist
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			err := fs.underlyingFs.Mkdir(path, info.Mode())
+			if err != nil {
+				if !os.IsExist(err) {
+					errs <- errors.Wrap(err, "copying dir")
+					return
+				}
+				err = fs.underlyingFs.Chmod(path, info.Mode())
+				if err != nil {
+					errs <- errors.Wrap(err, "copying dir")
+					return
+				}
+			}
+		}()
+		return nil
+	}
+
+	reader := fullReader{r} // fullReader: call f.Write as few times as possible, since large files are expensive
+	// read once. if we reached EOF, then write it to fs asynchronously
+	smallBuf := smallPool.Wait()
+	n, err := reader.Read(smallBuf.Data)
+	switch err {
+	case io.EOF:
+		wg.Add(1)
+		go func() {
+			err := fs.writeFile(path, info, smallBuf, n, nil, nil)
+			smallBuf.Done()
+			if err != nil {
+				errs <- err
+			}
+			wg.Done()
+		}()
+		return nil
+	case nil:
+		bigBuf := bigPool.Wait()
+		err := fs.writeFile(path, info, smallBuf, n, reader, bigBuf)
+		bigBuf.Done()
+		smallBuf.Done()
+		return err
+	default:
+		return err
 	}
 }
 
