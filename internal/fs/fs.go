@@ -8,6 +8,7 @@ import (
 	"github.com/johnstarich/go-wasm/internal/mountfs"
 	"github.com/johnstarich/go-wasm/internal/storer"
 	"github.com/johnstarich/go-wasm/internal/tarfs"
+	"github.com/johnstarich/go-wasm/log"
 	"github.com/johnstarich/go/datasize"
 	"github.com/spf13/afero"
 	"github.com/spf13/afero/zipfs"
@@ -40,17 +41,24 @@ func OverlayTarGzip(mountPath string, r io.ReadCloser, persist bool) error {
 		return filesystem.Mount(mountPath, fs)
 	}
 
+	const tarfsDoneMarker = ".tarfs-complete"
+
 	underlyingFs, err := NewIndexedDBFs(mountPath)
 	if err != nil {
 		return err
 	}
-	root, err := underlyingFs.Open(afero.FilePathSeparator)
+	_, err = underlyingFs.Stat(tarfsDoneMarker)
 	if err == nil {
-		dirEntries, err := root.Readdirnames(-1)
-		if err == nil && len(dirEntries) > 0 {
-			// TODO should not assume valid if only non-empty. add a flag indicating completion
-			r.Close()
-			return filesystem.Mount(mountPath, underlyingFs)
+		// tarfs already completed successfully and is persisted,
+		// so close tarfs reader and mount the existing files
+		r.Close()
+		return filesystem.Mount(mountPath, underlyingFs)
+	} else {
+		// either never untar'd or did not finish untaring, so start again
+		// should be idempotent, but rewriting buffers from JS is expensive, so just delete everything
+		err := underlyingFs.Clear()
+		if err != nil {
+			return err
 		}
 	}
 
@@ -58,6 +66,20 @@ func OverlayTarGzip(mountPath string, r io.ReadCloser, persist bool) error {
 	if err != nil {
 		return err
 	}
+	go func() {
+		<-fs.Done()
+		err := fs.InitErr()
+		if err != nil {
+			log.Errorf("Failed to initialize mount %q: %v", mountPath, err)
+			return
+		}
+		f, err := underlyingFs.Create(tarfsDoneMarker)
+		if err != nil {
+			log.Errorf("Failed to mark tarfs overlay %q complete: %v", mountPath, err)
+			return
+		}
+		f.Close()
+	}()
 	return filesystem.Mount(mountPath, fs)
 }
 
