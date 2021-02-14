@@ -9,3 +9,7 @@ type Blob interface {
 	Grow(off int64) error
 	Truncate(size int64)
 }
+
+func NewBytesLength(length int) Blob {
+	return NewFromBytes(make([]byte, length))
+}
