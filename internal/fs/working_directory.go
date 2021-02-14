@@ -19,6 +19,7 @@ func newWorkingDirectory(path string) *workingDirectory {
 }
 
 func (w *workingDirectory) Set(wd string) error {
+	// must be async to support IDB FS
 	w.updating.Store(true)
 	go func() {
 		defer w.updating.Store(false)
