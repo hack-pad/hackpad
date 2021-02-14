@@ -5,6 +5,7 @@ package indexeddb
 import (
 	"syscall/js"
 
+	"github.com/johnstarich/go-wasm/internal/common"
 	"github.com/johnstarich/go-wasm/internal/interop"
 	"github.com/johnstarich/go-wasm/internal/promise"
 )
@@ -46,7 +47,7 @@ func wrapTransaction(jsTransaction js.Value) *Transaction {
 }
 
 func (t *Transaction) Abort() (err error) {
-	defer catch(&err)
+	defer common.CatchException(&err)
 	t.jsTransaction.Call("abort")
 	return nil
 }
@@ -55,7 +56,7 @@ func (t *Transaction) ObjectStore(name string) (_ *ObjectStore, err error) {
 	if store, ok := t.jsObjectStores[name]; ok {
 		return store, nil
 	}
-	defer catch(&err)
+	defer common.CatchException(&err)
 	jsObjectStore := t.jsTransaction.Call("objectStore", name)
 	store := newObjectStore(t, jsObjectStore)
 	t.jsObjectStores[name] = store
@@ -67,7 +68,7 @@ func (t *Transaction) Commit() (err error) {
 		return nil
 	}
 
-	defer catch(&err)
+	defer common.CatchException(&err)
 	t.jsTransaction.Call("commit")
 	return nil
 }
