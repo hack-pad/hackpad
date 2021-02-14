@@ -245,7 +245,7 @@ func (fs *Fs) Chmod(name string, mode os.FileMode) error {
 
 	const chmodBits = os.ModePerm | os.ModeSetuid | os.ModeSetgid | os.ModeSticky // Only a subset of bits are allowed to be changed. Documented under os.Chmod()
 	file.Mode = (file.Mode & ^chmodBits) | (mode & chmodBits)
-	return nil
+	return file.save()
 }
 
 func (fs *Fs) Chtimes(name string, atime time.Time, mtime time.Time) error {
@@ -254,5 +254,5 @@ func (fs *Fs) Chtimes(name string, atime time.Time, mtime time.Time) error {
 		return fs.wrapperErr("chtimes", name, err)
 	}
 	file.ModTime = mtime
-	return nil
+	return file.save()
 }
