@@ -58,7 +58,7 @@ func (t *Transaction) ObjectStore(name string) (_ *ObjectStore, err error) {
 	}
 	defer common.CatchException(&err)
 	jsObjectStore := t.jsTransaction.Call("objectStore", name)
-	store := newObjectStore(t, jsObjectStore)
+	store := newObjectStore(jsObjectStore)
 	t.jsObjectStores[name] = store
 	return store, nil
 }

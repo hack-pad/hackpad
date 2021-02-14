@@ -14,12 +14,11 @@ type ObjectStoreOptions struct {
 }
 
 type ObjectStore struct {
-	transaction   *Transaction
 	jsObjectStore js.Value
 }
 
-func newObjectStore(transaction *Transaction, jsObjectStore js.Value) *ObjectStore {
-	return &ObjectStore{transaction: transaction, jsObjectStore: jsObjectStore}
+func newObjectStore(jsObjectStore js.Value) *ObjectStore {
+	return &ObjectStore{jsObjectStore: jsObjectStore}
 }
 
 func (o *ObjectStore) Add(key, value js.Value) (_ *Request, err error) {
@@ -51,7 +50,7 @@ func (o *ObjectStore) CreateIndex(name string, keyPath js.Value, options IndexOp
 		"unique":     options.Unique,
 		"multiEntry": options.MultiEntry,
 	})
-	return wrapIndex(o.transaction, jsIndex), nil
+	return wrapIndex(jsIndex), nil
 }
 
 func (o *ObjectStore) Delete(key js.Value) (_ *Request, err error) {
@@ -82,7 +81,7 @@ func (o *ObjectStore) GetKey(value js.Value) (_ *Request, err error) {
 func (o *ObjectStore) Index(name string) (index *Index, err error) {
 	defer common.CatchException(&err)
 	jsIndex := o.jsObjectStore.Call("index", name)
-	return wrapIndex(o.transaction, jsIndex), nil
+	return wrapIndex(jsIndex), nil
 }
 
 func (o *ObjectStore) OpenCursor(key js.Value, direction CursorDirection) (_ <-chan *Cursor, err error) {
