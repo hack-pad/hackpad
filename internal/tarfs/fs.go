@@ -29,6 +29,7 @@ const (
 type Fs struct {
 	underlyingFs, underlyingReadOnlyFs afero.Fs
 	ps                                 pubsub.PubSub
+	ctx                                context.Context
 	done                               context.CancelFunc
 	initErr                            error
 }
@@ -57,6 +58,7 @@ func New(r io.Reader, underlyingFs afero.Fs) (_ *Fs, retErr error) {
 		underlyingFs:         underlyingFs,
 		underlyingReadOnlyFs: afero.NewReadOnlyFs(underlyingFs),
 		ps:                   pubsub.New(ctx),
+		ctx:                  ctx,
 		done:                 cancel,
 	}
 	go fs.downloadGzip(r)
@@ -290,3 +292,11 @@ func (fs *Fs) RemoveAll(path string) error                                 { ret
 func (fs *Fs) Rename(oldname, newname string) error                        { return syscall.EPERM }
 func (fs *Fs) Chmod(name string, mode os.FileMode) error                   { return syscall.EPERM }
 func (fs *Fs) Chtimes(name string, atime time.Time, mtime time.Time) error { return syscall.EPERM }
+
+func (fs *Fs) Done() <-chan struct{} {
+	return fs.ctx.Done()
+}
+
+func (fs *Fs) InitErr() error {
+	return fs.initErr
+}

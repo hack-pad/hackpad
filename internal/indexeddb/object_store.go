@@ -33,7 +33,7 @@ func (o *ObjectStore) Add(key, value js.Value) (err error) {
 func (o *ObjectStore) Clear() (err error) {
 	defer catch(&err)
 	o.jsObjectStore.Call("clear")
-	return o.transaction.Await()
+	return
 }
 
 func (o *ObjectStore) Count() (count int, err error) {

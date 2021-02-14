@@ -64,6 +64,30 @@ func NewIndexedDBFs(name string) (_ *IndexedDBFs, err error) {
 	return &IndexedDBFs{fs}, nil
 }
 
+func (i *IndexedDBFs) Clear() error {
+	db := i.Storer.(*indexedDBStorer).db
+	stores := []string{idbFileContentsStore, idbFileInfoStore}
+	txn, err := db.Transaction(indexeddb.TransactionReadWrite, stores...)
+	if err != nil {
+		return err
+	}
+	for _, name := range stores {
+		store, err := txn.ObjectStore(name)
+		if err != nil {
+			return err
+		}
+		err = store.Clear()
+		if err != nil {
+			return err
+		}
+	}
+	err = txn.Commit()
+	if err != nil {
+		return err
+	}
+	return txn.Await()
+}
+
 type indexedDBStorer struct {
 	db           *indexeddb.DB
 	jsPaths      interop.StringCache
