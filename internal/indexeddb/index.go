@@ -14,14 +14,12 @@ type IndexOptions struct {
 }
 
 type Index struct {
-	transaction *Transaction
-	jsIndex     js.Value
+	jsIndex js.Value
 }
 
-func wrapIndex(txn *Transaction, jsIndex js.Value) *Index {
+func wrapIndex(jsIndex js.Value) *Index {
 	return &Index{
-		transaction: txn,
-		jsIndex:     jsIndex,
+		jsIndex: jsIndex,
 	}
 }
 
