@@ -4,6 +4,8 @@ package indexeddb
 
 import (
 	"syscall/js"
+
+	"github.com/johnstarich/go-wasm/internal/common"
 )
 
 type CursorDirection int
@@ -33,33 +35,31 @@ type Cursor struct {
 }
 
 func (c *Cursor) Advance(count uint) (err error) {
-	defer catch(&err)
+	defer common.CatchException(&err)
 	c.jsCursor.Call("advance", count)
 	return nil
 }
 
 func (c *Cursor) Continue() (err error) {
-	defer catch(&err)
+	defer common.CatchException(&err)
 	c.jsCursor.Call("continue")
 	return nil
 }
 
 func (c *Cursor) ContinuePrimaryKey(key, primaryKey js.Value) (err error) {
-	defer catch(&err)
+	defer common.CatchException(&err)
 	c.jsCursor.Call("continuePrimaryKey", key, primaryKey)
 	return nil
 }
 
 func (c *Cursor) Delete() (err error) {
-	defer catch(&err)
-	req := c.jsCursor.Call("delete")
-	_, err = await(processRequest(req))
+	defer common.CatchException(&err)
+	_, err = newRequest(c.jsCursor.Call("delete")).Await()
 	return
 }
 
 func (c *Cursor) Update(value js.Value) (err error) {
-	defer catch(&err)
-	req := c.jsCursor.Call("update", value)
-	_, err = await(processRequest(req))
+	defer common.CatchException(&err)
+	_, err = newRequest(c.jsCursor.Call("update", value)).Await()
 	return
 }

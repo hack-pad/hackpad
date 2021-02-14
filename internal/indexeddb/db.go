@@ -5,8 +5,8 @@ package indexeddb
 import (
 	"syscall/js"
 
+	"github.com/johnstarich/go-wasm/internal/common"
 	"github.com/johnstarich/go-wasm/internal/interop"
-	"github.com/johnstarich/go-wasm/internal/promise"
 	"github.com/johnstarich/go-wasm/log"
 )
 
@@ -20,22 +20,17 @@ type DB struct {
 }
 
 func DeleteDatabase(name string) error {
-	prom := processRequest(jsIndexedDB.Call("deleteDatabase", name))
-	_, err := await(prom)
+	_, err := newRequest(jsIndexedDB.Call("deleteDatabase", name)).Await()
 	return err
 }
 
 func New(name string, version int, upgrader func(db *DB, oldVersion, newVersion int) error) (*DB, error) {
 	db := &DB{}
-	request := jsIndexedDB.Call("open", name, version)
+	jsRequest := jsIndexedDB.Call("open", name, version)
+	request := newRequest(jsRequest)
 
-	resolve, reject, prom := promise.NewGo()
-	request.Call("addEventListener", "error", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
-		reject(request.Get("error"))
-		return nil
-	}))
-	request.Call("addEventListener", "success", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
-		jsDB := request.Get("result")
+	request.ListenSuccess(func() {
+		jsDB := request.Result()
 		jsDB.Call("addEventListener", "versionchange", js.FuncOf(func(js.Value, []js.Value) interface{} {
 			log.Print("Version change detected, closing DB...")
 			jsDB.Call("close")
@@ -51,25 +46,23 @@ func New(name string, version int, upgrader func(db *DB, oldVersion, newVersion 
 		jsDB.Call("addEventListener", "error", logEvent("error"))
 		jsDB.Call("addEventListener", "abort", logEvent("abort"))
 		jsDB.Call("addEventListener", "close", logEvent("close"))
-		resolve(jsDB)
-		return nil
-	}))
-	request.Call("addEventListener", "upgradeneeded", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+	})
+	jsRequest.Call("addEventListener", "upgradeneeded", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
 		event := args[0]
-		db.jsDB = request.Get("result")
+		db.jsDB = request.Result()
 		err := upgrader(db, event.Get("oldVersion").Int(), event.Get("newVersion").Int())
 		if err != nil {
-			reject(err)
+			panic(err)
 		}
 		return nil
 	}))
 	var err error
-	db.jsDB, err = await(prom)
+	db.jsDB, err = request.Await()
 	return db, err
 }
 
 func (db *DB) CreateObjectStore(name string, options ObjectStoreOptions) (_ *ObjectStore, err error) {
-	defer catch(&err)
+	defer common.CatchException(&err)
 	jsOptions := map[string]interface{}{
 		"autoIncrement": options.AutoIncrement,
 	}
@@ -81,19 +74,19 @@ func (db *DB) CreateObjectStore(name string, options ObjectStoreOptions) (_ *Obj
 }
 
 func (db *DB) DeleteObjectStore(name string) (err error) {
-	defer catch(&err)
+	defer common.CatchException(&err)
 	db.jsDB.Call("deleteObjectStore", name)
 	return nil
 }
 
 func (db *DB) Close() (err error) {
-	defer catch(&err)
+	defer common.CatchException(&err)
 	db.jsDB.Call("close")
 	return nil
 }
 
 func (db *DB) Transaction(mode TransactionMode, objectStoreNames ...string) (_ *Transaction, err error) {
-	defer catch(&err)
+	defer common.CatchException(&err)
 	jsTxn := db.jsFuncs.Call(db.jsDB, "transaction", interop.SliceFromStrings(objectStoreNames), mode)
 	return wrapTransaction(jsTxn), nil
 }
