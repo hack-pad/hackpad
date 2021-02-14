@@ -55,7 +55,12 @@ func StartCPUProfile(ctx context.Context) error {
 }
 
 func StartCPUProfileDuration(d time.Duration) error {
-	ctx, _ := context.WithTimeout(context.Background(), d) // nolint:lostcancel // This func is only called while debugging. We don't want to cancel the context in this scope, so discard it.
+	ctx, cancel := context.WithTimeout(context.Background(), d)
+	go func() {
+		// NOTE: this is purely to satisfy linters. This func is only called while debugging. We don't want to cancel the context in this scope, so discard it.
+		<-ctx.Done()
+		cancel()
+	}()
 	return StartCPUProfile(ctx)
 }
 
