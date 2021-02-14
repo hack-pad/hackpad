@@ -30,10 +30,6 @@ func NewFromBytes(buf []byte) Blob {
 	return b
 }
 
-func NewBytesLength(length int) Blob {
-	return NewFromBytes(make([]byte, length))
-}
-
 func NewFromJS(buf js.Value) (Blob, error) {
 	if !buf.Truthy() {
 		return NewFromBytes(nil), nil
