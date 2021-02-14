@@ -16,8 +16,6 @@ type Queue struct {
 	startOnce sync.Once
 }
 
-type Op = func(*indexeddb.Transaction) *indexeddb.Request
-
 func New(size int) *Queue {
 	return &Queue{
 		ops: make(chan opRunner, size),
@@ -27,12 +25,12 @@ func New(size int) *Queue {
 type opRunner struct {
 	mode       indexeddb.TransactionMode
 	storeNames []string
-	op         Op
+	op         indexeddb.Op
 	result     chan<- js.Value
 	err        chan<- error
 }
 
-func (q *Queue) Push(mode indexeddb.TransactionMode, storeNames []string, op Op) (<-chan js.Value, <-chan error) {
+func (q *Queue) Push(mode indexeddb.TransactionMode, storeNames []string, op indexeddb.Op) (<-chan js.Value, <-chan error) {
 	result := make(chan js.Value, 1)
 	err := make(chan error, 1)
 	q.ops <- opRunner{

@@ -52,14 +52,12 @@ func (c *Cursor) ContinuePrimaryKey(key, primaryKey js.Value) (err error) {
 	return nil
 }
 
-func (c *Cursor) Delete() (err error) {
+func (c *Cursor) Delete() (_ *Request, err error) {
 	defer common.CatchException(&err)
-	_, err = newRequest(c.jsCursor.Call("delete")).Await()
-	return
+	return newRequest(c.jsCursor.Call("delete")), nil
 }
 
-func (c *Cursor) Update(value js.Value) (err error) {
+func (c *Cursor) Update(value js.Value) (_ *Request, err error) {
 	defer common.CatchException(&err)
-	_, err = newRequest(c.jsCursor.Call("update", value)).Await()
-	return
+	return newRequest(c.jsCursor.Call("update", value)), nil
 }

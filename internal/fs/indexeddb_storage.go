@@ -76,7 +76,7 @@ func (i *IndexedDBFs) Clear() error {
 		if err != nil {
 			return err
 		}
-		err = store.Clear()
+		_, err = store.Clear()
 		if err != nil {
 			return err
 		}
@@ -107,7 +107,11 @@ func (i *indexedDBStorer) GetFileRecord(path string, dest *storer.FileRecord) (e
 		return err
 	}
 	log.Debug("Loading file info from JS: ", path)
-	value, err := files.Get(i.jsPaths.Value(path))
+	req, err := files.Get(i.jsPaths.Value(path))
+	if err != nil {
+		return err
+	}
+	value, err := req.Await()
 	return i.extractFileRecord(path, value, err, dest)
 }
 
@@ -151,7 +155,11 @@ func (i *indexedDBStorer) getFileData(path string) func() (blob.Blob, error) {
 			return nil, err
 		}
 		log.Debug("Loading file contents from JS: ", path)
-		value, err := files.Get(i.jsPaths.Value(path))
+		req, err := files.Get(i.jsPaths.Value(path))
+		if err != nil {
+			return nil, err
+		}
+		value, err := req.Await()
 		if value.IsUndefined() {
 			return nil, os.ErrNotExist
 		}
@@ -183,7 +191,11 @@ func (i *indexedDBStorer) getDirNames(path string) func() ([]string, error) {
 		if err != nil {
 			return nil, err
 		}
-		jsKeys, err := parentIndex.GetAllKeys(i.jsPaths.Value(path))
+		keysReq, err := parentIndex.GetAllKeys(i.jsPaths.Value(path))
+		if err != nil {
+			return nil, err
+		}
+		jsKeys, err := keysReq.Await()
 		var keys []string
 		if err == nil {
 			keys = interop.StringsFromJSValue(jsKeys)
@@ -213,7 +225,7 @@ func (i *indexedDBStorer) GetFileRecords(paths []string, dest []*storer.FileReco
 		q.Push(
 			indexeddb.TransactionReadOnly,
 			[]string{idbFileInfoStore},
-			indexeddb.BatchGet(idbFileInfoStore, i.jsPaths.Value(p)))
+			indexeddb.GetOp(idbFileInfoStore, i.jsPaths.Value(p)))
 	}
 
 	log.Debug("Loading file infos from JS: ", paths)
@@ -268,14 +280,14 @@ func (i *indexedDBStorer) setFile(path string, data *storer.FileRecord) error {
 
 func (i *indexedDBStorer) queueSetFile(q *queue.Queue, path string, data *storer.FileRecord) <-chan error {
 	if data == nil {
-		q.Push(indexeddb.TransactionReadWrite, []string{idbFileInfoStore}, indexeddb.BatchDelete(idbFileInfoStore, i.jsPaths.Value(path)))
-		_, err := q.Push(indexeddb.TransactionReadWrite, []string{idbFileContentsStore}, indexeddb.BatchDelete(idbFileContentsStore, i.jsPaths.Value(path)))
+		q.Push(indexeddb.TransactionReadWrite, []string{idbFileInfoStore}, indexeddb.DeleteOp(idbFileInfoStore, i.jsPaths.Value(path)))
+		_, err := q.Push(indexeddb.TransactionReadWrite, []string{idbFileContentsStore}, indexeddb.DeleteOp(idbFileContentsStore, i.jsPaths.Value(path)))
 		return err
 	}
 
 	if !data.Mode.IsDir() {
 		// this is a file, so include file contents
-		q.Push(indexeddb.TransactionReadWrite, []string{idbFileContentsStore}, indexeddb.BatchPut(
+		q.Push(indexeddb.TransactionReadWrite, []string{idbFileContentsStore}, indexeddb.PutOp(
 			idbFileContentsStore,
 			i.jsPaths.Value(path), data.Data().JSValue(),
 		))
@@ -289,7 +301,7 @@ func (i *indexedDBStorer) queueSetFile(q *queue.Queue, path string, data *storer
 		fileInfo[idbParentKey] = filepath.Dir(path)
 	}
 	// include metadata update
-	_, err := q.Push(indexeddb.TransactionReadWrite, []string{idbFileInfoStore}, indexeddb.BatchPut(
+	_, err := q.Push(indexeddb.TransactionReadWrite, []string{idbFileInfoStore}, indexeddb.PutOp(
 		idbFileInfoStore,
 		i.jsPaths.Value(path),
 		js.ValueOf(fileInfo),
@@ -304,7 +316,7 @@ func (i *indexedDBStorer) queueSetFile(q *queue.Queue, path string, data *storer
 }
 
 func (i *indexedDBStorer) batchRequireDir(path string) func(*indexeddb.Transaction) *indexeddb.Request {
-	batchGet := indexeddb.BatchGet(idbFileInfoStore, i.jsPaths.Value(path))
+	batchGet := indexeddb.GetOp(idbFileInfoStore, i.jsPaths.Value(path))
 	return func(txn *indexeddb.Transaction) *indexeddb.Request {
 		req := batchGet(txn)
 		req.ListenSuccess(func() {

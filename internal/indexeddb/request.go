@@ -74,33 +74,3 @@ func (r *Request) Error() error {
 	}
 	return nil
 }
-
-func BatchGet(objectStore string, key js.Value) func(*Transaction) *Request {
-	return func(txn *Transaction) *Request {
-		o, err := txn.ObjectStore(objectStore)
-		if err != nil {
-			panic(err)
-		}
-		return newRequest(o.jsObjectStore.Call("get", key))
-	}
-}
-
-func BatchPut(objectStore string, key, value js.Value) func(*Transaction) *Request {
-	return func(txn *Transaction) *Request {
-		o, err := txn.ObjectStore(objectStore)
-		if err != nil {
-			panic(err)
-		}
-		return newRequest(o.jsObjectStore.Call("put", value, key))
-	}
-}
-
-func BatchDelete(objectStore string, key js.Value) func(*Transaction) *Request {
-	return func(txn *Transaction) *Request {
-		o, err := txn.ObjectStore(objectStore)
-		if err != nil {
-			panic(err)
-		}
-		return newRequest(o.jsObjectStore.Call("delete", key))
-	}
-}
