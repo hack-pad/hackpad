@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"runtime/debug"
 	"syscall"
 	"syscall/js"
 	"time"
@@ -177,12 +176,7 @@ func (i *indexedDBStorer) getFileData(path string) func() (blob.Blob, error) {
 
 func (i *indexedDBStorer) getDirNames(path string) func() ([]string, error) {
 	return func() (_ []string, err error) {
-		defer func() {
-			common.CatchException(&err)
-			if err != nil {
-				log.Error(err, "\n", string(debug.Stack()))
-			}
-		}()
+		defer common.CatchException(&err)
 		txn, err := i.db.Transaction(indexeddb.TransactionReadOnly, idbFileInfoStore)
 		if err != nil {
 			return nil, err
