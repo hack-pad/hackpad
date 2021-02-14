@@ -9,6 +9,8 @@ github.com/fatih/color v1.9.0/go.mod h1:eQcE1qtQxscV5RaZvpXrrb8Drkc3/DdQ+uUYCNjL
 github.com/google/renameio v0.1.0/go.mod h1:KWCgfxg9yswjAJkECMjeO8J8rahYeXnNhOm40UhjYkI=
 github.com/johnstarich/afero v1.3.2-0.20200824034706-e0c81fb79d7b h1:8XJ1QRVoSx+rcCoch3GI3lOCEIWLu7bsoU5xd+GO3sk=
 github.com/johnstarich/afero v1.3.2-0.20200824034706-e0c81fb79d7b/go.mod h1:5KUK8ByomD5Ti5Artl0RtHeI5pTF7MIDuXL3yY520V4=
+github.com/johnstarich/afero v1.3.2-0.20210214021553-81c4e4e83b19 h1:dF789piTv5rw9ztiRTsTEWyVeVo90AC+5W1XIPawBEo=
+github.com/johnstarich/afero v1.3.2-0.20210214021553-81c4e4e83b19/go.mod h1:5KUK8ByomD5Ti5Artl0RtHeI5pTF7MIDuXL3yY520V4=
 github.com/johnstarich/go v0.1.2 h1:F9dlaaVfeouu87o0phoCutz41FlzrFYKzwC4gV/DRlg=
 github.com/johnstarich/go/datasize v0.0.1 h1:Hjswen8gwmO7trXtQ8Xl8NUOQAKKm1wvus3/xK5eHGY=
 github.com/johnstarich/go/datasize v0.0.1/go.mod h1:4eHLMGz7Q5uCmZeS9rZdahvAih1QmBg1EW3bBXTJpi4=
