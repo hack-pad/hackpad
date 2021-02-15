@@ -38,11 +38,6 @@ type IndexedDBFs struct {
 	*storer.Fs
 }
 
-func newPersistDB(name string) (*IndexedDBFs, error) {
-	// TODO support Chromium nativeIO
-	return NewIndexedDBFs(name)
-}
-
 func NewIndexedDBFs(name string) (_ *IndexedDBFs, err error) {
 	db, err := indexeddb.New(name, idbVersion, func(db *indexeddb.DB, oldVersion, newVersion int) error {
 		_, err := db.CreateObjectStore(idbFileContentsStore, indexeddb.ObjectStoreOptions{})

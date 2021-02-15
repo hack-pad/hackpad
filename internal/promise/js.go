@@ -53,7 +53,7 @@ func (p JS) do(methodName string, fn func(value interface{}) interface{}) Promis
 func (p JS) Catch(fn func(rejectedReason interface{}) interface{}) Promise {
 	stack := string(debug.Stack())
 	return p.do("catch", func(rejectedReason interface{}) interface{} {
-		log.ErrorJSValues(
+		log.DebugJSValues(
 			js.ValueOf("Promise rejected:"),
 			rejectedReason,
 			js.ValueOf(stack),
