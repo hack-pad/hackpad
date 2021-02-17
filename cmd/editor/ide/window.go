@@ -3,6 +3,7 @@
 package ide
 
 import (
+	_ "embed"
 	"go/format"
 	"io/ioutil"
 	"runtime/debug"
@@ -17,6 +18,9 @@ import (
 
 var (
 	document = js.Global().Get("document")
+
+	//go:embed window.html
+	windowHTML string
 )
 
 type Window interface {
@@ -41,29 +45,7 @@ type window struct {
 }
 
 func New(elem js.Value, editorBuilder EditorBuilder, consoleBuilder ConsoleBuilder, taskConsoleBuilder TaskConsoleBuilder) (Window, TaskConsole) {
-	elem.Set("innerHTML", `
-<header>
-	<h1 class="app-title">
-		<span class="app-title-go">go</span>
-		<span class="app-title-wasm">wasm</span>
-	</h1>
-	<div class="controls">
-		<button class="control" title="build"><span class="fa fa-hammer"></span></button>
-		<button class="control" title="run"><span class="fa fa-play"></span></button>
-		<button class="control" title="gofmt"><span class="fa fa-magic"></span></button>
-		<div class="loading-indicator"></div>
-		<div class="spacer"></div>
-		<div class="control">
-			<a target="_blank" title="Go Wasm on GitHub" href="https://github.com/johnstarich/go-wasm">
-				<span class="fab fa-github"></span>
-			</a>
-		</div>
-	</div>
-</header>
-
-<div class="panes">
-</div>
-`)
+	elem.Set("innerHTML", windowHTML)
 
 	w := &window{
 		consoleBuilder: consoleBuilder,
