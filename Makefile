@@ -1,5 +1,5 @@
 SHELL := /usr/bin/env bash
-GO_VERSION = 1.15.8
+GO_VERSION = 1.16
 GOROOT =
 PATH := ${PWD}/cache/go/bin:${PWD}/cache/go/misc/wasm:${PATH}
 GOOS = js
