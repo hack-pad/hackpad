@@ -13,6 +13,7 @@ import (
 	"github.com/johnstarich/go-wasm/internal/global"
 	"github.com/johnstarich/go-wasm/internal/interop"
 	"github.com/johnstarich/go-wasm/internal/process"
+	"github.com/johnstarich/go-wasm/internal/promise"
 )
 
 /*
@@ -76,6 +77,7 @@ func Init() {
 	interop.SetFunc(fs, "writeSync", writeSync)
 
 	global.Set("getMounts", js.FuncOf(getMounts))
+	global.Set("destroyMount", js.FuncOf(destroyMount))
 	global.Set("overlayZip", js.FuncOf(overlayZip))
 	global.Set("overlayTarGzip", js.FuncOf(overlayTarGzip))
 	global.Set("overlayStorage", js.FuncOf(overlayStorage))
@@ -96,7 +98,7 @@ func Dump(basePath string) interface{} {
 
 func dumpZip(this js.Value, args []js.Value) interface{} {
 	if len(args) != 1 {
-		return interop.WrapErr(errors.New("dumpZip: file path is required"), "EINVAL")
+		return interop.WrapAsJSError(errors.New("dumpZip: file path is required"), "EINVAL")
 	}
 	path := args[0].String()
 	path = common.ResolvePath(process.Current().WorkingDirectory(), path)
@@ -109,4 +111,21 @@ func getMounts(this js.Value, args []js.Value) interface{} {
 		jsMounts[k] = v
 	}
 	return jsMounts
+}
+
+func destroyMount(this js.Value, args []js.Value) interface{} {
+	if len(args) < 1 {
+		return interop.WrapAsJSError(errors.New("destroyMount: mount path is required"), "EINVAL")
+	}
+	resolve, reject, prom := promise.New()
+	mountPath := args[0].String()
+	go func() {
+		err := interop.WrapAsJSError(fs.DestroyMount(mountPath), "destroyMount")
+		if err != nil {
+			reject(err)
+		} else {
+			resolve(nil)
+		}
+	}()
+	return prom
 }

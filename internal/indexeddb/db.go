@@ -30,7 +30,10 @@ func New(name string, version int, upgrader func(db *DB, oldVersion, newVersion 
 	request := newRequest(jsRequest)
 
 	request.ListenSuccess(func() {
-		jsDB := request.Result()
+		jsDB, err := request.Result()
+		if err != nil {
+			panic(err)
+		}
 		jsDB.Call("addEventListener", "versionchange", js.FuncOf(func(js.Value, []js.Value) interface{} {
 			log.Print("Version change detected, closing DB...")
 			jsDB.Call("close")
@@ -49,8 +52,12 @@ func New(name string, version int, upgrader func(db *DB, oldVersion, newVersion 
 	})
 	jsRequest.Call("addEventListener", "upgradeneeded", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
 		event := args[0]
-		db.jsDB = request.Result()
-		err := upgrader(db, event.Get("oldVersion").Int(), event.Get("newVersion").Int())
+		var err error
+		db.jsDB, err = request.Result()
+		if err != nil {
+			panic(err)
+		}
+		err = upgrader(db, event.Get("oldVersion").Int(), event.Get("newVersion").Int())
 		if err != nil {
 			panic(err)
 		}

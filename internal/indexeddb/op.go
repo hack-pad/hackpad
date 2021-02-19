@@ -2,36 +2,38 @@
 
 package indexeddb
 
-import "syscall/js"
+import (
+	"syscall/js"
+)
 
-type Op = func(*Transaction) *Request
+type Op = func(*Transaction) (*Request, error)
 
 func GetOp(objectStore string, key js.Value) Op {
-	return func(txn *Transaction) *Request {
+	return func(txn *Transaction) (*Request, error) {
 		o, err := txn.ObjectStore(objectStore)
 		if err != nil {
-			panic(err)
+			return nil, err
 		}
-		return newRequest(o.jsObjectStore.Call("get", key))
+		return o.Get(key)
 	}
 }
 
 func PutOp(objectStore string, key, value js.Value) Op {
-	return func(txn *Transaction) *Request {
+	return func(txn *Transaction) (*Request, error) {
 		o, err := txn.ObjectStore(objectStore)
 		if err != nil {
-			panic(err)
+			return nil, err
 		}
-		return newRequest(o.jsObjectStore.Call("put", value, key))
+		return o.Put(key, value)
 	}
 }
 
 func DeleteOp(objectStore string, key js.Value) Op {
-	return func(txn *Transaction) *Request {
+	return func(txn *Transaction) (*Request, error) {
 		o, err := txn.ObjectStore(objectStore)
 		if err != nil {
-			panic(err)
+			return nil, err
 		}
-		return newRequest(o.jsObjectStore.Call("delete", key))
+		return o.Delete(key)
 	}
 }

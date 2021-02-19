@@ -11,6 +11,7 @@ import (
 
 	"github.com/johnstarich/go-wasm/internal/fsutil"
 	"github.com/johnstarich/go-wasm/log"
+	"github.com/pkg/errors"
 	"github.com/spf13/afero"
 )
 
@@ -43,6 +44,22 @@ func (m *Fs) Mounts() (pathsToFSName map[string]string) {
 		pathsToFSName[mount.path] = mount.fs.Name()
 	}
 	return
+}
+
+type fsClearer interface {
+	Clear() error
+}
+
+func (m *Fs) DestroyMount(path string) error {
+	mount := m.mountForPath(path)
+	if mount.path != path {
+		return errors.Errorf("Mount not found for path: %s", path)
+	}
+	clearer, ok := mount.fs.(fsClearer)
+	if !ok {
+		return errors.Errorf("Destroy not supported for mount: %s", mount.fs.Name())
+	}
+	return clearer.Clear()
 }
 
 func (m *Fs) Mount(path string, fs afero.Fs) error {

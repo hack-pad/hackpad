@@ -6,6 +6,7 @@ import (
 	"syscall/js"
 
 	"github.com/johnstarich/go-wasm/internal/common"
+	"github.com/johnstarich/go-wasm/log"
 )
 
 type ObjectStoreOptions struct {
@@ -36,7 +37,12 @@ func (o *ObjectStore) Count() (_ <-chan int, err error) {
 	count := make(chan int)
 	req := newRequest(o.jsObjectStore.Call("count"))
 	req.Listen(func() {
-		count <- req.Result().Int()
+		result, err := req.Result()
+		if err == nil {
+			count <- result.Int()
+		} else {
+			log.Error("Failed to get count result:", err)
+		}
 		close(count)
 	}, func() {
 		close(count)
@@ -89,7 +95,12 @@ func (o *ObjectStore) OpenCursor(key js.Value, direction CursorDirection) (_ <-c
 	cursor := make(chan *Cursor)
 	req := newRequest(o.jsObjectStore.Call("openCursor", key, direction.String()))
 	req.Listen(func() {
-		cursor <- &Cursor{jsCursor: req.Result()}
+		result, err := req.Result()
+		if err == nil {
+			cursor <- &Cursor{jsCursor: result}
+		} else {
+			log.Error("Failed to get cursor result:", err)
+		}
 		close(cursor)
 	}, func() {
 		close(cursor)

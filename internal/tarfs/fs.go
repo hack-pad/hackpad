@@ -30,7 +30,7 @@ type Fs struct {
 	underlyingFs, underlyingReadOnlyFs afero.Fs
 	ps                                 pubsub.PubSub
 	ctx                                context.Context
-	done                               context.CancelFunc
+	cancel                             context.CancelFunc
 	initErr                            error
 }
 
@@ -59,7 +59,7 @@ func New(r io.Reader, underlyingFs afero.Fs) (_ *Fs, retErr error) {
 		underlyingReadOnlyFs: afero.NewReadOnlyFs(underlyingFs),
 		ps:                   pubsub.New(ctx),
 		ctx:                  ctx,
-		done:                 cancel,
+		cancel:               cancel,
 	}
 	go fs.downloadGzip(r)
 	return fs, nil
@@ -71,7 +71,7 @@ func (fs *Fs) downloadGzip(r io.Reader) {
 		fs.initErr = err
 		log.Error("tarfs: Failed to complete overlay: ", err)
 	}
-	fs.done()
+	fs.cancel()
 
 	if closer, ok := r.(io.Closer); ok {
 		_ = closer.Close()
@@ -153,6 +153,12 @@ func (fs *Fs) initProcessFile(
 	mkdirAll func(string, os.FileMode) error,
 	bigPool, smallPool *bufferpool.Pool,
 ) error {
+	select {
+	case <-fs.ctx.Done():
+		return fs.ctx.Err()
+	default:
+	}
+
 	originalName := header.Name
 	path := fsutil.NormalizePath(originalName)
 	info := header.FileInfo()
@@ -299,4 +305,17 @@ func (fs *Fs) Done() <-chan struct{} {
 
 func (fs *Fs) InitErr() error {
 	return fs.initErr
+}
+
+type clearerFs interface {
+	Clear() error
+}
+
+func (fs *Fs) Clear() (err error) {
+	if clearer, ok := fs.underlyingFs.(clearerFs); ok {
+		fs.initErr = context.Canceled
+		fs.cancel()
+		return clearer.Clear()
+	}
+	return errors.Errorf("Unsupported operation for fs: %s", fs.underlyingFs.Name())
 }
