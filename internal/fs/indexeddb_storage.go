@@ -152,6 +152,7 @@ func (i *indexedDBStorer) extractFileRecord(path string, value js.Value, err err
 }
 
 func (i *indexedDBStorer) getFileData(path string) func() (blob.Blob, error) {
+	path = fsutil.NormalizePath(path)
 	return func() (blob.Blob, error) {
 		txn, err := i.db.Transaction(indexeddb.TransactionReadOnly, idbFileContentsStore)
 		if err != nil {
@@ -178,6 +179,7 @@ func (i *indexedDBStorer) getFileData(path string) func() (blob.Blob, error) {
 }
 
 func (i *indexedDBStorer) getDirNames(path string) func() ([]string, error) {
+	path = fsutil.NormalizePath(path)
 	return func() (_ []string, err error) {
 		defer common.CatchException(&err)
 		txn, err := i.db.Transaction(indexeddb.TransactionReadOnly, idbFileInfoStore)
