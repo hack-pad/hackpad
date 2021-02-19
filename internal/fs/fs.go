@@ -27,7 +27,10 @@ func DestroyMount(path string) error {
 }
 
 func OverlayStorage(mountPath string, s storer.Storer) error {
-	fs := storer.New(s)
+	fs, ok := s.(afero.Fs)
+	if !ok {
+		fs = storer.New(s)
+	}
 	return filesystem.Mount(mountPath, fs)
 }
 
