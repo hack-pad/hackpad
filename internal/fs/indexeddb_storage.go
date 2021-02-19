@@ -36,6 +36,7 @@ const (
 
 type IndexedDBFs struct {
 	*storer.Fs
+	db *indexeddb.DB
 }
 
 func newPersistDB(name string) (*IndexedDBFs, error) {
@@ -65,13 +66,15 @@ func NewIndexedDBFs(name string) (_ *IndexedDBFs, err error) {
 		db:       db,
 		setQueue: setQueue,
 	})
-	return &IndexedDBFs{fs}, nil
+	return &IndexedDBFs{
+		Fs: fs,
+		db: db,
+	}, nil
 }
 
 func (i *IndexedDBFs) Clear() error {
-	db := i.Storer.(*indexedDBStorer).db
 	stores := []string{idbFileContentsStore, idbFileInfoStore}
-	txn, err := db.Transaction(indexeddb.TransactionReadWrite, stores...)
+	txn, err := i.db.Transaction(indexeddb.TransactionReadWrite, stores...)
 	if err != nil {
 		return err
 	}
@@ -314,20 +317,28 @@ func (i *indexedDBStorer) queueSetFile(q *queue.Queue, path string, data *storer
 	return err
 }
 
-func (i *indexedDBStorer) batchRequireDir(path string) func(*indexeddb.Transaction) *indexeddb.Request {
-	batchGet := indexeddb.GetOp(idbFileInfoStore, i.jsPaths.Value(path))
-	return func(txn *indexeddb.Transaction) *indexeddb.Request {
-		req := batchGet(txn)
+func (i *indexedDBStorer) batchRequireDir(path string) func(*indexeddb.Transaction) (*indexeddb.Request, error) {
+	return func(txn *indexeddb.Transaction) (_ *indexeddb.Request, err error) {
+		o, err := txn.ObjectStore(idbFileInfoStore)
+		if err != nil {
+			return nil, err
+		}
+		req, err := o.Get(i.jsPaths.Value(path))
+		if err != nil {
+			return nil, err
+		}
 		req.ListenSuccess(func() {
-			result := req.Result()
+			result, err := req.Result()
+			if err != nil {
+				log.Error("Failed batch require dir: ", err)
+				_ = txn.Abort()
+				return
+			}
 			mode := i.getMode(result)
 			if !mode.IsDir() {
-				err := txn.Abort()
-				if err != nil {
-					panic(err)
-				}
+				_ = txn.Abort()
 			}
 		})
-		return req
+		return req, nil
 	}
 }

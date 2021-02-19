@@ -6,6 +6,7 @@ import (
 	"syscall/js"
 
 	"github.com/johnstarich/go-wasm/internal/common"
+	"github.com/johnstarich/go-wasm/log"
 )
 
 type IndexOptions struct {
@@ -28,7 +29,12 @@ func (i *Index) Count() (_ <-chan int, err error) {
 	count := make(chan int)
 	req := newRequest(i.jsIndex.Call("count"))
 	req.Listen(func() {
-		count <- req.Result().Int()
+		result, err := req.Result()
+		if err == nil {
+			count <- result.Int()
+		} else {
+			log.Error("Failed to get count result:", err)
+		}
 		close(count)
 	}, func() {
 		close(count)
@@ -56,7 +62,12 @@ func (i *Index) OpenCursor(key js.Value, direction CursorDirection) (_ <-chan *C
 	cursor := make(chan *Cursor)
 	req := newRequest(i.jsIndex.Call("openCursor", key, direction.String()))
 	req.Listen(func() {
-		cursor <- &Cursor{jsCursor: req.Result()}
+		result, err := req.Result()
+		if err == nil {
+			cursor <- &Cursor{jsCursor: result}
+		} else {
+			log.Error("Failed to get cursor result:", err)
+		}
 		close(cursor)
 	}, func() {
 		close(cursor)

@@ -22,6 +22,10 @@ func Mounts() (pathsToFSName map[string]string) {
 	return filesystem.Mounts()
 }
 
+func DestroyMount(path string) error {
+	return filesystem.DestroyMount(path)
+}
+
 func OverlayStorage(mountPath string, s storer.Storer) error {
 	fs := storer.New(s)
 	return filesystem.Mount(mountPath, fs)

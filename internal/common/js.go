@@ -17,16 +17,29 @@ func (p PID) JSValue() js.Value {
 }
 
 func CatchException(err *error) {
-	r := recover()
+	recoverErr := handleRecovery(recover())
+	if recoverErr != nil {
+		*err = recoverErr
+	}
+}
+
+func CatchExceptionHandler(fn func(err error)) {
+	err := handleRecovery(recover())
+	if err != nil {
+		fn(err)
+	}
+}
+
+func handleRecovery(r interface{}) error {
 	if r == nil {
-		return
+		return nil
 	}
 	switch val := r.(type) {
 	case error:
-		*err = val
+		return val
 	case js.Value:
-		*err = js.Error{Value: val}
+		return js.Error{Value: val}
 	default:
-		*err = errors.Errorf("%+v", val)
+		return errors.Errorf("%+v", val)
 	}
 }

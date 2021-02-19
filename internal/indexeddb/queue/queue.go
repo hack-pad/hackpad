@@ -65,7 +65,11 @@ func (q *Queue) Do(db *indexeddb.DB) ([]js.Value, error) {
 	if err == nil {
 		results = make([]js.Value, len(requests))
 		for i := range runners {
-			result := requests[i].Result()
+			result, resultErr := requests[i].Result()
+			if resultErr != nil && err == nil {
+				err = resultErr
+				break
+			}
 			runners[i].result <- result
 			results[i] = result
 		}
@@ -100,7 +104,11 @@ func runOps(db *indexeddb.DB, mode indexeddb.TransactionMode, storeNames []strin
 	}
 
 	for _, runner := range runners {
-		requests = append(requests, runner.op(txn))
+		req, err := runner.op(txn)
+		if err != nil {
+			return nil, err
+		}
+		requests = append(requests, req)
 	}
 
 	err = txn.Commit()
