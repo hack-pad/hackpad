@@ -1,3 +1,14 @@
+:root {
+    --color-danger: #af1a1a;
+
+}
+
+@media screen and (prefers-color-scheme: dark) {
+    :root {
+        --color-danger: #ff8989;
+    }
+}
+
 .ide {
     display: flex;
     flex-direction: column;
