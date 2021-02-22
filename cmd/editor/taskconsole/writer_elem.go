@@ -6,7 +6,7 @@ import (
 	"io"
 	"syscall/js"
 
-	"github.com/johnstarich/go-wasm/cmd/editor/element"
+	"github.com/johnstarich/go-wasm/cmd/editor/dom"
 )
 
 var (
@@ -18,11 +18,11 @@ const (
 )
 
 type elementWriter struct {
-	element *element.Element
+	element *dom.Element
 	class   string
 }
 
-func newElementWriter(elem *element.Element, class string) interface {
+func newElementWriter(elem *dom.Element, class string) interface {
 	io.Writer
 	io.StringWriter
 } {
@@ -37,7 +37,7 @@ func (w *elementWriter) Write(p []byte) (n int, err error) {
 }
 
 func (w *elementWriter) WriteString(s string) (n int, err error) {
-	textNode := element.New("span")
+	textNode := dom.New("span")
 	w.element.AppendChild(textNode)
 	if w.class != "" {
 		textNode.AddClass(w.class)

@@ -6,19 +6,19 @@ import (
 	"context"
 	"syscall/js"
 
-	"github.com/johnstarich/go-wasm/cmd/editor/element"
+	"github.com/johnstarich/go-wasm/cmd/editor/dom"
 )
 
 type Tab struct {
 	id             int
-	button         *element.Element
-	buttonListener element.EventListener
-	contents       *element.Element
-	title          *element.Element
+	button         *dom.Element
+	buttonListener dom.EventListener
+	contents       *dom.Element
+	title          *dom.Element
 	stopTitlesLoop context.CancelFunc
 }
 
-func newTab(id int, button, contents, title *element.Element, tabber Tabber, focus func(id int)) *Tab {
+func newTab(id int, button, contents, title *dom.Element, tabber Tabber, focus func(id int)) *Tab {
 	ctx, cancel := context.WithCancel(context.Background())
 	t := &Tab{
 		id:             id,

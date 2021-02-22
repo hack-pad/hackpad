@@ -7,7 +7,7 @@ import (
 	"os"
 	"syscall/js"
 
-	"github.com/johnstarich/go-wasm/cmd/editor/element"
+	"github.com/johnstarich/go-wasm/cmd/editor/dom"
 	"github.com/johnstarich/go-wasm/cmd/editor/ide"
 	"github.com/johnstarich/go-wasm/log"
 )
@@ -21,7 +21,7 @@ import (
 // }
 type editorJSFunc js.Value
 
-func (e editorJSFunc) New(elem *element.Element) ide.Editor {
+func (e editorJSFunc) New(elem *dom.Element) ide.Editor {
 	editor := &jsEditor{
 		titleChan: make(chan string, 1),
 	}

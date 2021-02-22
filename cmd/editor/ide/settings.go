@@ -9,7 +9,7 @@ import (
 	"syscall/js"
 
 	"github.com/johnstarich/go-wasm/cmd/editor/css"
-	"github.com/johnstarich/go-wasm/cmd/editor/element"
+	"github.com/johnstarich/go-wasm/cmd/editor/dom"
 	"github.com/johnstarich/go-wasm/internal/global"
 	"github.com/johnstarich/go-wasm/internal/interop"
 	"github.com/johnstarich/go-wasm/internal/promise"
@@ -30,8 +30,8 @@ func init() {
 	css.Add(settingsCSS)
 }
 
-func newSettings() *element.Element {
-	button := element.New("button")
+func newSettings() *dom.Element {
+	button := dom.New("button")
 	button.SetInnerHTML(`<span class="fa fa-cog"></span>`)
 	button.SetAttribute("className", "control")
 	button.SetAttribute("title", "Settings")
@@ -44,8 +44,8 @@ func newSettings() *element.Element {
 	return button
 }
 
-func newSettingsDropdown(attachTo *element.Element) *dropdown {
-	elem := element.New("div")
+func newSettingsDropdown(attachTo *dom.Element) *dropdown {
+	elem := dom.New("div")
 	elem.SetInnerHTML(settingsHTML)
 	elem.AddClass("settings-dropdown")
 	drop := newDropdown(attachTo, elem)

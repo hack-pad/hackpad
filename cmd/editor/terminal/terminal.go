@@ -7,7 +7,7 @@ import (
 	"os/exec"
 	"syscall/js"
 
-	"github.com/johnstarich/go-wasm/cmd/editor/element"
+	"github.com/johnstarich/go-wasm/cmd/editor/dom"
 	"github.com/johnstarich/go-wasm/cmd/editor/ide"
 	"github.com/johnstarich/go-wasm/internal/blob"
 	"github.com/johnstarich/go-wasm/log"
@@ -29,7 +29,7 @@ type terminal struct {
 	titleChan chan string
 }
 
-func (b *terminalBuilder) New(elem *element.Element, rawName, name string, args ...string) (ide.Console, error) {
+func (b *terminalBuilder) New(elem *dom.Element, rawName, name string, args ...string) (ide.Console, error) {
 	term := &terminal{
 		xterm:     b.newXTermFunc.Invoke(elem),
 		titleChan: make(chan string, 1),

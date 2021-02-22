@@ -2,10 +2,10 @@
 
 package ide
 
-import "github.com/johnstarich/go-wasm/cmd/editor/element"
+import "github.com/johnstarich/go-wasm/cmd/editor/dom"
 
 type EditorBuilder interface {
-	New(elem *element.Element) Editor
+	New(elem *dom.Element) Editor
 }
 
 type Editor interface {

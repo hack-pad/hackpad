@@ -5,11 +5,11 @@ package ide
 import (
 	"context"
 
-	"github.com/johnstarich/go-wasm/cmd/editor/element"
+	"github.com/johnstarich/go-wasm/cmd/editor/dom"
 )
 
 type ConsoleBuilder interface {
-	New(elem *element.Element, rawName, name string, args ...string) (Console, error)
+	New(elem *dom.Element, rawName, name string, args ...string) (Console, error)
 }
 
 type Console interface {
@@ -21,7 +21,7 @@ type ConsoleWaiter interface {
 }
 
 type TaskConsoleBuilder interface {
-	New(elem *element.Element) TaskConsole
+	New(elem *dom.Element) TaskConsole
 }
 
 type TaskConsole interface {

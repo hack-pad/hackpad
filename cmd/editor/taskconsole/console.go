@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/johnstarich/go-wasm/cmd/editor/element"
+	"github.com/johnstarich/go-wasm/cmd/editor/dom"
 	"github.com/johnstarich/go-wasm/cmd/editor/ide"
 )
 
@@ -27,7 +27,7 @@ type console struct {
 	titleChan            chan string
 }
 
-func (b *builder) New(elem *element.Element) ide.TaskConsole {
+func (b *builder) New(elem *dom.Element) ide.TaskConsole {
 	elem.SetInnerHTML(`
 <pre class="console-output"></pre>
 `)

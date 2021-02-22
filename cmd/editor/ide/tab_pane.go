@@ -5,7 +5,7 @@ package ide
 import (
 	"syscall/js"
 
-	"github.com/johnstarich/go-wasm/cmd/editor/element"
+	"github.com/johnstarich/go-wasm/cmd/editor/dom"
 )
 
 type Tabber interface {
@@ -13,10 +13,10 @@ type Tabber interface {
 }
 
 type TabPane struct {
-	*element.Element
+	*dom.Element
 	lastTabID         int
-	tabButtonsParent  *element.Element
-	tabsParent        *element.Element
+	tabButtonsParent  *dom.Element
+	tabsParent        *dom.Element
 	tabs              []*Tab
 	currentTab        int
 	makeDefaultTab    TabBuilder
@@ -29,10 +29,10 @@ type TabOptions struct {
 	NoClose bool // disables the close button
 }
 
-type TabBuilder func(id int, title, contents *element.Element) Tabber
+type TabBuilder func(id int, title, contents *dom.Element) Tabber
 
 func NewTabPane(newTabOptions TabOptions, makeDefaultTab TabBuilder, closedTab func(index int)) *TabPane {
-	elem := element.New("div")
+	elem := dom.New("div")
 	elem.AddClass("pane")
 	elem.SetInnerHTML(`
 <nav class="tab-bar">
@@ -62,11 +62,11 @@ func (p *TabPane) NewDefaultTab(options TabOptions) Tabber {
 }
 
 func (p *TabPane) NewTab(options TabOptions, makeTab TabBuilder) Tabber {
-	contents := element.New("div")
+	contents := dom.New("div")
 	contents.AddClass("tab")
 	p.tabsParent.AppendChild(contents)
 
-	tabItem := element.New("li")
+	tabItem := dom.New("li")
 	tabItem.AddClass("tab-button")
 	buttonTemplate := `
 <span class="tab-title">New file</span>

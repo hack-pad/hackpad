@@ -6,7 +6,7 @@ import (
 	"io/ioutil"
 	"syscall/js"
 
-	"github.com/johnstarich/go-wasm/cmd/editor/element"
+	"github.com/johnstarich/go-wasm/cmd/editor/dom"
 	"github.com/johnstarich/go-wasm/cmd/editor/ide"
 	"github.com/johnstarich/go-wasm/log"
 )
@@ -19,13 +19,13 @@ func New() ide.EditorBuilder {
 }
 
 type textAreaEditor struct {
-	elem      *element.Element
-	textarea  *element.Element
+	elem      *dom.Element
+	textarea  *dom.Element
 	filePath  string
 	titleChan chan string
 }
 
-func (b *textAreaBuilder) New(elem *element.Element) ide.Editor {
+func (b *textAreaBuilder) New(elem *dom.Element) ide.Editor {
 	elem.SetInnerHTML(`<textarea spellcheck=false></textarea>`)
 	e := &textAreaEditor{
 		elem:      elem,

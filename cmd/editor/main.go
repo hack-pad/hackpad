@@ -8,7 +8,7 @@ import (
 	"os"
 	"syscall/js"
 
-	"github.com/johnstarich/go-wasm/cmd/editor/element"
+	"github.com/johnstarich/go-wasm/cmd/editor/dom"
 	"github.com/johnstarich/go-wasm/cmd/editor/ide"
 	"github.com/johnstarich/go-wasm/cmd/editor/plaineditor"
 	"github.com/johnstarich/go-wasm/cmd/editor/taskconsole"
@@ -30,7 +30,7 @@ func main() {
 		os.Exit(2)
 	}
 
-	app := element.GetDocument().GetElementByID(*editorID)
+	app := dom.GetDocument().GetElementByID(*editorID)
 	app.AddClass("ide")
 	globalEditorProps := js.Global().Get("editor")
 	globalEditorProps.Set("profile", js.FuncOf(interop.ProfileJS))

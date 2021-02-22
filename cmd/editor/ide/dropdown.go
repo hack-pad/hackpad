@@ -6,7 +6,7 @@ import (
 	"syscall/js"
 
 	"github.com/johnstarich/go-wasm/cmd/editor/css"
-	"github.com/johnstarich/go-wasm/cmd/editor/element"
+	"github.com/johnstarich/go-wasm/cmd/editor/dom"
 )
 
 var (
@@ -19,25 +19,25 @@ func init() {
 }
 
 type dropdown struct {
-	*element.Element
+	*dom.Element
 
-	attached *element.Element
+	attached *dom.Element
 	opened   bool
 }
 
-func newDropdown(attachTo, content *element.Element) *dropdown {
+func newDropdown(attachTo, content *dom.Element) *dropdown {
 	drop := &dropdown{
-		Element:  element.New("div"),
+		Element:  dom.New("div"),
 		attached: attachTo,
 	}
-	element.GetDocument().AddEventListener("click", func(event js.Value) {
+	dom.GetDocument().AddEventListener("click", func(event js.Value) {
 		if !event.Call("composedPath").Call("includes", drop).Bool() {
 			drop.Close()
 		}
 	})
 	drop.AppendChild(content)
 	drop.AddClass("dropdown")
-	element.Body().InsertBefore(drop.Element, element.Body().FirstChild())
+	dom.Body().InsertBefore(drop.Element, dom.Body().FirstChild())
 	return drop
 }
 
@@ -55,7 +55,7 @@ func (d *dropdown) Open() {
 	}
 	d.opened = true
 	rect := d.attached.GetBoundingClientRect()
-	viewportRect := element.ViewportRect()
+	viewportRect := dom.ViewportRect()
 	top := px(rect.Bottom)
 	if rect.Left+rect.Width/2 > viewportRect.Left+viewportRect.Right/2 {
 		// on the right half of the screen, align right
