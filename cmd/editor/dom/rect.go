@@ -17,16 +17,3 @@ func newRect(domRect js.Value) *Rect {
 		Height: domRect.Get("height").Float(),
 	}
 }
-
-func ViewportRect() *Rect {
-	window := js.Global()
-	width, height := window.Get("innerWidth").Float(), window.Get("innerHeight").Float()
-	return &Rect{
-		Left:   0,
-		Top:    0,
-		Right:  width,
-		Bottom: height,
-		Width:  width,
-		Height: height,
-	}
-}

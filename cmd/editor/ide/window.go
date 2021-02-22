@@ -12,7 +12,6 @@ import (
 	"github.com/avct/uasurfer"
 	"github.com/johnstarich/go-wasm/cmd/editor/css"
 	"github.com/johnstarich/go-wasm/cmd/editor/dom"
-	"github.com/johnstarich/go-wasm/internal/interop"
 	"github.com/johnstarich/go-wasm/log"
 	"go.uber.org/atomic"
 )
@@ -182,10 +181,9 @@ func (w *window) makeDefaultEditor(id int, title, contents *dom.Element) Tabber 
 
 	title.SetInnerHTML(`<input type="text" class="editor-file-picker" placeholder="file_name.go" spellcheck=false />`)
 	inputElem := title.QuerySelector("input")
-	js.Global().Call("setTimeout", interop.SingleUseFunc(func(this js.Value, args []js.Value) interface{} {
+	dom.QueueMicrotask(func() {
 		inputElem.Focus() // run focus on next run loop so opening a file immediately doesn't trigger onblur
-		return nil
-	}))
+	})
 
 	keydownFn := func(event js.Value) {
 		if event.Get("key").String() != "Enter" {
