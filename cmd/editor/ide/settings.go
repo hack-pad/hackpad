@@ -54,7 +54,7 @@ func newSettingsDropdown(attachTo *dom.Element) *dropdown {
 		elem.
 			QuerySelector(fmt.Sprintf("button[title=%q]", name)).
 			AddEventListener("click", func(event js.Value) {
-				if prompt == "" || js.Global().Call("confirm", prompt).Bool() {
+				if prompt == "" || dom.Confirm(prompt) {
 					go fn()
 				}
 			})
@@ -72,7 +72,7 @@ func newSettingsDropdown(attachTo *dom.Element) *dropdown {
 		for _, p := range promises {
 			_, _ = p.Await()
 		}
-		js.Global().Get("window").Get("location").Call("reload")
+		dom.Reload()
 	})
 	listenButton("clean build cache", "", func() {
 		cache, err := os.UserCacheDir()
@@ -82,7 +82,7 @@ func newSettingsDropdown(attachTo *dom.Element) *dropdown {
 	})
 	listenButton("reload go install", "Reinstall Go and reload?", func() {
 		_, _ = destroyMount(goInstallPath).Await()
-		js.Global().Get("window").Get("location").Call("reload")
+		dom.Reload()
 	})
 	return drop
 }
