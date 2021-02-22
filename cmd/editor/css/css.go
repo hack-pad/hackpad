@@ -4,15 +4,15 @@ import (
 	"fmt"
 	"syscall/js"
 
-	"github.com/johnstarich/go-wasm/cmd/editor/element"
+	"github.com/johnstarich/go-wasm/cmd/editor/dom"
 )
 
 var sheet = createStyleSheet()
 
 func createStyleSheet() js.Value {
-	style := element.New("style")
+	style := dom.New("style")
 	style.SetAttribute("type", "text/css")
-	element.Head().AppendChild(style)
+	dom.Head().AppendChild(style)
 	return style.GetProperty("sheet")
 }
 

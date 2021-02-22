@@ -1,4 +1,4 @@
-package element
+package dom
 
 import (
 	"runtime/debug"

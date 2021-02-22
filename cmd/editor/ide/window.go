@@ -11,7 +11,7 @@ import (
 
 	"github.com/avct/uasurfer"
 	"github.com/johnstarich/go-wasm/cmd/editor/css"
-	"github.com/johnstarich/go-wasm/cmd/editor/element"
+	"github.com/johnstarich/go-wasm/cmd/editor/dom"
 	"github.com/johnstarich/go-wasm/internal/interop"
 	"github.com/johnstarich/go-wasm/log"
 	"go.uber.org/atomic"
@@ -30,11 +30,11 @@ type Window interface {
 }
 
 type window struct {
-	*element.Element
+	*dom.Element
 
 	panesElem,
-	loadingElem *element.Element
-	controlButtons []*element.Element
+	loadingElem *dom.Element
+	controlButtons []*dom.Element
 
 	consoleBuilder ConsoleBuilder
 	consoles       []Console
@@ -46,7 +46,7 @@ type window struct {
 	showLoading atomic.Bool
 }
 
-func New(elem *element.Element, editorBuilder EditorBuilder, consoleBuilder ConsoleBuilder, taskConsoleBuilder TaskConsoleBuilder) (Window, TaskConsole) {
+func New(elem *dom.Element, editorBuilder EditorBuilder, consoleBuilder ConsoleBuilder, taskConsoleBuilder TaskConsoleBuilder) (Window, TaskConsole) {
 	css.Add(windowCSS)
 	elem.SetInnerHTML(windowHTML)
 
@@ -62,7 +62,7 @@ func New(elem *element.Element, editorBuilder EditorBuilder, consoleBuilder Cons
 	w.editorsPane = NewTabPane(TabOptions{NoFocus: true}, w.makeDefaultEditor, w.closedEditor)
 	w.panesElem.AppendChild(w.editorsPane.Element)
 
-	w.consolesPane = NewTabPane(TabOptions{}, func(_ int, _, contents *element.Element) Tabber {
+	w.consolesPane = NewTabPane(TabOptions{}, func(_ int, _, contents *dom.Element) Tabber {
 		console, err := w.consoleBuilder.New(contents, "", "sh")
 		if err != nil {
 			log.Error(err)
@@ -126,14 +126,14 @@ func New(elem *element.Element, editorBuilder EditorBuilder, consoleBuilder Cons
 	controls.AppendChild(settings)
 
 	if !isCompatibleBrowser() {
-		dialogElem := element.New("div")
+		dialogElem := dom.New("div")
 		dialogElem.AddClass("compatibility-warning-dialog")
 		dialogElem.SetInnerHTML(`
 			<p>Go Wasm may not work reliably in your browser.</p>
 			<p>If you're experience any issues, try a recent version of Chrome or Firefox on a device with enough memory, like a PC.</p>
 		`)
 
-		warningElem := element.New("button")
+		warningElem := dom.New("button")
 		warningElem.AddClass("control")
 		warningElem.AddClass("compatibility-warning")
 		warningElem.SetAttribute("title", "Show browser compatibility warning")
@@ -142,11 +142,11 @@ func New(elem *element.Element, editorBuilder EditorBuilder, consoleBuilder Cons
 			dialogElem.ToggleClass("compatibility-warning-show")
 		})
 
-		element.Body().InsertBefore(dialogElem, element.Body().FirstChild())
+		dom.Body().InsertBefore(dialogElem, dom.Body().FirstChild())
 		controls.AppendChild(warningElem)
 	}
 
-	taskConsole := w.consolesPane.NewTab(TabOptions{NoClose: true}, func(_ int, _, contents *element.Element) Tabber {
+	taskConsole := w.consolesPane.NewTab(TabOptions{NoClose: true}, func(_ int, _, contents *dom.Element) Tabber {
 		c := taskConsoleBuilder.New(contents)
 		w.consoles = append(w.consoles, c)
 		return c
@@ -175,7 +175,7 @@ func isCompatibleBrowser() bool {
 	return false
 }
 
-func (w *window) makeDefaultEditor(id int, title, contents *element.Element) Tabber {
+func (w *window) makeDefaultEditor(id int, title, contents *dom.Element) Tabber {
 	contents.AddClass("editor")
 	editor := w.editorBuilder.New(contents)
 	w.editors = append(w.editors, editor)
