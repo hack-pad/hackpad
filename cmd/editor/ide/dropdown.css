@@ -1,0 +1,9 @@
+.dropdown {
+    visibility: hidden;
+    z-index: 1000;
+    position: absolute;
+}
+
+.dropdown-visible {
+    visibility: visible;
+}

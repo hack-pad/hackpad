@@ -1,0 +1,11 @@
+.settings-dropdown {
+    color: var(--app-controls-color);
+    background-color: var(--app-controls-background);
+    text-align: left;
+    width: 20em;
+    padding: 0 1em;
+    border-left: 2px solid;
+    border-bottom: 2px solid;
+    border-color: var(--app-controls-background-light);
+    border-bottom-left-radius: 0.5em;
+}

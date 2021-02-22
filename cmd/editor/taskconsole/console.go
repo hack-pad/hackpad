@@ -8,9 +8,9 @@ import (
 	"io"
 	"os/exec"
 	"strings"
-	"syscall/js"
 	"time"
 
+	"github.com/johnstarich/go-wasm/cmd/editor/element"
 	"github.com/johnstarich/go-wasm/cmd/editor/ide"
 )
 
@@ -27,12 +27,12 @@ type console struct {
 	titleChan            chan string
 }
 
-func (b *builder) New(element js.Value) ide.TaskConsole {
-	element.Set("innerHTML", `
+func (b *builder) New(elem *element.Element) ide.TaskConsole {
+	elem.SetInnerHTML(`
 <pre class="console-output"></pre>
 `)
-	element.Get("classList").Call("add", "console")
-	outputElem := element.Call("querySelector", ".console-output")
+	elem.AddClass("console")
+	outputElem := elem.QuerySelector(".console-output")
 	c := &console{
 		stdout:      newElementWriter(outputElem, ""),
 		stderr:      newElementWriter(outputElem, "stderr"),

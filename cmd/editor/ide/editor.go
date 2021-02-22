@@ -2,10 +2,10 @@
 
 package ide
 
-import "syscall/js"
+import "github.com/johnstarich/go-wasm/cmd/editor/element"
 
 type EditorBuilder interface {
-	New(elem js.Value) Editor
+	New(elem *element.Element) Editor
 }
 
 type Editor interface {

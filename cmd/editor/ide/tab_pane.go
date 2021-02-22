@@ -5,7 +5,7 @@ package ide
 import (
 	"syscall/js"
 
-	"github.com/johnstarich/go-wasm/internal/interop"
+	"github.com/johnstarich/go-wasm/cmd/editor/element"
 )
 
 type Tabber interface {
@@ -13,11 +13,10 @@ type Tabber interface {
 }
 
 type TabPane struct {
+	*element.Element
 	lastTabID         int
-	jsValue           js.Value
-	tabButtonsParent  js.Value
-	tabsParent        js.Value
-	newTabListener    js.Func
+	tabButtonsParent  *element.Element
+	tabsParent        *element.Element
 	tabs              []*Tab
 	currentTab        int
 	makeDefaultTab    TabBuilder
@@ -30,12 +29,12 @@ type TabOptions struct {
 	NoClose bool // disables the close button
 }
 
-type TabBuilder func(id int, title, contents js.Value) Tabber
+type TabBuilder func(id int, title, contents *element.Element) Tabber
 
 func NewTabPane(newTabOptions TabOptions, makeDefaultTab TabBuilder, closedTab func(index int)) *TabPane {
-	elem := document.Call("createElement", "div")
-	elem.Get("classList").Call("add", "pane")
-	elem.Set("innerHTML", `
+	elem := element.New("div")
+	elem.AddClass("pane")
+	elem.SetInnerHTML(`
 <nav class="tab-bar">
 	<ul class="tab-buttons"></ul>
 	<button class="tab-new" title="new tab"><span class="fa fa-plus"></span></button>
@@ -43,25 +42,19 @@ func NewTabPane(newTabOptions TabOptions, makeDefaultTab TabBuilder, closedTab f
 <div class="tabs"></div>
 `)
 	p := &TabPane{
-		jsValue:           elem,
-		tabButtonsParent:  elem.Call("querySelector", ".tab-buttons"),
-		tabsParent:        elem.Call("querySelector", ".tabs"),
+		Element:           elem,
+		tabButtonsParent:  elem.QuerySelector(".tab-buttons"),
+		tabsParent:        elem.QuerySelector(".tabs"),
 		tabs:              nil,
 		currentTab:        -1,
 		makeDefaultTab:    makeDefaultTab,
 		newTabOptions:     newTabOptions,
 		closedTabListener: closedTab,
 	}
-	p.newTabListener = js.FuncOf(func(js.Value, []js.Value) interface{} {
+	elem.QuerySelector(".tab-new").AddEventListener("click", func(js.Value) {
 		p.NewTab(newTabOptions, p.makeDefaultTab)
-		return nil
 	})
-	elem.Call("querySelector", ".tab-new").Call("addEventListener", "click", p.newTabListener)
 	return p
-}
-
-func (p *TabPane) JSValue() js.Value {
-	return p.jsValue
 }
 
 func (p *TabPane) NewDefaultTab(options TabOptions) Tabber {
@@ -69,21 +62,21 @@ func (p *TabPane) NewDefaultTab(options TabOptions) Tabber {
 }
 
 func (p *TabPane) NewTab(options TabOptions, makeTab TabBuilder) Tabber {
-	contents := document.Call("createElement", "div")
-	contents.Set("className", "tab")
-	p.tabsParent.Call("appendChild", contents)
+	contents := element.New("div")
+	contents.AddClass("tab")
+	p.tabsParent.AppendChild(contents)
 
-	tabItem := document.Call("createElement", "li")
-	tabItem.Get("classList").Call("add", "tab-button")
+	tabItem := element.New("li")
+	tabItem.AddClass("tab-button")
 	buttonTemplate := `
 <span class="tab-title">New file</span>
 `
 	if !options.NoClose {
 		buttonTemplate += `<button class="tab-close" title="close"><span class="fa fa-times"></span></button>`
 	}
-	tabItem.Set("innerHTML", buttonTemplate)
-	title := tabItem.Call("querySelector", ".tab-title")
-	p.tabButtonsParent.Call("appendChild", tabItem)
+	tabItem.SetInnerHTML(buttonTemplate)
+	title := tabItem.QuerySelector(".tab-title")
+	p.tabButtonsParent.AppendChild(tabItem)
 
 	id := p.lastTabID
 	p.lastTabID++
@@ -92,13 +85,11 @@ func (p *TabPane) NewTab(options TabOptions, makeTab TabBuilder) Tabber {
 	p.tabs = append(p.tabs, tab)
 
 	if !options.NoClose {
-		closeButton := tabItem.Call("querySelector", ".tab-close")
-		closeButton.Call("addEventListener", "click", interop.SingleUseFunc(func(_ js.Value, args []js.Value) interface{} {
-			event := args[0]
+		closeButton := tabItem.QuerySelector(".tab-close")
+		closeButton.AddEventListener("click", func(event js.Value) {
 			event.Call("stopPropagation")
 			p.closeTabID(tab.id)
-			return nil
-		}))
+		})
 	}
 
 	if !options.NoFocus {
@@ -127,7 +118,6 @@ func (p *TabPane) focusID(id int) {
 }
 
 func (p *TabPane) Close() {
-	p.newTabListener.Release()
 }
 
 func (p *TabPane) CloseTab(index int) {
@@ -151,8 +141,8 @@ func (p *TabPane) closeTabID(id int) {
 	}
 
 	tab.Close()
-	p.tabButtonsParent.Get("children").Index(tabIndex).Call("remove")
-	p.tabsParent.Get("children").Index(tabIndex).Call("remove")
+	p.tabButtonsParent.Children()[tabIndex].Remove()
+	p.tabsParent.Children()[tabIndex].Remove()
 
 	var newTabs []*Tab
 	newTabs = append(newTabs, p.tabs[:tabIndex]...)

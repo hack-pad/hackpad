@@ -54,6 +54,7 @@ func OverlayTarGzip(mountPath string, r io.ReadCloser, persist bool) error {
 	if err != nil {
 		return err
 	}
+
 	_, err = underlyingFs.Stat(tarfsDoneMarker)
 	if err == nil {
 		// tarfs already completed successfully and is persisted,

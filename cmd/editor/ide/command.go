@@ -47,10 +47,10 @@ func (w *window) startProcess(console TaskConsole, rawPath, name string, args ..
 		return false, 0
 	}
 	startTime := time.Now()
-	w.loadingElem.Get("classList").Call("add", "loading")
+	w.loadingElem.AddClass("loading")
 	defer func() {
 		w.showLoading.Store(false)
-		w.loadingElem.Get("classList").Call("remove", "loading")
+		w.loadingElem.RemoveClass("loading")
 	}()
 
 	ctx, err := console.Start(rawPath, name, args...)

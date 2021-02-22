@@ -4,11 +4,12 @@ package ide
 
 import (
 	"context"
-	"syscall/js"
+
+	"github.com/johnstarich/go-wasm/cmd/editor/element"
 )
 
 type ConsoleBuilder interface {
-	New(elem js.Value, rawName, name string, args ...string) (Console, error)
+	New(elem *element.Element, rawName, name string, args ...string) (Console, error)
 }
 
 type Console interface {
@@ -20,7 +21,7 @@ type ConsoleWaiter interface {
 }
 
 type TaskConsoleBuilder interface {
-	New(elem js.Value) TaskConsole
+	New(elem *element.Element) TaskConsole
 }
 
 type TaskConsole interface {

@@ -6,21 +6,22 @@ import (
 	_ "embed"
 	"go/format"
 	"io/ioutil"
-	"runtime/debug"
 	"strings"
 	"syscall/js"
 
 	"github.com/avct/uasurfer"
+	"github.com/johnstarich/go-wasm/cmd/editor/css"
+	"github.com/johnstarich/go-wasm/cmd/editor/element"
 	"github.com/johnstarich/go-wasm/internal/interop"
 	"github.com/johnstarich/go-wasm/log"
 	"go.uber.org/atomic"
 )
 
 var (
-	document = js.Global().Get("document")
-
 	//go:embed window.html
 	windowHTML string
+	//go:embed window.css
+	windowCSS string
 )
 
 type Window interface {
@@ -29,10 +30,11 @@ type Window interface {
 }
 
 type window struct {
-	elem js.Value
+	*element.Element
+
 	panesElem,
-	controlButtons,
-	loadingElem js.Value
+	loadingElem *element.Element
+	controlButtons []*element.Element
 
 	consoleBuilder ConsoleBuilder
 	consoles       []Console
@@ -44,22 +46,23 @@ type window struct {
 	showLoading atomic.Bool
 }
 
-func New(elem js.Value, editorBuilder EditorBuilder, consoleBuilder ConsoleBuilder, taskConsoleBuilder TaskConsoleBuilder) (Window, TaskConsole) {
-	elem.Set("innerHTML", windowHTML)
+func New(elem *element.Element, editorBuilder EditorBuilder, consoleBuilder ConsoleBuilder, taskConsoleBuilder TaskConsoleBuilder) (Window, TaskConsole) {
+	css.Add(windowCSS)
+	elem.SetInnerHTML(windowHTML)
 
 	w := &window{
+		Element:        elem,
 		consoleBuilder: consoleBuilder,
-		controlButtons: elem.Call("querySelectorAll", ".controls button"),
+		controlButtons: elem.QuerySelectorAll(".controls button"),
 		editorBuilder:  editorBuilder,
-		elem:           elem,
-		loadingElem:    elem.Call("querySelector", ".controls .loading-indicator"),
-		panesElem:      elem.Call("querySelector", ".panes"),
+		loadingElem:    elem.QuerySelector(".controls .loading-indicator"),
+		panesElem:      elem.QuerySelector(".panes"),
 	}
 
 	w.editorsPane = NewTabPane(TabOptions{NoFocus: true}, w.makeDefaultEditor, w.closedEditor)
-	w.panesElem.Call("appendChild", w.editorsPane)
+	w.panesElem.AppendChild(w.editorsPane.Element)
 
-	w.consolesPane = NewTabPane(TabOptions{}, func(_ int, _, contents js.Value) Tabber {
+	w.consolesPane = NewTabPane(TabOptions{}, func(_ int, _, contents *element.Element) Tabber {
 		console, err := w.consoleBuilder.New(contents, "", "sh")
 		if err != nil {
 			log.Error(err)
@@ -72,82 +75,78 @@ func New(elem js.Value, editorBuilder EditorBuilder, consoleBuilder ConsoleBuild
 		newConsoles = append(newConsoles, w.consoles[closedIndex+1:]...)
 		w.consoles = newConsoles
 	})
-	w.panesElem.Call("appendChild", w.consolesPane)
+	w.panesElem.AppendChild(w.consolesPane.Element)
 
-	w.controlButtons.Index(0).Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+	w.controlButtons[0].AddEventListener("click", func(event js.Value) {
 		w.consolesPane.Focus(buildConsoleIndex)
 		console := w.consoles[buildConsoleIndex]
 		w.runGoProcess(console.(TaskConsole), "build", "-v", ".")
-		return nil
-	}))
-	w.controlButtons.Index(1).Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+	})
+	w.controlButtons[1].AddEventListener("click", func(event js.Value) {
 		w.consolesPane.Focus(buildConsoleIndex)
 		console := w.consoles[buildConsoleIndex]
 		w.runPlayground(console.(TaskConsole))
-		return nil
-	}))
-	w.controlButtons.Index(2).Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+	})
+	w.controlButtons[2].AddEventListener("click", func(event js.Value) {
 		ix := w.editorsPane.currentTab
 		if ix < 0 || ix >= len(w.editorsPane.tabs) {
-			return nil
+			return
 		}
 
 		editor := w.editors[ix]
 		path := editor.CurrentFile()
 		if path == "" {
-			return nil
+			return
 		}
 
 		src, err := ioutil.ReadFile(path)
 		if err != nil {
 			log.Errorf("Failed to read Go file %q: %v", path, err)
-			return nil
+			return
 		}
 		out, err := format.Source(src)
 		if err != nil {
 			log.Errorf("Failed to format Go file %q: %v", path, err)
-			return nil
+			return
 		}
 		err = ioutil.WriteFile(path, out, 0)
 		if err != nil {
 			log.Errorf("Failed to write Go file %q: %v", path, err)
-			return nil
+			return
 		}
 		err = editor.ReloadFile()
 		if err != nil {
 			log.Errorf("Failed to reload Go file %q: %v", path, err)
-			return nil
+			return
 		}
-		return nil
-	}))
+	})
+
+	controls := elem.QuerySelector(".controls")
+	settings := newSettings()
+	controls.AppendChild(settings)
 
 	if !isCompatibleBrowser() {
-		dialogElem := document.Call("createElement", "div")
-		dialogClassList := dialogElem.Get("classList")
-		dialogClassList.Call("add", "compatibility-warning-dialog")
-		dialogElem.Set("innerHTML", `
+		dialogElem := element.New("div")
+		dialogElem.AddClass("compatibility-warning-dialog")
+		dialogElem.SetInnerHTML(`
 			<p>Go Wasm may not work reliably in your browser.</p>
 			<p>If you're experience any issues, try a recent version of Chrome or Firefox on a device with enough memory, like a PC.</p>
 		`)
 
-		warningElem := document.Call("createElement", "button")
-		warningClassList := warningElem.Get("classList")
-		warningClassList.Call("add", "control")
-		warningClassList.Call("add", "compatibility-warning")
-		warningElem.Set("title", "Show browser compatibility warning")
-		warningElem.Set("innerHTML", `<span class="fa fa-exclamation-triangle"></span>`)
-		warningElem.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
-			dialogClassList.Call("toggle", "compatibility-warning-show")
-			return nil
-		}))
+		warningElem := element.New("button")
+		warningElem.AddClass("control")
+		warningElem.AddClass("compatibility-warning")
+		warningElem.SetAttribute("title", "Show browser compatibility warning")
+		warningElem.SetInnerHTML(`<span class="fa fa-exclamation-triangle"></span>`)
+		warningElem.AddEventListener("click", func(event js.Value) {
+			dialogElem.ToggleClass("compatibility-warning-show")
+		})
 
-		body := document.Get("body")
-		body.Call("insertBefore", dialogElem, body.Get("firstChild"))
-		controls := elem.Call("querySelector", ".controls")
-		controls.Call("appendChild", warningElem)
+		element.Body().InsertBefore(dialogElem, element.Body().FirstChild())
+		controls.AppendChild(warningElem)
 	}
 
-	taskConsole := w.consolesPane.NewTab(TabOptions{NoClose: true}, func(_ int, _, contents js.Value) Tabber {
+	taskConsole := w.consolesPane.NewTab(TabOptions{NoClose: true}, func(_ int, _, contents *element.Element) Tabber {
 		c := taskConsoleBuilder.New(contents)
 		w.consoles = append(w.consoles, c)
 		return c
@@ -176,51 +175,44 @@ func isCompatibleBrowser() bool {
 	return false
 }
 
-func (w *window) makeDefaultEditor(id int, title, contents js.Value) Tabber {
-	contents.Get("classList").Call("add", "editor")
+func (w *window) makeDefaultEditor(id int, title, contents *element.Element) Tabber {
+	contents.AddClass("editor")
 	editor := w.editorBuilder.New(contents)
 	w.editors = append(w.editors, editor)
 
-	title.Set("innerHTML", `<input type="text" class="editor-file-picker" placeholder="file_name.go" spellcheck=false />`)
-	inputElem := title.Call("querySelector", "input")
-	inputElem.Call("focus")
+	title.SetInnerHTML(`<input type="text" class="editor-file-picker" placeholder="file_name.go" spellcheck=false />`)
+	inputElem := title.QuerySelector("input")
+	js.Global().Call("setTimeout", interop.SingleUseFunc(func(this js.Value, args []js.Value) interface{} {
+		inputElem.Focus() // run focus on next run loop so opening a file immediately doesn't trigger onblur
+		return nil
+	}))
 
-	var keydownFn js.Func
-	keydownFn = js.FuncOf(func(_ js.Value, args []js.Value) interface{} {
-		defer func() {
-			if r := recover(); r != nil {
-				log.Print("recovered from panic:", r, string(debug.Stack()))
-			}
-		}()
-		event := args[0]
+	keydownFn := func(event js.Value) {
 		if event.Get("key").String() != "Enter" {
-			return nil
+			return
 		}
 		event.Call("preventDefault")
 		event.Call("stopPropagation")
 
-		fileName := inputElem.Get("value").String()
+		fileName := inputElem.Value()
 		fileName = strings.TrimSpace(fileName)
 		if fileName == "" {
-			return nil
+			return
 		}
-		title.Set("innerText", "New file")
+		title.SetInnerText("New file")
 		err := editor.OpenFile(fileName)
 		if err != nil {
 			log.Error(err)
 		}
 		w.editorsPane.focusID(id)
-		keydownFn.Release()
-		return nil
-	})
-	title.Call("addEventListener", "keydown", keydownFn)
-	inputElem.Call("addEventListener", "blur", interop.SingleUseFunc(func(js.Value, []js.Value) interface{} {
-		titleText := title.Get("innerText")
-		if titleText.Truthy() && titleText.String() != "New file" {
+	}
+	title.AddEventListener("keydown", keydownFn)
+	inputElem.AddEventListener("blur", func(event js.Value) {
+		titleText := title.InnerText()
+		if titleText != "New file" {
 			w.editorsPane.closeTabID(id)
 		}
-		return nil
-	}))
+	})
 	return editor
 }
 

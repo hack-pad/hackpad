@@ -7,18 +7,14 @@ import (
 	"io/ioutil"
 	"os"
 	"syscall/js"
-	"time"
 
+	"github.com/johnstarich/go-wasm/cmd/editor/element"
 	"github.com/johnstarich/go-wasm/cmd/editor/ide"
 	"github.com/johnstarich/go-wasm/cmd/editor/plaineditor"
 	"github.com/johnstarich/go-wasm/cmd/editor/taskconsole"
 	"github.com/johnstarich/go-wasm/cmd/editor/terminal"
 	"github.com/johnstarich/go-wasm/internal/interop"
 	"github.com/johnstarich/go-wasm/log"
-)
-
-var (
-	document = js.Global().Get("document")
 )
 
 const (
@@ -34,8 +30,8 @@ func main() {
 		os.Exit(2)
 	}
 
-	app := document.Call("querySelector", "#"+*editorID)
-	app.Set("className", "ide")
+	app := element.GetDocument().GetElementByID(*editorID)
+	app.AddClass("ide")
 	globalEditorProps := js.Global().Get("editor")
 	globalEditorProps.Set("profile", js.FuncOf(interop.ProfileJS))
 	newEditor := globalEditorProps.Get("newEditor")
@@ -96,7 +92,6 @@ func main() {
 		}
 	}
 
-	time.Sleep(1) // nolint:staticcheck // allow JS event loop to run
 	if makeNewModule {
 		_, err := tasks.Start(goBinaryPath, "go", "mod", "tidy")
 		if err != nil {
