@@ -14,6 +14,10 @@ import (
 	"mvdan.cc/sh/v3/syntax"
 )
 
+const (
+	homeTilde = "~"
+)
+
 func runLine(term console.Console, line string) error {
 	parser := syntax.NewParser()
 	var cmdErr error
@@ -35,10 +39,17 @@ func runLine(term console.Console, line string) error {
 
 func evalWord(parts []syntax.WordPart) (string, error) {
 	s := ""
-	for _, part := range parts {
+	for ix, part := range parts {
 		switch part := part.(type) {
 		case *syntax.Lit:
 			s += part.Value
+			if ix == 0 && strings.HasPrefix(s, homeTilde) {
+				homeDir, err := os.UserHomeDir()
+				if err != nil {
+					return "", err
+				}
+				s = homeDir + s[len(homeTilde):]
+			}
 		case *syntax.SglQuoted:
 			if part.Dollar {
 				return "", errors.Errorf("Dollar single-quotes not supported: %v", part)
