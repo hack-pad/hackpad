@@ -50,18 +50,20 @@ func newSettingsDropdown(attachTo *dom.Element) *dropdown {
 	elem.AddClass("settings-dropdown")
 	drop := newDropdown(attachTo, elem)
 
-	listenButton := func(name string, fn func()) {
+	listenButton := func(name, prompt string, fn func()) {
 		elem.
 			QuerySelector(fmt.Sprintf("button[title=%q]", name)).
 			AddEventListener("click", func(event js.Value) {
-				go fn()
+				if prompt == "" || js.Global().Call("confirm", prompt).Bool() {
+					go fn()
+				}
 			})
 	}
 
 	destroyMount := func(path string) promise.Promise {
 		return promise.From(global.Get("destroyMount").Invoke(path))
 	}
-	listenButton("reset", func() {
+	listenButton("reset", "Erase all data and reload?", func() {
 		mounts := interop.Keys(global.Get("getMounts").Invoke())
 		var promises []promise.Promise
 		for _, mount := range mounts {
@@ -72,13 +74,13 @@ func newSettingsDropdown(attachTo *dom.Element) *dropdown {
 		}
 		js.Global().Get("window").Get("location").Call("reload")
 	})
-	listenButton("clean build cache", func() {
+	listenButton("clean build cache", "", func() {
 		cache, err := os.UserCacheDir()
 		if err == nil {
 			destroyMount(cache)
 		}
 	})
-	listenButton("reload go install", func() {
+	listenButton("reload go install", "Reinstall Go and reload?", func() {
 		_, _ = destroyMount(goInstallPath).Await()
 		js.Global().Get("window").Get("location").Call("reload")
 	})
