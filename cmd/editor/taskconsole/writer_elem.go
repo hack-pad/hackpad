@@ -5,6 +5,8 @@ package taskconsole
 import (
 	"io"
 	"syscall/js"
+
+	"github.com/johnstarich/go-wasm/cmd/editor/element"
 )
 
 var (
@@ -16,11 +18,11 @@ const (
 )
 
 type elementWriter struct {
-	element js.Value
+	element *element.Element
 	class   string
 }
 
-func newElementWriter(elem js.Value, class string) interface {
+func newElementWriter(elem *element.Element, class string) interface {
 	io.Writer
 	io.StringWriter
 } {
@@ -35,12 +37,12 @@ func (w *elementWriter) Write(p []byte) (n int, err error) {
 }
 
 func (w *elementWriter) WriteString(s string) (n int, err error) {
-	textNode := document.Call("createElement", "span")
-	w.element.Call("appendChild", textNode)
+	textNode := element.New("span")
+	w.element.AppendChild(textNode)
 	if w.class != "" {
-		textNode.Get("classList").Call("add", w.class)
+		textNode.AddClass(w.class)
 	}
-	textNode.Set("innerText", s)
-	w.element.Set("scrollTop", maxJSInt)
+	textNode.SetInnerText(s)
+	w.element.SetScrollTop(maxJSInt)
 	return len(s), nil
 }

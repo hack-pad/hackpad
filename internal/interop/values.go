@@ -23,6 +23,15 @@ func StringsFromJSValue(value js.Value) []string {
 	return strs
 }
 
+func SliceFromJSValue(value js.Value) []js.Value {
+	var values []js.Value
+	length := value.Length()
+	for i := 0; i < length; i++ {
+		values = append(values, value.Index(i))
+	}
+	return values
+}
+
 func SliceFromJSValues(args []js.Value) []interface{} {
 	var values []interface{}
 	for _, arg := range args {

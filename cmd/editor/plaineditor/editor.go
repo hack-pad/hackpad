@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"syscall/js"
 
+	"github.com/johnstarich/go-wasm/cmd/editor/element"
 	"github.com/johnstarich/go-wasm/cmd/editor/ide"
 	"github.com/johnstarich/go-wasm/log"
 )
@@ -18,26 +19,23 @@ func New() ide.EditorBuilder {
 }
 
 type textAreaEditor struct {
-	elem      js.Value
-	textarea  js.Value
+	elem      *element.Element
+	textarea  *element.Element
 	filePath  string
 	titleChan chan string
 }
 
-func (b *textAreaBuilder) New(elem js.Value) ide.Editor {
-	elem.Set("innerHTML", `<textarea spellcheck=false></textarea>`)
+func (b *textAreaBuilder) New(elem *element.Element) ide.Editor {
+	elem.SetInnerHTML(`<textarea spellcheck=false></textarea>`)
 	e := &textAreaEditor{
 		elem:      elem,
-		textarea:  elem.Call("querySelector", "textarea"),
+		textarea:  elem.QuerySelector("textarea"),
 		titleChan: make(chan string, 1),
 	}
-	e.textarea.Call("addEventListener", "keydown", js.FuncOf(codeTyper))
-	e.textarea.Call("addEventListener", "input", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
-		go e.edited(func() string {
-			return e.textarea.Get("value").String()
-		})
-		return nil
-	}))
+	e.textarea.AddEventListener("keydown", codeTyper)
+	e.textarea.AddEventListener("input", func(event js.Value) {
+		go e.edited(e.textarea.Value)
+	})
 	return e
 }
 
@@ -56,7 +54,7 @@ func (e *textAreaEditor) ReloadFile() error {
 	if err != nil {
 		return err
 	}
-	e.textarea.Set("value", string(contents))
+	e.textarea.SetValue(string(contents))
 	return nil
 }
 
@@ -69,12 +67,13 @@ func (e *textAreaEditor) edited(newContents func() string) {
 }
 
 func (e *textAreaEditor) GetCursor() int {
-	return e.textarea.Get("selectionStart").Int()
+	return e.textarea.GetProperty("selectionStart").Int()
 }
 
 func (e *textAreaEditor) SetCursor(i int) error {
-	e.textarea.Set("selectionStart", i)
-	e.textarea.Set("selectionEnd", i)
+	v := js.ValueOf(i)
+	e.textarea.SetProperty("selectionStart", v)
+	e.textarea.SetProperty("selectionEnd", v)
 	return nil
 }
 

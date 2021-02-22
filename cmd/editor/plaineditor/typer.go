@@ -16,7 +16,7 @@ var (
 )
 
 // codeTyper is fired on keydown event
-func codeTyper(this js.Value, args []js.Value) interface{} {
+func codeTyper(event js.Value) {
 	defer func() {
 		r := recover()
 		if r == nil {
@@ -26,11 +26,7 @@ func codeTyper(this js.Value, args []js.Value) interface{} {
 		log.Error("Failed to handle keydown:", r, "\n"+string(debug.Stack()))
 	}()
 
-	if len(args) > 0 {
-		event := args[0]
-		handleKeydown(event)
-	}
-	return nil
+	handleKeydown(event)
 }
 
 const (
