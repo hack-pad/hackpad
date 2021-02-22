@@ -89,7 +89,7 @@ func (e *Element) SetAttribute(prop, value string) {
 	e.elem.Set(prop, value)
 }
 
-func (e *Element) GetBoundingClientRect() *DOMRect {
+func (e *Element) GetBoundingClientRect() *Rect {
 	return newRect(e.elem.Call("getBoundingClientRect"))
 }
 
