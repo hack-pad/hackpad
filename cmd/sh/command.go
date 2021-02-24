@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -43,7 +44,7 @@ func evalWord(parts []syntax.WordPart) (string, error) {
 		switch part := part.(type) {
 		case *syntax.Lit:
 			s += part.Value
-			if ix == 0 && strings.HasPrefix(s, homeTilde) {
+			if ix == 0 && (s == homeTilde || strings.HasPrefix(s, homeTilde+string(filepath.Separator))) {
 				homeDir, err := os.UserHomeDir()
 				if err != nil {
 					return "", err
