@@ -8,6 +8,16 @@ import (
 )
 
 func main() {
+	os.Exit(run())
+}
+
+func run() int {
+	cancel, err := ttySetup()
+	if err != nil {
+		panic(err)
+	}
+	defer cancel()
+
 	command := flag.String("c", "", "Read and execute commands from the given string value.")
 	flag.Parse()
 
@@ -17,7 +27,6 @@ func main() {
 	} else {
 		reader = newRuneReader(os.Stdin)
 	}
-	var err error
 	os.Stdout, err = newCarriageReturnWriter(os.Stdout)
 	if err != nil {
 		panic(err)
@@ -28,5 +37,5 @@ func main() {
 	}
 	term := newTerminal()
 
-	term.ReadEvalPrintLoop(reader)
+	return term.ReadEvalPrintLoop(reader)
 }

@@ -78,19 +78,19 @@ func (t *terminal) ErrPrint(args ...interface{}) {
 	fmt.Fprint(t.Stderr(), args...)
 }
 
-func (t *terminal) ReadEvalPrintLoop(reader io.RuneReader) {
+func (t *terminal) ReadEvalPrintLoop(reader io.RuneReader) int {
 	fmt.Fprint(t.Stdout(), prompt(t))
 	for {
 		err := t.ReadEvalPrint(reader)
-		if err == io.EOF {
-			return
+		if exitErr, ok := err.(*ExitErr); ok {
+			return exitErr.Code
 		}
-		if unwrapErr(err) == os.ErrClosed {
-			return
+		if err == io.EOF || unwrapErr(err) == os.ErrClosed {
+			return 0
 		}
 		if err != nil {
 			log.Error("Critical error during REPL: ", err)
-			return
+			return 1
 		}
 	}
 }
@@ -177,7 +177,7 @@ func (t *terminal) ReadEvalPrint(reader io.RuneReader) error {
 	case controlHome:
 		t.moveCursorToStart()
 	case controlCloseStdin:
-		os.Stdin.Close()
+		return &ExitErr{Code: 0}
 	case controlSigTStop:
 		t.line = nil
 		t.cursor = 0
@@ -336,8 +336,8 @@ func (t *terminal) CursorRightN(n int) {
 
 func (t *terminal) Clear() {
 	// TODO this wipes out some scrollback, need to figure out how to preserve it
-	t.Print(string(escapeCSI) + "[2J")   // clear viewport
-	t.Print(string(escapeCSI) + "[1;1H") // set cursor to top left
+	t.Print(string(escapeCSI) + "[H") // set cursor to top left
+	t.Print(string(escapeCSI) + "[J") // clear viewport
 }
 
 func (t *terminal) deleteWord() {
