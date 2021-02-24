@@ -292,7 +292,7 @@ func clear(term console.Console, args ...string) error {
 
 func exit(term console.Console, args ...string) error {
 	if len(args) == 0 {
-		os.Exit(0)
+		return &ExitErr{Code: 0}
 	}
 
 	exitCode, err := strconv.ParseInt(args[0], 10, 64)
@@ -300,8 +300,7 @@ func exit(term console.Console, args ...string) error {
 		return err
 	}
 	fmt.Fprintf(term.Stderr(), color.RedString("Exited with code %d\n"), exitCode)
-	os.Exit(int(exitCode))
-	return nil
+	return &ExitErr{Code: int(exitCode)}
 }
 
 func env(term console.Console, args ...string) error {
