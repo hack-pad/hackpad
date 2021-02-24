@@ -152,6 +152,7 @@ func (t *terminal) ReadEvalPrint(reader io.RuneReader) error {
 		t.Clear()
 		t.Print(prompt(t))
 	case controlEnter:
+		t.eraseBelowPrompt()
 		t.Print("\r\n")
 		command := string(t.line)
 		t.line = nil
@@ -188,7 +189,30 @@ func (t *terminal) ReadEvalPrint(reader io.RuneReader) error {
 		t.lastExitCode = 1
 		t.Print("^C\n\r")
 		t.Print(prompt(t))
-	case '\t': // ignore for now
+	case '\t':
+		completions := getCompletions(string(t.line), t.cursor)
+		t.eraseBelowPrompt()
+		if len(completions) == 1 {
+			completion := completions[0]
+			t.ClearRightN(len(t.line) - completion.End)
+			t.CursorLeftN(t.cursor - completion.Start)
+			t.ClearRightN(t.cursor - completion.Start)
+			line := string(t.line)
+			prefix, suffix := line[:completion.Start], line[completion.End:]
+			line = prefix + completion.Completion + suffix
+			t.Print(completion.Completion)
+			t.Print(suffix)
+			t.CursorLeftN(len(suffix))
+			t.line = []rune(line)
+			t.cursor = len(t.line) - len(suffix)
+		} else if len(completions) > 1 {
+			t.SaveCursor()
+			t.Print("\n")
+			for _, completion := range completions {
+				t.Print(completion.Completion, "\t")
+			}
+			t.RestoreCursor()
+		}
 	default:
 		prefix, suffix := splitRunes(t.line, t.cursor)
 		t.cursor++
@@ -320,6 +344,20 @@ func (t *terminal) ClearRightN(n int) {
 	t.Printf("%c%c%dX", escapeCSI, escapeLBracket, n)
 }
 
+func (t *terminal) CursorUpN(n int) {
+	if n <= 0 {
+		return
+	}
+	t.Printf("%c%c%d%c", escapeCSI, escapeLBracket, n, controlCursorUp)
+}
+
+func (t *terminal) CursorDownN(n int) {
+	if n <= 0 {
+		return
+	}
+	t.Printf("%c%c%d%c", escapeCSI, escapeLBracket, n, controlCursorDown)
+}
+
 func (t *terminal) CursorLeftN(n int) {
 	if n <= 0 {
 		return
@@ -332,6 +370,14 @@ func (t *terminal) CursorRightN(n int) {
 		return
 	}
 	t.Printf("%c%c%d%c", escapeCSI, escapeLBracket, n, controlCursorForward)
+}
+
+func (t *terminal) SaveCursor() {
+	t.Printf("%c%c%s", escapeCSI, escapeLBracket, "s")
+}
+
+func (t *terminal) RestoreCursor() {
+	t.Printf("%c%c%s", escapeCSI, escapeLBracket, "u")
 }
 
 func (t *terminal) Clear() {
@@ -376,4 +422,11 @@ func (t *terminal) moveCursorToStart() {
 func (t *terminal) moveCursorToEnd() {
 	t.CursorRightN(len(t.line) - t.cursor)
 	t.cursor = len(t.line)
+}
+
+func (t *terminal) eraseBelowPrompt() {
+	t.SaveCursor()
+	t.Print("\n\r")
+	t.Printf("%c%c%d%c", escapeCSI, escapeLBracket, 0, 'J') // erase from cursor to end of viewport
+	t.RestoreCursor()
 }
