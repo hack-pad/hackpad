@@ -60,7 +60,7 @@ func OverlayTarGzip(mountPath string, r io.ReadCloser, persist bool) error {
 		// tarfs already completed successfully and is persisted,
 		// so close tarfs reader and mount the existing files
 		r.Close()
-		return filesystem.Mount(mountPath, underlyingFs)
+		return filesystem.Mount(mountPath, afero.NewReadOnlyFs(underlyingFs))
 	} else {
 		// either never untar'd or did not finish untaring, so start again
 		// should be idempotent, but rewriting buffers from JS is expensive, so just delete everything
