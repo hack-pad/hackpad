@@ -31,7 +31,7 @@ func (f *fileStorer) GetFile(path string) (*File, error) {
 		path:   path,
 		storer: f,
 	}
-	err := <-QueueGetFileRecord(f.Storer, path, &file.FileRecord)
+	err := f.GetFileRecord(path, &file.FileRecord)
 	return &File{fileData: &file}, err
 }
 
