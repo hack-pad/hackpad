@@ -4,13 +4,8 @@ package taskconsole
 
 import (
 	"io"
-	"syscall/js"
 
 	"github.com/johnstarich/go-wasm/cmd/editor/dom"
-)
-
-var (
-	document = js.Global().Get("document")
 )
 
 const (
