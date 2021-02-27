@@ -31,6 +31,17 @@ func GetFileRecords(s Storer, paths []string, dest []*FileRecord) []error {
 	if len(paths) != len(dest) {
 		panic(fmt.Sprintf("GetFileRecords: Paths and dest lengths must be equal: %d != %d", len(paths), len(dest)))
 	}
+	if queueGetter, ok := s.(QueueGetter); ok {
+		errChans := make([]<-chan error, len(paths))
+		for i := range paths {
+			errChans[i] = queueGetter.QueueGetFileRecord(paths[i], dest[i])
+		}
+		errs := make([]error, len(paths))
+		for i := range paths {
+			errs[i] = <-errChans[i]
+		}
+		return errs
+	}
 	if batcher, ok := s.(BatchGetter); ok {
 		return batcher.GetFileRecords(paths, dest)
 	}
