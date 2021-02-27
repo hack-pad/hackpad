@@ -30,6 +30,8 @@ const (
 )
 
 const (
+	maxGetQueue      = 64
+	getQueueInterval = 20 * time.Millisecond
 	maxSetQueue      = 64
 	setQueueInterval = 20 * time.Millisecond
 )
@@ -60,10 +62,13 @@ func NewIndexedDBFs(name string) (_ *IndexedDBFs, err error) {
 	if err != nil {
 		return nil, err
 	}
-	setQueue := queue.New(maxSetQueue)
+	getQueue := queue.New(name+" gets", maxGetQueue)
+	getQueue.StartAsync(context.Background(), getQueueInterval, db)
+	setQueue := queue.New(name+" sets", maxSetQueue)
 	setQueue.StartAsync(context.Background(), setQueueInterval, db)
 	fs := storer.New(&indexedDBStorer{
 		db:       db,
+		getQueue: getQueue,
 		setQueue: setQueue,
 	})
 	return &IndexedDBFs{
@@ -99,6 +104,7 @@ type indexedDBStorer struct {
 	db           *indexeddb.DB
 	jsPaths      interop.StringCache
 	jsProperties interop.StringCache
+	getQueue     *queue.Queue
 	setQueue     *queue.Queue
 }
 
@@ -223,7 +229,7 @@ func (i *indexedDBStorer) GetFileRecords(paths []string, dest []*storer.FileReco
 	errs = make([]error, len(paths))
 	defer common.CatchException(&errs[0])
 
-	q := queue.New(len(paths))
+	q := queue.New("get file records", len(paths))
 	for ix := range paths {
 		p := fsutil.NormalizePath(paths[ix])
 		q.Push(
@@ -244,6 +250,33 @@ func (i *indexedDBStorer) GetFileRecords(paths []string, dest []*storer.FileReco
 		errs[ix] = i.extractFileRecord(paths[ix], infos[ix], nil, dest[ix])
 	}
 	return errs
+}
+
+func (i *indexedDBStorer) QueueGetFileRecord(path string, dest *storer.FileRecord) <-chan error {
+	path = fsutil.NormalizePath(path)
+	return i.queueGetFile(i.getQueue, path, dest)
+}
+
+func (i *indexedDBStorer) queueGetFile(q *queue.Queue, path string, dest *storer.FileRecord) <-chan error {
+	p := fsutil.NormalizePath(path)
+	queueErr := make(chan error)
+
+	jsResultChan, jsErr := i.getQueue.Push(
+		indexeddb.TransactionReadOnly,
+		[]string{idbFileInfoStore},
+		indexeddb.GetOp(idbFileInfoStore, i.jsPaths.Value(p)))
+	log.Print("Queueing get file record: ", p)
+	go func() {
+		defer close(queueErr)
+		jsResult, err := <-jsResultChan, <-jsErr
+		if err != nil {
+			queueErr <- err
+			return
+		}
+		queueErr <- i.extractFileRecord(path, jsResult, nil, dest)
+	}()
+
+	return queueErr
 }
 
 func (i *indexedDBStorer) QueueSetFileRecord(path string, data *storer.FileRecord) <-chan error {
@@ -270,7 +303,7 @@ func (i *indexedDBStorer) SetFileRecord(path string, data *storer.FileRecord) er
 
 func (i *indexedDBStorer) setFile(path string, data *storer.FileRecord) error {
 	const maxQueue = 8 // arbitrarily large for a single file. only expect 2-3 operations
-	q := queue.New(maxQueue)
+	q := queue.New("set file", maxQueue)
 	_ = i.queueSetFile(q, path, data)
 	_, err := q.Do(i.db)
 	if err != nil {

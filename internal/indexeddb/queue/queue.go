@@ -9,16 +9,19 @@ import (
 	"time"
 
 	"github.com/johnstarich/go-wasm/internal/indexeddb"
+	"github.com/johnstarich/go-wasm/log"
 )
 
 type Queue struct {
+	name      string
 	ops       chan opRunner
 	startOnce sync.Once
 }
 
-func New(size int) *Queue {
+func New(name string, size int) *Queue {
 	return &Queue{
-		ops: make(chan opRunner, size),
+		name: name,
+		ops:  make(chan opRunner, size),
 	}
 }
 
@@ -45,6 +48,9 @@ func (q *Queue) Push(mode indexeddb.TransactionMode, storeNames []string, op ind
 
 func (q *Queue) Do(db *indexeddb.DB) ([]js.Value, error) {
 	runners := q.readOps()
+	if len(runners) > 0 {
+		log.Print(q.name, ": Processing ", len(runners), " jobs")
+	}
 	mode := indexeddb.TransactionReadOnly
 	storeNameSet := make(map[string]bool)
 	for _, runner := range runners {
