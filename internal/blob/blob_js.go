@@ -81,12 +81,25 @@ func (b *blob) Len() int {
 	return int(b.length.Load())
 }
 
-func (b *blob) Slice(start, end int64) (_ Blob, returnedErr error) {
+func (b *blob) View(start, end int64) (_ Blob, returnedErr error) {
 	defer common.CatchException(&returnedErr)
 
 	if b.hasBytes.Load() {
 		buf := b.bytes.Load().([]byte)
 		return NewFromBytes(buf[start:end]), nil
+	}
+	buf := b.jsValue.Load().(js.Value)
+	return NewFromJS(buf.Call("subarray", start, end))
+}
+
+func (b *blob) Slice(start, end int64) (_ Blob, returnedErr error) {
+	defer common.CatchException(&returnedErr)
+
+	if b.hasBytes.Load() {
+		buf := b.bytes.Load().([]byte)
+		bufCopy := make([]byte, end-start)
+		copy(bufCopy, buf)
+		return NewFromBytes(bufCopy), nil
 	}
 	buf := b.jsValue.Load().(js.Value)
 	return NewFromJS(buf.Call("slice", start, end))

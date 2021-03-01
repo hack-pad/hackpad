@@ -149,7 +149,7 @@ func (f *File) ReadBlobAt(length int, off int64) (blob blob.Blob, n int, err err
 	if end > max {
 		end = max
 	}
-	blob, err = f.Data().Slice(off, end)
+	blob, err = f.Data().View(off, end)
 	if err != nil {
 		return nil, 0, err
 	}
