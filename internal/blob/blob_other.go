@@ -20,8 +20,14 @@ func (b *blob) Len() int {
 	return len(b.bytes)
 }
 
-func (b *blob) Slice(start, end int64) (_ Blob, err error) {
+func (b *blob) View(start, end int64) (_ Blob, err error) {
 	return NewFromBytes(b.bytes[start:end]), nil
+}
+
+func (b *blob) Slice(start, end int64) (_ Blob, err error) {
+	buf := make([]byte, end-start)
+	copy(buf, b.bytes)
+	return NewFromBytes(buf), nil
 }
 
 func (b *blob) Set(w Blob, off int64) (n int, err error) {

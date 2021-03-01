@@ -20,7 +20,7 @@ func (f *FileDescriptors) Write(fd FID, buffer blob.Blob, offset, length int, po
 			return 0, err
 		}
 	}
-	dataToCopy, err := buffer.Slice(int64(offset), int64(offset+length))
+	dataToCopy, err := buffer.View(int64(offset), int64(offset+length))
 	if err != nil {
 		return 0, err
 	}
