@@ -80,7 +80,8 @@ func newSettingsDropdown(attachTo *dom.Element) *dropdown {
 			destroyMount(cache)
 		}
 	})
-	listenButton("reload go install", "Reinstall Go and reload?", func() {
+	listenButton("reload programs", "Reinstall programs and reload?", func() {
+		_, _ = destroyMount("/bin").Await()
 		_, _ = destroyMount(goInstallPath).Await()
 		dom.Reload()
 	})
