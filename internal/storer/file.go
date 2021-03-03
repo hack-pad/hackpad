@@ -11,10 +11,12 @@ import (
 
 	"github.com/johnstarich/go-wasm/internal/blob"
 	"github.com/pkg/errors"
+	"github.com/spf13/afero"
 	"go.uber.org/atomic"
 )
 
 var (
+	_ afero.File    = &File{}
 	_ blob.Reader   = &File{}
 	_ blob.ReaderAt = &File{}
 	_ blob.Writer   = &File{}

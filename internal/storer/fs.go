@@ -160,7 +160,7 @@ func (fs *Fs) OpenFile(name string, flag int, perm os.FileMode) (afFile afero.Fi
 	case flag&os.O_RDWR != 0:
 	default:
 		// os.O_RDONLY = 0
-		file = rwonly.ReadOnly(file)
+		file = rwonly.BlobReadOnly(file)
 	}
 
 	if flag&os.O_TRUNC != 0 {
