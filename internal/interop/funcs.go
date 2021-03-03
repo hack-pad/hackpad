@@ -42,10 +42,8 @@ func setFuncHandler(name string, fn interface{}, args []js.Value) (returnedVal i
 
 	switch fn := fn.(type) {
 	case Func:
-		defer func() {
-			log.DebugJSValues("completed sync op: "+name, returnedVal)
-			handlePanic(0)
-		}()
+		defer handlePanic(0)
+		defer log.DebugJSValues("completed sync op: "+name, returnedVal)
 
 		ret, err := fn(args)
 		if err != nil {
@@ -60,13 +58,13 @@ func setFuncHandler(name string, fn interface{}, args []js.Value) (returnedVal i
 		go func() {
 			var ret []interface{}
 			var err error
+			defer handlePanic(0)
 			defer func() {
 				if err != nil {
 					log.DebugJSValues("completed op failed: "+name, ret)
 				} else {
 					log.DebugJSValues("completed op: "+name, ret)
 				}
-				handlePanic(0)
 			}()
 
 			ret, err = fn(args)
@@ -80,11 +78,24 @@ func setFuncHandler(name string, fn interface{}, args []js.Value) (returnedVal i
 	}
 }
 
-func handlePanic(skipPanicLines int) interface{} {
+func handlePanic(skipPanicLines int) {
 	r := recover()
 	if r == nil {
-		return nil
+		return
 	}
+	defaultHandlePanic(skipPanicLines+1, r)
+}
+
+func handlePanicFunc(skipPanicLines int, fn func(interface{})) {
+	r := recover()
+	if r == nil {
+		return
+	}
+	defaultHandlePanic(skipPanicLines+1, r)
+	fn(r)
+}
+
+func defaultHandlePanic(skipPanicLines int, r interface{}) {
 	stack := string(debug.Stack())
 	for iter := 0; iter < skipPanicLines; iter++ {
 		ix := strings.IndexRune(stack, '\n')
@@ -104,12 +115,13 @@ func handlePanic(skipPanicLines int) interface{} {
 		log.Errorf("panic: (%T) %+v\n\n%s", r, r, stack)
 	}
 	// TODO need to find a way to just throw the error instead of crashing
-	return r
 }
 
 func PanicLogger() {
-	r := handlePanic(0)
-	if r != nil {
-		panic(r)
+	r := recover()
+	if r == nil {
+		return
 	}
+	defaultHandlePanic(1, r)
+	panic(r)
 }
