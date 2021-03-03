@@ -34,7 +34,13 @@ func (b *terminalBuilder) New(elem *dom.Element, rawName, name string, args ...s
 		xterm:     b.newXTermFunc.Invoke(elem),
 		titleChan: make(chan string, 1),
 	}
-	return term, term.start(rawName, name, args...)
+	go func() {
+		err := term.start(rawName, name, args...)
+		if err != nil {
+			log.Error("Failed to start terminal:", err)
+		}
+	}()
+	return term, nil
 }
 
 func (t *terminal) start(rawName, name string, args ...string) error {
