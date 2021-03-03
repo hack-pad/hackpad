@@ -167,10 +167,6 @@ func (f *FileDescriptors) Fstat(fd FID) (os.FileInfo, error) {
 	return fileDescriptor.file.Stat()
 }
 
-func (f *FileDescriptors) ReadFile(path string) ([]byte, error) {
-	return afero.ReadFile(filesystem, f.resolvePath(path))
-}
-
 func (f *FileDescriptors) ReadDir(path string) ([]os.FileInfo, error) {
 	return afero.ReadDir(filesystem, f.resolvePath(path))
 }
