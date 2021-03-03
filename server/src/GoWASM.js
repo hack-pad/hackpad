@@ -21,6 +21,8 @@ async function init() {
   const { goWasm, fs } = window
   console.debug(`go-wasm status: ${goWasm.ready ? 'ready' : 'not ready'}`)
 
+  await promisify(fs.mkdir, "/bin", {mode: 0o700})
+  await goWasm.overlayIndexedDB('/bin')
   await goWasm.overlayIndexedDB('/home/me')
   await promisify(fs.mkdir, "/home/me/.cache", {recursive: true, mode: 0o700})
   await goWasm.overlayIndexedDB('/home/me/.cache')
