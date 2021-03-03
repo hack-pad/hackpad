@@ -4,13 +4,12 @@ package main
 
 import (
 	"errors"
-	"io"
-	"net/http"
 	"os"
 	"path/filepath"
 	"syscall/js"
 
 	"github.com/johnstarich/go-wasm/internal/interop"
+	"github.com/johnstarich/go-wasm/internal/process"
 	"github.com/johnstarich/go-wasm/internal/promise"
 	"github.com/johnstarich/go-wasm/log"
 )
@@ -39,29 +38,19 @@ func install(args []js.Value) error {
 		return err
 	}
 
-	resp, err := http.Get("wasm/" + command + ".wasm")
+	body, err := httpGetFetch("wasm/" + command + ".wasm")
 	if err != nil {
 		return err
 	}
-	defer resp.Body.Close()
-	if resp.StatusCode/100 != 2 { // not success
-		return errors.New(resp.Status)
-	}
-	if contentType := resp.Header.Get("Content-Type"); contentType != "application/wasm" {
-		return errors.New("Invalid content type for Wasm: " + contentType)
-	}
-	f, err := os.Create("/bin/" + command)
+	fs := process.Current().Files()
+	fd, err := fs.Open("/bin/"+command, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0750)
 	if err != nil {
 		return err
 	}
-	defer f.Close()
-	if _, err := io.Copy(f, resp.Body); err != nil {
+	defer fs.Close(fd)
+	if _, err := fs.Write(fd, body, 0, body.Len(), nil); err != nil {
 		return err
 	}
-	if err := f.Chmod(0750); err != nil {
-		return err
-	}
-
 	log.Print("Install completed: ", command)
 	return nil
 }
