@@ -67,6 +67,8 @@ func (t *Tab) watchTitles(ctx context.Context, tabber Tabber) {
 		case title, ok := <-titles:
 			if ok {
 				t.title.SetInnerText(title)
+			} else {
+				t.Close()
 			}
 		}
 	}

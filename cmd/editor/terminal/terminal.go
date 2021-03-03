@@ -10,6 +10,7 @@ import (
 	"github.com/johnstarich/go-wasm/cmd/editor/dom"
 	"github.com/johnstarich/go-wasm/cmd/editor/ide"
 	"github.com/johnstarich/go-wasm/internal/blob"
+	"github.com/johnstarich/go-wasm/internal/common"
 	"github.com/johnstarich/go-wasm/log"
 )
 
@@ -25,8 +26,10 @@ func New(xtermFunc js.Value) ide.ConsoleBuilder {
 
 type terminal struct {
 	xterm     js.Value
+	closables []func() error
 	cmd       *exec.Cmd
 	titleChan chan string
+	closed    bool
 }
 
 func (b *terminalBuilder) New(elem *dom.Element, rawName, name string, args ...string) (ide.Console, error) {
@@ -63,6 +66,7 @@ func (t *terminal) start(rawName, name string, args ...string) error {
 	if err != nil {
 		return err
 	}
+	t.closables = append(t.closables, stdin.Close, stdout.Close, stderr.Close)
 
 	err = t.cmd.Start()
 	if err != nil {
@@ -72,6 +76,9 @@ func (t *terminal) start(rawName, name string, args ...string) error {
 	f := js.FuncOf(func(this js.Value, args []js.Value) interface{} {
 		chunk := []byte(args[0].String())
 		_, err := stdin.Write(chunk)
+		if err == io.EOF {
+			err = t.Close()
+		}
 		if err != nil {
 			log.Error("Failed to write to terminal:", err)
 		}
@@ -81,9 +88,16 @@ func (t *terminal) start(rawName, name string, args ...string) error {
 		_ = t.cmd.Wait()
 		f.Release()
 	}()
-	t.xterm.Call("onData", f)
-	go readOutputPipes(t.xterm, stdout)
-	go readOutputPipes(t.xterm, stderr)
+	dataListener := t.xterm.Call("onData", f)
+	t.closables = append(t.closables, func() (err error) {
+		defer common.CatchException(&err)
+		dataListener.Call("dispose")
+		log.Print("disposed of data listener")
+		return nil
+	})
+
+	go t.readOutputPipes(stdout)
+	go t.readOutputPipes(stderr)
 	return nil
 }
 
@@ -91,14 +105,36 @@ func (t *terminal) Wait() error {
 	return t.cmd.Wait()
 }
 
-func readOutputPipes(term js.Value, r io.Reader) {
+func (t *terminal) Close() error {
+	if t.closed {
+		return nil
+	}
+	t.closed = true
+	const colorRed = "\033[1;31m"
+	t.xterm.Call("write", blob.NewFromBytes([]byte("\n\r"+colorRed+"[exited]\n\r")))
+	var err error
+	for _, closer := range t.closables {
+		cErr := closer()
+		if cErr != nil {
+			err = cErr
+		}
+	}
+	close(t.titleChan)
+	return err
+}
+
+func (t *terminal) readOutputPipes(r io.Reader) {
 	buf := make([]byte, 1)
 	for {
 		_, err := r.Read(buf)
-		if err != nil {
+		switch err {
+		case nil:
+			t.xterm.Call("write", blob.NewFromBytes(buf))
+		case io.EOF:
+			t.Close()
+			return
+		default:
 			log.Error("Failed to write to terminal:", err)
-		} else {
-			term.Call("write", blob.NewFromBytes(buf))
 		}
 	}
 }
