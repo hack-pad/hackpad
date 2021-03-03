@@ -7,6 +7,7 @@ import (
 	"context"
 	"runtime"
 	"runtime/pprof"
+	"runtime/trace"
 	"syscall/js"
 	"time"
 
@@ -14,8 +15,33 @@ import (
 )
 
 func ProfileJS(this js.Value, args []js.Value) interface{} {
-	MemoryProfileJS(this, args)
-	//StartCPUProfileJS(this, args) // Re-enable once CPU profiles actually work in the browser. Currently produces 0 samples.
+	go func() {
+		MemoryProfileJS(this, args)
+		// Re-enable once these profiles actually work in the browser. Currently produces 0 samples.
+		//TraceProfileJS(this, args)
+		//StartCPUProfileJS(this, args)
+	}()
+	return nil
+}
+
+func TraceProfile(d time.Duration) ([]byte, error) {
+	var buf bytes.Buffer
+	err := trace.Start(&buf)
+	if err != nil {
+		return nil, err
+	}
+	time.Sleep(d)
+	trace.Stop()
+	return buf.Bytes(), nil
+}
+
+func TraceProfileJS(this js.Value, args []js.Value) interface{} {
+	buf, err := TraceProfile(30 * time.Second)
+	if err != nil {
+		log.Error("Failed to create memory profile: ", err)
+		return nil
+	}
+	StartDownload("application/octet-stream", "go-wasm-trace.pprof", buf)
 	return nil
 }
 
