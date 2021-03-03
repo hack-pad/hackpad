@@ -31,3 +31,20 @@ func (f *FileDescriptors) Read(fd FID, buffer blob.Blob, offset, length int, pos
 	}
 	return
 }
+
+func (f *FileDescriptors) ReadFile(path string) (blob.Blob, error) {
+	fd, err := f.Open(path, 0, 0)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close(fd)
+
+	info, err := f.Fstat(fd)
+	if err != nil {
+		return nil, err
+	}
+
+	buf := blob.NewJSLength(int(info.Size()))
+	_, err = f.Read(fd, buf, 0, buf.Len(), nil)
+	return buf, err
+}

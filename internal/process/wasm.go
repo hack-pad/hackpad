@@ -9,7 +9,6 @@ import (
 	"syscall/js"
 	"time"
 
-	"github.com/johnstarich/go-wasm/internal/blob"
 	"github.com/johnstarich/go-wasm/internal/interop"
 	"github.com/johnstarich/go-wasm/internal/promise"
 	"github.com/johnstarich/go-wasm/log"
@@ -50,13 +49,11 @@ func (p *process) newWasmInstance(path string, importObject js.Value) (js.Value,
 		}
 	}
 
-	// TODO switch to reading with blob package
 	wasm, err := p.Files().ReadFile(path)
 	if err != nil {
 		return js.Value{}, err
 	}
-	b := blob.NewFromBytes(wasm)
-	instantiatePromise := promise.From(jsWasm.Call("instantiate", b, importObject))
+	instantiatePromise := promise.From(jsWasm.Call("instantiate", wasm, importObject))
 	instantiateResult, err := instantiatePromise.Await()
 	if err != nil {
 		return js.Value{}, err
