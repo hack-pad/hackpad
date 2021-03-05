@@ -156,7 +156,7 @@ func (fs *Fs) OpenFile(name string, flag int, perm os.FileMode) (afFile afero.Fi
 	var file afero.File = storerFile
 	switch {
 	case flag&os.O_WRONLY != 0:
-		file = rwonly.WriteOnly(file)
+		file = rwonly.BlobWriteOnly(file)
 	case flag&os.O_RDWR != 0:
 	default:
 		// os.O_RDONLY = 0
