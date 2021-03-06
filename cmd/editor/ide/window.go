@@ -98,26 +98,28 @@ func New(elem *dom.Element, editorBuilder EditorBuilder, consoleBuilder ConsoleB
 			return
 		}
 
-		src, err := ioutil.ReadFile(path)
-		if err != nil {
-			log.Errorf("Failed to read Go file %q: %v", path, err)
-			return
-		}
-		out, err := format.Source(src)
-		if err != nil {
-			log.Errorf("Failed to format Go file %q: %v", path, err)
-			return
-		}
-		err = ioutil.WriteFile(path, out, 0)
-		if err != nil {
-			log.Errorf("Failed to write Go file %q: %v", path, err)
-			return
-		}
-		err = editor.ReloadFile()
-		if err != nil {
-			log.Errorf("Failed to reload Go file %q: %v", path, err)
-			return
-		}
+		go func() {
+			src, err := ioutil.ReadFile(path)
+			if err != nil {
+				log.Errorf("Failed to read Go file %q: %v", path, err)
+				return
+			}
+			out, err := format.Source(src)
+			if err != nil {
+				log.Errorf("Failed to format Go file %q: %v", path, err)
+				return
+			}
+			err = ioutil.WriteFile(path, out, 0)
+			if err != nil {
+				log.Errorf("Failed to write Go file %q: %v", path, err)
+				return
+			}
+			err = editor.ReloadFile()
+			if err != nil {
+				log.Errorf("Failed to reload Go file %q: %v", path, err)
+				return
+			}
+		}()
 	})
 
 	controls := elem.QuerySelector(".controls")
