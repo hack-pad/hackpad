@@ -5,70 +5,19 @@ package process
 import (
 	"os"
 	"runtime"
-	"strings"
 	"syscall/js"
-	"time"
 
 	"github.com/johnstarich/go-wasm/internal/interop"
 	"github.com/johnstarich/go-wasm/internal/promise"
 	"github.com/johnstarich/go-wasm/log"
 )
 
-var wasmCache = make(map[string]wasmCacheValue)
-
 var (
 	jsObject = js.Global().Get("Object")
 )
 
-type wasmCacheValue struct {
-	modTime time.Time
-	module  js.Value
-}
-
-func cacheAllowed(path string) bool {
-	return strings.HasPrefix(path, "/usr/local/go/")
-}
-
 func (p *process) newWasmInstance(path string, importObject js.Value) (js.Value, error) {
-	allowCache := cacheAllowed(path)
-	var info os.FileInfo
-	var err error
-	if allowCache {
-		info, err = p.Files().Stat(path)
-		if err != nil {
-			return js.Value{}, err
-		}
-		val, ok := wasmCache[path]
-		if ok && info.ModTime() == val.modTime {
-			instantiatePromise := promise.From(jsWasm.Call("instantiate", val.module, importObject))
-			instanceInterface, err := instantiatePromise.Await()
-			if err != nil {
-				return js.Value{}, err
-			}
-			return instanceInterface.(js.Value), nil
-		}
-	}
-
-	wasm, err := p.Files().ReadFile(path)
-	if err != nil {
-		return js.Value{}, err
-	}
-	instantiatePromise := promise.From(jsWasm.Call("instantiate", wasm, importObject))
-	instantiateResult, err := instantiatePromise.Await()
-	if err != nil {
-		return js.Value{}, err
-	}
-	jsInstantiate := instantiateResult.(js.Value)
-	module := jsInstantiate.Get("module")
-	instance := jsInstantiate.Get("instance")
-
-	if allowCache {
-		wasmCache[path] = wasmCacheValue{
-			modTime: info.ModTime(),
-			module:  module,
-		}
-	}
-	return instance, nil
+	return p.Files().WasmInstance(path, importObject)
 }
 
 func (p *process) run(path string) {

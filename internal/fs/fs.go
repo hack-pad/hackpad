@@ -15,8 +15,16 @@ import (
 )
 
 var (
-	filesystem = mountfs.New(afero.NewMemMapFs())
+	filesystem rootFs = mountfs.New(afero.NewMemMapFs())
 )
+
+type rootFs interface {
+	afero.Fs
+	afero.Lstater
+	Mounts() map[string]string
+	DestroyMount(string) error
+	Mount(string, afero.Fs) error
+}
 
 func Mounts() (pathsToFSName map[string]string) {
 	return filesystem.Mounts()
