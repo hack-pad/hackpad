@@ -84,6 +84,9 @@ func (b *blob) Len() int {
 func (b *blob) View(start, end int64) (_ Blob, returnedErr error) {
 	defer common.CatchException(&returnedErr)
 
+	if start == 0 && end == b.length.Load() {
+		return b, nil
+	}
 	if b.hasBytes.Load() {
 		buf := b.bytes.Load().([]byte)
 		return NewFromBytes(buf[start:end]), nil
