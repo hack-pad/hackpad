@@ -261,3 +261,25 @@ func (w *wasmCacheFs) Rename(oldname, newname string) error {
 func (w *wasmCacheFs) Chtimes(name string, atime time.Time, mtime time.Time) error {
 	return w.rootFs.Chtimes(name, atime, mtime)
 }
+
+func (w *wasmCacheFs) DestroyMount(path string) error {
+	txn, err := w.db.Transaction(indexeddb.TransactionReadWrite, wasmCacheStore)
+	if err != nil {
+		return err
+	}
+	store, err := txn.ObjectStore(wasmCacheStore)
+	if err != nil {
+		return err
+	}
+	req, err := store.Clear()
+	if err != nil {
+		return err
+	}
+	_, err = req.Await()
+	if err != nil {
+		return err
+	}
+	w.idbFound = make(map[string]bool)
+	w.memCache = make(map[string]js.Value)
+	return w.rootFs.DestroyMount(path)
+}
