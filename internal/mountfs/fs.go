@@ -98,7 +98,7 @@ func (m *Fs) mountForPath(path string) mount {
 			return mounts[i]
 		}
 	}
-	return mounts[0] // should be impossible to hit this line, but always fall back to defaultFs mount
+	return mounts[0] // always fall back to defaultFs mount
 }
 
 func (m *Fs) Create(name string) (afero.File, error) {
