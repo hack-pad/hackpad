@@ -21,7 +21,7 @@ func main() {
 	global.Set("spawnTerminal", js.FuncOf(terminal.SpawnTerminal))
 	global.Set("dump", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
 		go func() {
-			basePath := "/"
+			basePath := ""
 			if len(args) >= 1 {
 				basePath = args[0].String()
 				if filepath.IsAbs(basePath) {
@@ -30,7 +30,11 @@ func main() {
 					basePath = filepath.Join(libProcess.Current().WorkingDirectory(), basePath)
 				}
 			}
-			log.Error("Process:\n", process.Dump(), "\n\nFiles:\n", fs.Dump(basePath))
+			var fsDump interface{}
+			if basePath != "" {
+				fsDump = fs.Dump(basePath)
+			}
+			log.Error("Process:\n", process.Dump(), "\n\nFiles:\n", fsDump)
 		}()
 		return nil
 	}))
