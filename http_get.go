@@ -3,7 +3,6 @@
 package main
 
 import (
-	"errors"
 	"io/ioutil"
 	"net/http"
 	"syscall/js"
@@ -11,6 +10,7 @@ import (
 	"github.com/johnstarich/go-wasm/internal/blob"
 	"github.com/johnstarich/go-wasm/internal/common"
 	"github.com/johnstarich/go-wasm/internal/promise"
+	"github.com/pkg/errors"
 )
 
 var jsFetch = js.Global().Get("fetch")
@@ -37,12 +37,17 @@ func httpGetGo(path string) (blob.Blob, error) {
 func httpGetFetch(path string) (_ blob.Blob, err error) {
 	defer common.CatchException(&err)
 	prom := jsFetch.Invoke(path)
-	result, err := promise.From(prom).Await()
+	resultInt, err := promise.From(prom).Await()
 	if err != nil {
 		return nil, err
 	}
+	result := resultInt.(js.Value)
 
-	body, err := promise.From(result.(js.Value).Call("arrayBuffer")).Await()
+	jsContentType := result.Get("headers").Call("get", "Content-Type")
+	if jsContentType.Type() != js.TypeString || jsContentType.String() != "application/wasm" {
+		return nil, errors.Errorf("Invalid content type for Wasm: %v", jsContentType)
+	}
+	body, err := promise.From(result.Call("arrayBuffer")).Await()
 	if err != nil {
 		return nil, err
 	}
