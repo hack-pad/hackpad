@@ -21,13 +21,14 @@ async function init() {
   const { goWasm, fs } = window
   console.debug(`go-wasm status: ${goWasm.ready ? 'ready' : 'not ready'}`)
 
-  await promisify(fs.mkdir, "/bin", {mode: 0o700})
+  const mkdir = promisify(fs.mkdir)
+  await mkdir("/bin", {mode: 0o700})
   await goWasm.overlayIndexedDB('/bin')
   await goWasm.overlayIndexedDB('/home/me')
-  await promisify(fs.mkdir, "/home/me/.cache", {recursive: true, mode: 0o700})
+  await mkdir("/home/me/.cache", {recursive: true, mode: 0o700})
   await goWasm.overlayIndexedDB('/home/me/.cache')
 
-  await promisify(fs.mkdir, "/usr/local/go", {recursive: true, mode: 0o700})
+  await mkdir("/usr/local/go", {recursive: true, mode: 0o700})
   await goWasm.overlayTarGzip('/usr/local/go', 'wasm/go.tar.gz', {
     persist: true,
     progress: percentage => {
@@ -95,17 +96,18 @@ export function observeGoDownloadProgress(callback) {
   callback(overlayProgress)
 }
 
-function promisify(fn, ...args) {
-  return new Promise((resolve, reject) => {
-    const newArgs = [...args]
-    newArgs.push((err, ...results) => {
-      if (err) {
-        reject(err)
-      } else {
-        resolve(results)
-      }
+function promisify(fn) {
+  return (...args) => {
+    return new Promise((resolve, reject) => {
+      const newArgs = [...args]
+      newArgs.push((err, ...results) => {
+        if (err) {
+          reject(err)
+        } else {
+          resolve(results)
+        }
+      })
+      fn(...newArgs)
     })
-    fn(...newArgs)
-  })
+  }
 }
-
