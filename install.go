@@ -6,6 +6,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"runtime"
 	"syscall/js"
 
 	"github.com/johnstarich/go-wasm/internal/interop"
@@ -42,6 +43,7 @@ func install(args []js.Value) error {
 	if err != nil {
 		return err
 	}
+	defer runtime.GC()
 	fs := process.Current().Files()
 	fd, err := fs.Open("/bin/"+command, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0750)
 	if err != nil {
