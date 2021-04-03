@@ -5,6 +5,7 @@ package fs
 import (
 	"io"
 	"os"
+	"strings"
 	"syscall/js"
 	"time"
 
@@ -41,6 +42,10 @@ func initWasmCache() {
 	} else {
 		filesystem = fs
 	}
+}
+
+func shouldCache(path string) bool {
+	return strings.HasPrefix(path, "/usr/local/go/")
 }
 
 func newWasmCacheFs(underlying rootFs) (*wasmCacheFs, error) {
@@ -103,7 +108,9 @@ func (w *wasmCacheFs) WasmInstance(path string, importObject js.Value) (js.Value
 		return result, nil
 	}
 
-	w.memCache[path] = result.Get("module") // save compiled module for reuse
+	if shouldCache(path) {
+		w.memCache[path] = result.Get("module") // save compiled module for reuse
+	}
 	return result.Get("instance"), nil
 }
 
