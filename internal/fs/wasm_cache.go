@@ -11,7 +11,6 @@ import (
 
 	"github.com/johnstarich/go-wasm/internal/blob"
 	"github.com/johnstarich/go-wasm/internal/fsutil"
-	"github.com/johnstarich/go-wasm/internal/interop"
 	"github.com/johnstarich/go-wasm/internal/promise"
 	"github.com/johnstarich/go-wasm/log"
 	"github.com/spf13/afero"
@@ -19,15 +18,8 @@ import (
 
 var jsWasm = js.Global().Get("WebAssembly")
 
-const (
-	wasmCacheDB      = "wasmModules"
-	wasmCacheVersion = 1
-	wasmCacheStore   = "modules"
-)
-
 type wasmCacheFs struct {
 	rootFs
-	jsPaths  interop.StringCache
 	memCache map[string]js.Value
 }
 

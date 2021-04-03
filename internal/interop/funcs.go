@@ -86,15 +86,6 @@ func handlePanic(skipPanicLines int) {
 	defaultHandlePanic(skipPanicLines+1, r)
 }
 
-func handlePanicFunc(skipPanicLines int, fn func(interface{})) {
-	r := recover()
-	if r == nil {
-		return
-	}
-	defaultHandlePanic(skipPanicLines+1, r)
-	fn(r)
-}
-
 func defaultHandlePanic(skipPanicLines int, r interface{}) {
 	stack := string(debug.Stack())
 	for iter := 0; iter < skipPanicLines; iter++ {

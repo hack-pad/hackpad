@@ -9,8 +9,7 @@ import (
 )
 
 var (
-	jsGo   = js.Global().Get("Go")
-	jsWasm = js.Global().Get("WebAssembly")
+	jsGo = js.Global().Get("Go")
 )
 
 func (p *process) JSValue() js.Value {
