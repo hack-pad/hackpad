@@ -24,6 +24,7 @@ type rootFs interface {
 	Mounts() map[string]string
 	DestroyMount(string) error
 	Mount(string, afero.Fs) error
+	FSForPath(string) afero.Fs
 }
 
 func Mounts() (pathsToFSName map[string]string) {

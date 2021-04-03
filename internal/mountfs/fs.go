@@ -86,7 +86,7 @@ func (m *Fs) Mount(path string, fs afero.Fs) error {
 	return nil
 }
 
-func (m *Fs) fsForPath(path string) afero.Fs {
+func (m *Fs) FSForPath(path string) afero.Fs {
 	return mountedFs{m.mountForPath(path)}
 }
 
@@ -102,23 +102,23 @@ func (m *Fs) mountForPath(path string) mount {
 }
 
 func (m *Fs) Create(name string) (afero.File, error) {
-	return m.fsForPath(name).Create(name)
+	return m.FSForPath(name).Create(name)
 }
 
 func (m *Fs) Mkdir(name string, perm os.FileMode) error {
-	return m.fsForPath(name).Mkdir(name, perm)
+	return m.FSForPath(name).Mkdir(name, perm)
 }
 
 func (m *Fs) MkdirAll(path string, perm os.FileMode) error {
-	return m.fsForPath(path).MkdirAll(path, perm)
+	return m.FSForPath(path).MkdirAll(path, perm)
 }
 
 func (m *Fs) Open(name string) (afero.File, error) {
-	return m.fsForPath(name).Open(name)
+	return m.FSForPath(name).Open(name)
 }
 
 func (m *Fs) OpenFile(name string, flag int, perm os.FileMode) (afero.File, error) {
-	return m.fsForPath(name).OpenFile(name, flag, perm)
+	return m.FSForPath(name).OpenFile(name, flag, perm)
 }
 
 func (m *Fs) Remove(name string) error {
@@ -130,14 +130,14 @@ func (m *Fs) Remove(name string) error {
 }
 
 func (m *Fs) RemoveAll(path string) error {
-	return m.fsForPath(path).RemoveAll(path)
+	return m.FSForPath(path).RemoveAll(path)
 }
 
 func (m *Fs) Rename(oldname, newname string) error {
 	m.mu.RLock()
-	oldFs := m.fsForPath(oldname)
+	oldFs := m.FSForPath(oldname)
 	oldMount := m.mountForPath(oldname)
-	newFs := m.fsForPath(newname)
+	newFs := m.FSForPath(newname)
 	newMount := m.mountForPath(newname)
 	m.mu.RUnlock()
 
@@ -174,7 +174,7 @@ func (m *Fs) Rename(oldname, newname string) error {
 }
 
 func (m *Fs) Stat(name string) (os.FileInfo, error) {
-	return m.fsForPath(name).Stat(name)
+	return m.FSForPath(name).Stat(name)
 }
 
 func (m *Fs) Name() string {
@@ -182,15 +182,15 @@ func (m *Fs) Name() string {
 }
 
 func (m *Fs) Chmod(name string, mode os.FileMode) error {
-	return m.fsForPath(name).Chmod(name, mode)
+	return m.FSForPath(name).Chmod(name, mode)
 }
 
 func (m *Fs) Chtimes(name string, atime time.Time, mtime time.Time) error {
-	return m.fsForPath(name).Chtimes(name, atime, mtime)
+	return m.FSForPath(name).Chtimes(name, atime, mtime)
 }
 
 func (m *Fs) LstatIfPossible(name string) (os.FileInfo, bool, error) {
-	fs := m.fsForPath(name)
+	fs := m.FSForPath(name)
 	if lstater, ok := fs.(afero.Lstater); ok {
 		return lstater.LstatIfPossible(name)
 	}
