@@ -44,7 +44,7 @@ func (f *FileDescriptors) ReadFile(path string) (blob.Blob, error) {
 		return nil, err
 	}
 
-	buf := blob.NewJSLength(int(info.Size()))
+	buf := blob.NewWithLength(int(info.Size()))
 	_, err = f.Read(fd, buf, 0, buf.Len(), nil)
 	return buf, err
 }

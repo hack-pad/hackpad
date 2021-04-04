@@ -99,7 +99,7 @@ func pipe(files *fs.FileDescriptors) (r, w fs.FID) {
 }
 
 func readOutputPipes(term js.Value, files *fs.FileDescriptors, output fs.FID) {
-	buf := blob.NewJSLength(1)
+	buf := blob.NewWithLength(1)
 	for {
 		_, err := files.Read(output, buf, 0, buf.Len(), nil)
 		if err != nil {
