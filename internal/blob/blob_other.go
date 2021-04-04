@@ -12,6 +12,10 @@ func NewFromBytes(buf []byte) Blob {
 	return &blob{buf}
 }
 
+func NewWithLength(length int) Blob {
+	return NewFromBytes(make([]byte, length))
+}
+
 func (b *blob) Bytes() []byte {
 	return b.bytes
 }

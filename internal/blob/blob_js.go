@@ -44,7 +44,7 @@ func NewFromJS(buf js.Value) (Blob, error) {
 	return b, nil
 }
 
-func NewJSLength(length int) Blob {
+func NewWithLength(length int) Blob {
 	buf, err := NewFromJS(uint8Array.New(length))
 	if err != nil {
 		panic("blob: New empty array of correct type was rejected: " + err.Error())
