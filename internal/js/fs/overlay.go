@@ -99,13 +99,22 @@ func overlayIndexedDB(this js.Value, args []js.Value) interface{} {
 	return prom
 }
 
-func OverlayIndexedDB(args []js.Value) error {
-	if len(args) != 1 {
+func OverlayIndexedDB(args []js.Value) (err error) {
+	if len(args) == 0 {
 		return errors.New("overlayIndexedDB: mount path is required")
 	}
-
 	mountPath := args[0].String()
-	idb, err := fs.NewIndexedDBFs(mountPath)
+	var options map[string]js.Value
+	if len(args) >= 2 && args[1].Type() == js.TypeObject {
+		options = interop.Entries(args[1])
+	}
+
+	shouldCache := func(string) bool { return false }
+	if cacheEnabled, ok := options["cacheInfo"]; ok && cacheEnabled.Bool() {
+		shouldCache = func(string) bool { return true }
+	}
+
+	idb, err := fs.NewIndexedDBFs(mountPath, shouldCache)
 	if err != nil {
 		return err
 	}

@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sync"
 	"syscall"
 	"syscall/js"
 	"time"
@@ -39,12 +40,12 @@ type IndexedDBFs struct {
 	db *indexeddb.DB
 }
 
-func newPersistDB(name string) (*IndexedDBFs, error) {
+func newPersistDB(name string, shouldCache ShouldCacher) (*IndexedDBFs, error) {
 	// TODO support Chromium nativeIO
-	return NewIndexedDBFs(name)
+	return NewIndexedDBFs(name, shouldCache)
 }
 
-func NewIndexedDBFs(name string) (_ *IndexedDBFs, err error) {
+func NewIndexedDBFs(name string, shouldCache ShouldCacher) (_ *IndexedDBFs, err error) {
 	db, err := indexeddb.New(name, idbVersion, func(db *indexeddb.DB, oldVersion, newVersion int) error {
 		_, err := db.CreateObjectStore(idbFileContentsStore, indexeddb.ObjectStoreOptions{})
 		if err != nil {
@@ -60,12 +61,7 @@ func NewIndexedDBFs(name string) (_ *IndexedDBFs, err error) {
 	if err != nil {
 		return nil, err
 	}
-	setQueue := queue.New(maxSetQueue)
-	setQueue.StartAsync(context.Background(), setQueueInterval, db)
-	fs := storer.New(&indexedDBStorer{
-		db:       db,
-		setQueue: setQueue,
-	})
+	fs := storer.New(newIndexedDBStorer(db, shouldCache))
 	return &IndexedDBFs{
 		Fs: fs,
 		db: db,
@@ -100,10 +96,30 @@ type indexedDBStorer struct {
 	jsPaths      interop.StringCache
 	jsProperties interop.StringCache
 	setQueue     *queue.Queue
+
+	infoCache   sync.Map
+	shouldCache ShouldCacher
+}
+
+func newIndexedDBStorer(db *indexeddb.DB, shouldCache ShouldCacher) storer.Storer {
+	setQueue := queue.New(maxSetQueue)
+	setQueue.StartAsync(context.Background(), setQueueInterval, db)
+	return &indexedDBStorer{
+		db:          db,
+		setQueue:    setQueue,
+		shouldCache: shouldCache,
+	}
 }
 
 func (i *indexedDBStorer) GetFileRecord(path string, dest *storer.FileRecord) (err error) {
 	path = fsutil.NormalizePath(path)
+	if i.shouldCache(path) {
+		val, ok := i.infoCache.Load(path)
+		if ok {
+			return i.extractFileRecord(path, val.(js.Value), nil, dest)
+		}
+	}
+
 	defer common.CatchException(&err)
 	txn, err := i.db.Transaction(indexeddb.TransactionReadOnly, idbFileInfoStore)
 	if err != nil {
@@ -119,7 +135,11 @@ func (i *indexedDBStorer) GetFileRecord(path string, dest *storer.FileRecord) (e
 		return err
 	}
 	value, err := req.Await()
-	return i.extractFileRecord(path, value, err, dest)
+	err = i.extractFileRecord(path, value, err, dest)
+	if err == nil {
+		i.infoCache.Store(path, value)
+	}
+	return err
 }
 
 func (i *indexedDBStorer) extractFileRecord(path string, value js.Value, err error, dest *storer.FileRecord) error {
@@ -182,6 +202,7 @@ func (i *indexedDBStorer) getDirNames(path string) func() ([]string, error) {
 	path = fsutil.NormalizePath(path)
 	return func() (_ []string, err error) {
 		defer common.CatchException(&err)
+
 		txn, err := i.db.Transaction(indexeddb.TransactionReadOnly, idbFileInfoStore)
 		if err != nil {
 			return nil, err
@@ -283,6 +304,7 @@ func (i *indexedDBStorer) setFile(path string, data *storer.FileRecord) error {
 }
 
 func (i *indexedDBStorer) queueSetFile(q *queue.Queue, path string, data *storer.FileRecord) <-chan error {
+	i.infoCache.Delete(path)
 	if data == nil {
 		q.Push(indexeddb.TransactionReadWrite, []string{idbFileInfoStore}, indexeddb.DeleteOp(idbFileInfoStore, i.jsPaths.Value(path)))
 		_, err := q.Push(indexeddb.TransactionReadWrite, []string{idbFileContentsStore}, indexeddb.DeleteOp(idbFileContentsStore, i.jsPaths.Value(path)))

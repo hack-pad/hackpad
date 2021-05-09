@@ -47,6 +47,8 @@ func OverlayZip(mountPath string, z *zip.Reader) error {
 	return filesystem.Mount(mountPath, zipfs.New(z))
 }
 
+type ShouldCacher func(string) bool
+
 func OverlayTarGzip(mountPath string, r io.ReadCloser, persist bool) error {
 	if !persist {
 		underlyingFs := afero.NewMemMapFs()
@@ -59,7 +61,7 @@ func OverlayTarGzip(mountPath string, r io.ReadCloser, persist bool) error {
 
 	const tarfsDoneMarker = ".tarfs-complete"
 
-	underlyingFs, err := newPersistDB(mountPath)
+	underlyingFs, err := newPersistDB(mountPath, func(string) bool { return true })
 	if err != nil {
 		return err
 	}
