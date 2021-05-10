@@ -242,11 +242,32 @@ func (i *indexedDBStorer) GetFileRecords(paths []string, dest []*storer.FileReco
 		panic(fmt.Sprintf("indexedDBStorer: Paths and dest lengths must be equal: %d != %d", len(paths), len(dest)))
 	}
 	errs = make([]error, len(paths))
+
+	remainingPaths := make([]int, 0, len(paths)) // list of original indexes left over from cache sweep
+	for ix := range paths {
+		path := fsutil.NormalizePath(paths[ix])
+		var cachedVal interface{}
+		inCache := false
+		if i.shouldCache(path) {
+			cachedVal, inCache = i.infoCache.Load(path)
+		}
+
+		if inCache {
+			errs[ix] = i.extractFileRecord(path, cachedVal.(js.Value), nil, dest[ix])
+		} else {
+			remainingPaths = append(remainingPaths, ix)
+		}
+	}
+	if len(remainingPaths) == 0 {
+		return errs
+	}
+
 	defer common.CatchException(&errs[0])
 
-	q := queue.New(len(paths))
-	for ix := range paths {
+	q := queue.New(len(remainingPaths))
+	for _, ix := range remainingPaths {
 		p := fsutil.NormalizePath(paths[ix])
+
 		q.Push(
 			indexeddb.TransactionReadOnly,
 			[]string{idbFileInfoStore},
@@ -261,8 +282,9 @@ func (i *indexedDBStorer) GetFileRecords(paths []string, dest []*storer.FileReco
 		return errs
 	}
 
-	for ix := range paths {
-		errs[ix] = i.extractFileRecord(paths[ix], infos[ix], nil, dest[ix])
+	for srcIndex, destIndex := range remainingPaths {
+		info := infos[srcIndex]
+		errs[destIndex] = i.extractFileRecord(paths[destIndex], info, nil, dest[destIndex])
 	}
 	return errs
 }
