@@ -12,8 +12,9 @@ import (
 )
 
 type Queue struct {
-	ops       chan opRunner
-	startOnce sync.Once
+	ops        chan opRunner
+	startOnce  sync.Once
+	pushNotifs chan struct{}
 }
 
 func New(size int) *Queue {
@@ -39,6 +40,9 @@ func (q *Queue) Push(mode indexeddb.TransactionMode, storeNames []string, op ind
 		op:         op,
 		result:     result,
 		err:        err,
+	}
+	if q.pushNotifs != nil {
+		q.pushNotifs <- struct{}{}
 	}
 	return result, err
 }
@@ -121,6 +125,7 @@ func runOps(db *indexeddb.DB, mode indexeddb.TransactionMode, storeNames []strin
 
 func (q *Queue) StartAsync(ctx context.Context, interval time.Duration, db *indexeddb.DB) {
 	q.startOnce.Do(func() {
+		q.pushNotifs = make(chan struct{}, cap(q.ops))
 		go q.runDoLoop(ctx, interval, db)
 	})
 }
@@ -141,6 +146,16 @@ func (q *Queue) runDoLoop(ctx context.Context, interval time.Duration, db *index
 		case <-ctx.Done():
 			timer.Stop()
 			return
+		case <-q.pushNotifs:
+			if prevInterval > interval {
+				if !timer.Stop() {
+					<-timer.C
+					timer.Reset(0)
+				} else {
+					prevInterval = minInterval
+					timer.Reset(prevInterval)
+				}
+			}
 		case <-timer.C:
 			results, _ := q.Do(db) // errors handled by returned channels from q.Push()
 
