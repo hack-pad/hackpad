@@ -15,6 +15,9 @@ var (
 )
 
 func StartDownload(contentType, fileName string, buf []byte) {
+	if contentType == "" {
+		contentType = "application/octet-stream"
+	}
 	b := blob.NewFromBytes(buf)
 	blobInstance := jsBlob.New([]interface{}{b}, map[string]interface{}{
 		"type": contentType,

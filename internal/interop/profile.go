@@ -41,7 +41,7 @@ func TraceProfileJS(this js.Value, args []js.Value) interface{} {
 		log.Error("Failed to create memory profile: ", err)
 		return nil
 	}
-	StartDownload("application/octet-stream", "go-wasm-trace.pprof", buf)
+	StartDownload("", "go-wasm-trace.pprof", buf)
 	return nil
 }
 
@@ -61,7 +61,7 @@ func MemoryProfileJS(this js.Value, args []js.Value) interface{} {
 		log.Error("Failed to create memory profile: ", err)
 		return nil
 	}
-	StartDownload("application/octet-stream", "go-wasm-mem.pprof", buf)
+	StartDownload("", "go-wasm-mem.pprof", buf)
 	return nil
 }
 
@@ -75,7 +75,7 @@ func StartCPUProfile(ctx context.Context) error {
 	go func() {
 		<-ctx.Done()
 		pprof.StopCPUProfile()
-		StartDownload("application/octet-stream", "go-wasm-cpu.pprof", buf.Bytes())
+		StartDownload("", "go-wasm-cpu.pprof", buf.Bytes())
 	}()
 	return nil
 }
