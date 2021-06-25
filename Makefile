@@ -82,7 +82,7 @@ cache/go${GO_VERSION}: cache
 		mkdir -p ../bin/js_wasm; \
 		go build -o ../bin/js_wasm/ std cmd/go cmd/gofmt; \
 		go tool dist test -rebuild -list; \
-		go build -o ../pkg/tool/js_wasm/ std cmd/buildid cmd/pack; \
+		go build -o ../pkg/tool/js_wasm/ std cmd/buildid cmd/pack cmd/cover cmd/vet; \
 		go install ./...; \
 		popd; \
 		mv "$$TMP" cache/go${GO_VERSION}; \
