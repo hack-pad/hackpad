@@ -3,6 +3,7 @@ package fs
 import (
 	"time"
 
+	"github.com/hack-pad/hackpadfs"
 	"github.com/johnstarich/go-wasm/log"
 	"go.uber.org/atomic"
 )
@@ -23,7 +24,7 @@ func (w *workingDirectory) Set(wd string) error {
 	w.updating.Store(true)
 	go func() {
 		defer w.updating.Store(false)
-		info, err := filesystem.Stat(wd)
+		info, err := hackpadfs.Stat(filesystem, wd)
 		if err != nil {
 			log.Error("Cannot chdir to ", wd, ": ", err)
 			return

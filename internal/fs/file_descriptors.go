@@ -10,10 +10,10 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/hack-pad/hackpadfs"
 	"github.com/johnstarich/go-wasm/internal/common"
 	"github.com/johnstarich/go-wasm/internal/interop"
 	"github.com/pkg/errors"
-	"github.com/spf13/afero"
 )
 
 var (
@@ -127,18 +127,18 @@ func (f *FileDescriptors) removeFileDescriptor(descriptor *fileDescriptor) {
 	delete(f.files, descriptor.id) // TODO is it safe to leave the old FD's hanging around? they're useful for debugging
 }
 
-func getFile(absPath string, flags int, mode os.FileMode) (afero.File, error) {
+func getFile(absPath string, flags int, mode os.FileMode) (hackpadfs.File, error) {
 	switch absPath {
-	case "/dev/null":
-		return newNullFile("/dev/null"), nil
-	case "/dev/stdin":
-		return newNullFile("/dev/stdin"), nil // TODO can this be mocked?
-	case "/dev/stdout":
+	case "dev/null":
+		return newNullFile("dev/null"), nil
+	case "dev/stdin":
+		return newNullFile("dev/stdin"), nil // TODO can this be mocked?
+	case "dev/stdout":
 		return stdout, nil
-	case "/dev/stderr":
+	case "dev/stderr":
 		return stderr, nil
 	}
-	return filesystem.OpenFile(absPath, flags, mode)
+	return hackpadfs.OpenFile(filesystem, absPath, flags, mode)
 }
 
 func (f *FileDescriptors) Close(fd FID) error {
@@ -167,8 +167,8 @@ func (f *FileDescriptors) Fstat(fd FID) (os.FileInfo, error) {
 	return fileDescriptor.file.Stat()
 }
 
-func (f *FileDescriptors) ReadDir(path string) ([]os.FileInfo, error) {
-	return afero.ReadDir(filesystem, f.resolvePath(path))
+func (f *FileDescriptors) ReadDir(path string) ([]hackpadfs.DirEntry, error) {
+	return hackpadfs.ReadDir(filesystem, f.resolvePath(path))
 }
 
 func (f *FileDescriptors) RemoveDir(path string) error {
@@ -180,28 +180,27 @@ func (f *FileDescriptors) RemoveDir(path string) error {
 	if !info.IsDir() {
 		return ErrNotDir
 	}
-	return filesystem.Remove(path)
+	return hackpadfs.Remove(filesystem, path)
 }
 
 func (f *FileDescriptors) Chmod(path string, mode os.FileMode) error {
-	return filesystem.Chmod(f.resolvePath(path), mode)
+	return hackpadfs.Chmod(filesystem, f.resolvePath(path), mode)
 }
 
 func (f *FileDescriptors) Stat(path string) (os.FileInfo, error) {
-	return filesystem.Stat(f.resolvePath(path))
+	return hackpadfs.Stat(filesystem, f.resolvePath(path))
 }
 
 func (f *FileDescriptors) Lstat(path string) (os.FileInfo, error) {
-	info, _, err := filesystem.LstatIfPossible(f.resolvePath(path))
-	return info, err
+	return hackpadfs.LstatOrStat(filesystem, f.resolvePath(path))
 }
 
 func (f *FileDescriptors) Mkdir(path string, mode os.FileMode) error {
-	return filesystem.Mkdir(f.resolvePath(path), mode)
+	return hackpadfs.Mkdir(filesystem, f.resolvePath(path), mode)
 }
 
 func (f *FileDescriptors) MkdirAll(path string, mode os.FileMode) error {
-	return filesystem.MkdirAll(f.resolvePath(path), mode)
+	return hackpadfs.MkdirAll(filesystem, f.resolvePath(path), mode)
 }
 
 func (f *FileDescriptors) Unlink(path string) error {
@@ -213,11 +212,11 @@ func (f *FileDescriptors) Unlink(path string) error {
 	if info.IsDir() {
 		return os.ErrPermission
 	}
-	return filesystem.Remove(path)
+	return hackpadfs.Remove(filesystem, path)
 }
 
 func (f *FileDescriptors) Utimes(path string, atime, mtime time.Time) error {
-	return filesystem.Chtimes(f.resolvePath(path), atime, mtime)
+	return hackpadfs.Chtimes(filesystem, f.resolvePath(path), atime, mtime)
 }
 
 func (f *FileDescriptors) String() string {
@@ -240,7 +239,7 @@ func (f *FileDescriptors) Truncate(fd FID, length int64) error {
 	if fileDescriptor == nil {
 		return interop.BadFileNumber(fd)
 	}
-	return fileDescriptor.file.Truncate(length)
+	return hackpadfs.TruncateFile(fileDescriptor.file, length)
 }
 
 func (f *FileDescriptors) Fsync(fd FID) error {
@@ -248,13 +247,13 @@ func (f *FileDescriptors) Fsync(fd FID) error {
 	if fileDescriptor == nil {
 		return interop.BadFileNumber(fd)
 	}
-	return fileDescriptor.file.Sync()
+	return hackpadfs.SyncFile(fileDescriptor.file)
 }
 
 func (f *FileDescriptors) Rename(oldPath, newPath string) error {
 	oldPath = f.resolvePath(oldPath)
 	newPath = f.resolvePath(newPath)
-	return filesystem.Rename(oldPath, newPath)
+	return hackpadfs.Rename(filesystem, oldPath, newPath)
 }
 
 func (f *FileDescriptors) Fchmod(fd FID, mode os.FileMode) error {
@@ -262,7 +261,7 @@ func (f *FileDescriptors) Fchmod(fd FID, mode os.FileMode) error {
 	if fileDescriptor == nil {
 		return interop.BadFileNumber(fd)
 	}
-	return filesystem.Chmod(f.resolvePath(fileDescriptor.FileName()), mode)
+	return hackpadfs.Chmod(filesystem, f.resolvePath(fileDescriptor.FileName()), mode)
 }
 
 type LockAction int
@@ -304,15 +303,15 @@ func (f *FileDescriptors) Flock(fd FID, action LockAction) error {
 	return nil
 }
 
-func (f *FileDescriptors) RawFID(fid FID) (io.ReadWriter, error) {
+func (f *FileDescriptors) RawFID(fid FID) (io.Reader, error) {
 	if _, ok := f.files[fid]; !ok {
 		return nil, interop.BadFileNumber(fid)
 	}
 	return f.files[fid].file, nil
 }
 
-func (f *FileDescriptors) RawFIDs() []io.ReadWriter {
-	results := make([]io.ReadWriter, 0, len(f.files))
+func (f *FileDescriptors) RawFIDs() []io.Reader {
+	results := make([]io.Reader, 0, len(f.files))
 	for _, f := range f.files {
 		results = append(results, f.file)
 	}

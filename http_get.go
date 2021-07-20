@@ -5,7 +5,8 @@ package main
 import (
 	"syscall/js"
 
-	"github.com/johnstarich/go-wasm/internal/blob"
+	"github.com/hack-pad/hackpadfs/indexeddb/idbblob"
+	"github.com/hack-pad/hackpadfs/keyvalue/blob"
 	"github.com/johnstarich/go-wasm/internal/common"
 	"github.com/johnstarich/go-wasm/internal/promise"
 	"github.com/pkg/errors"
@@ -33,5 +34,5 @@ func httpGetFetch(path string) (_ blob.Blob, err error) {
 		return nil, err
 	}
 	buf := uint8Array.New(body.(js.Value))
-	return blob.NewFromJS(buf)
+	return idbblob.New(buf)
 }

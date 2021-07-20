@@ -5,7 +5,8 @@ package interop
 import (
 	"syscall/js"
 
-	"github.com/johnstarich/go-wasm/internal/blob"
+	"github.com/hack-pad/hackpadfs/indexeddb/idbblob"
+	"github.com/hack-pad/hackpadfs/keyvalue/blob"
 )
 
 var (
@@ -18,7 +19,7 @@ func StartDownload(contentType, fileName string, buf []byte) {
 	if contentType == "" {
 		contentType = "application/octet-stream"
 	}
-	b := blob.NewFromBytes(buf)
+	b := idbblob.FromBlob(blob.NewBytes(buf))
 	blobInstance := jsBlob.New([]interface{}{b}, map[string]interface{}{
 		"type": contentType,
 	})

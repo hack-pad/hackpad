@@ -1,10 +1,19 @@
 package common
 
-import "path/filepath"
+import (
+	"path"
+	"strings"
+)
 
-func ResolvePath(wd, path string) string {
-	if filepath.IsAbs(path) {
-		return filepath.Clean(path)
+func ResolvePath(wd, p string) string {
+	if path.IsAbs(p) {
+		p = path.Clean(p)
+	} else {
+		p = path.Join(wd, p)
 	}
-	return filepath.Join(wd, path)
+	p = strings.TrimPrefix(p, "/")
+	if p == "" {
+		return "."
+	}
+	return p
 }

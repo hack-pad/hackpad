@@ -7,7 +7,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/johnstarich/go-wasm/internal/blob"
+	"github.com/hack-pad/hackpadfs/keyvalue/blob"
 	"github.com/johnstarich/go-wasm/internal/common"
 	"github.com/johnstarich/go-wasm/internal/fs"
 	"github.com/johnstarich/go-wasm/log"

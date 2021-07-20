@@ -14,7 +14,12 @@ import (
 	"syscall/js"
 	"time"
 
+	"github.com/hack-pad/go-indexeddb/idb"
+	"github.com/hack-pad/hackpadfs"
+	"github.com/hack-pad/hackpadfs/indexeddb"
 	"github.com/machinebox/progress"
+	"github.com/spf13/afero"
+	"github.com/spf13/afero/zipfs"
 
 	"github.com/johnstarich/go-wasm/internal/fs"
 	"github.com/johnstarich/go-wasm/internal/interop"
@@ -68,21 +73,15 @@ func OverlayZip(args []js.Value) error {
 	if err != nil {
 		return err
 	}
-	return fs.OverlayZip(mountPath, z)
+	return fs.Overlay(mountPath, &zipFS{zipfs.New(z)})
 }
 
-func overlayStorage(this js.Value, args []js.Value) interface{} {
-	if len(args) != 2 {
-		return errors.New("overlayStorage: mount path and storer value (i.e. localStorage) are required")
-	}
+type zipFS struct {
+	afero.Fs
+}
 
-	mountPath := args[0].String()
-	jsStorer := args[1]
-	err := fs.OverlayStorage(mountPath, fs.NewJSStorage(jsStorer))
-	if err != nil {
-		log.Error("Failed to overlay storage FS:", err)
-	}
-	return nil
+func (z *zipFS) Open(name string) (hackpadfs.File, error) {
+	return z.Fs.Open(name)
 }
 
 func overlayIndexedDB(this js.Value, args []js.Value) interface{} {
@@ -109,16 +108,17 @@ func OverlayIndexedDB(args []js.Value) (err error) {
 		options = interop.Entries(args[1])
 	}
 
-	shouldCache := func(string) bool { return false }
+	//shouldCache := func(string) bool { return false }
 	if cacheEnabled, ok := options["cacheInfo"]; ok && cacheEnabled.Bool() {
-		shouldCache = func(string) bool { return true }
+		panic("cache not implemented")
+		//shouldCache = func(string) bool { return true }
 	}
 
-	idb, err := fs.NewIndexedDBFs(mountPath, shouldCache)
+	idbFS, err := indexeddb.NewFS(context.Background(), mountPath, idb.Global())
 	if err != nil {
 		return err
 	}
-	return fs.OverlayStorage(mountPath, idb)
+	return fs.Overlay(mountPath, idbFS)
 }
 
 func overlayTarGzip(this js.Value, args []js.Value) interface{} {
