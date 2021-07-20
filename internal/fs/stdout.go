@@ -10,8 +10,8 @@ import (
 )
 
 var (
-	stdout afero.File = &bufferedLogger{name: "/dev/stdout", printFn: log.Print}
-	stderr afero.File = &bufferedLogger{name: "/dev/stderr", printFn: log.Error}
+	stdout afero.File = &bufferedLogger{name: "dev/stdout", printFn: log.Print}
+	stderr afero.File = &bufferedLogger{name: "dev/stderr", printFn: log.Error}
 )
 
 type bufferedLogger struct {

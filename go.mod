@@ -5,6 +5,8 @@ go 1.16
 require (
 	github.com/avct/uasurfer v0.0.0-20191028135549-26b5daa857f1
 	github.com/fatih/color v1.9.0
+	github.com/hack-pad/go-indexeddb v0.0.0-20210627055059-75ac2a19af43
+	github.com/hack-pad/hackpadfs v0.0.0-20210720054718-312d90414ef8
 	github.com/johnstarich/go/datasize v0.0.1
 	github.com/machinebox/progress v0.2.0
 	github.com/mattn/go-tty v0.0.3

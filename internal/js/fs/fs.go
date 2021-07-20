@@ -80,7 +80,6 @@ func Init() {
 	global.Set("destroyMount", js.FuncOf(destroyMount))
 	global.Set("overlayZip", js.FuncOf(overlayZip))
 	global.Set("overlayTarGzip", js.FuncOf(overlayTarGzip))
-	global.Set("overlayStorage", js.FuncOf(overlayStorage))
 	global.Set("overlayIndexedDB", js.FuncOf(overlayIndexedDB))
 	global.Set("dumpZip", js.FuncOf(dumpZip))
 
@@ -106,11 +105,11 @@ func dumpZip(this js.Value, args []js.Value) interface{} {
 }
 
 func getMounts(this js.Value, args []js.Value) interface{} {
-	jsMounts := make(map[string]interface{})
-	for k, v := range fs.Mounts() {
-		jsMounts[k] = v
+	var mounts []string
+	for _, p := range fs.Mounts() {
+		mounts = append(mounts, p.Path)
 	}
-	return jsMounts
+	return interop.SliceFromStrings(mounts)
 }
 
 func destroyMount(this js.Value, args []js.Value) interface{} {

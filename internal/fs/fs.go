@@ -1,87 +1,99 @@
 package fs
 
 import (
-	"archive/zip"
+	"context"
 	"io"
-	"os"
 
-	"github.com/johnstarich/go-wasm/internal/mountfs"
-	"github.com/johnstarich/go-wasm/internal/storer"
+	"github.com/hack-pad/hackpadfs"
+	"github.com/hack-pad/hackpadfs/mem"
+	"github.com/hack-pad/hackpadfs/mount"
+	"github.com/johnstarich/go-wasm/internal/common"
 	"github.com/johnstarich/go-wasm/internal/tarfs"
 	"github.com/johnstarich/go-wasm/log"
 	"github.com/johnstarich/go/datasize"
-	"github.com/spf13/afero"
-	"github.com/spf13/afero/zipfs"
 )
 
 var (
-	filesystem rootFs = mountfs.New(afero.NewMemMapFs())
+	filesystem = func() rootFs {
+		memFS, err := mem.NewFS()
+		if err != nil {
+			panic(err)
+		}
+		fs, err := mount.NewFS(memFS)
+		if err != nil {
+			panic(err)
+		}
+		return fs
+	}()
 )
 
 type rootFs interface {
-	afero.Fs
-	afero.Lstater
-	Mounts() map[string]string
-	DestroyMount(string) error
-	Mount(string, afero.Fs) error
-	FSForPath(string) afero.Fs
+	hackpadfs.MountFS
+	AddMount(path string, mount hackpadfs.FS) error
+	MountPoints() []mount.Point
 }
 
-func Mounts() (pathsToFSName map[string]string) {
-	return filesystem.Mounts()
+func Mounts() []mount.Point {
+	return filesystem.MountPoints()
 }
 
 func DestroyMount(path string) error {
-	return filesystem.DestroyMount(path)
-}
-
-func OverlayStorage(mountPath string, s storer.Storer) error {
-	fs, ok := s.(afero.Fs)
-	if !ok {
-		fs = storer.New(s)
+	mount, _ := filesystem.Mount(path)
+	if clearFs, ok := mount.(interface{ Clear() error }); ok {
+		return clearFs.Clear()
 	}
-	return filesystem.Mount(mountPath, fs)
+	return &hackpadfs.PathError{Op: "clear", Path: path, Err: hackpadfs.ErrNotImplemented}
 }
 
-func OverlayZip(mountPath string, z *zip.Reader) error {
-	return filesystem.Mount(mountPath, zipfs.New(z))
+func Overlay(mountPath string, fs hackpadfs.FS) error {
+	mountPath = common.ResolvePath(".", mountPath)
+	return filesystem.AddMount(mountPath, fs)
 }
 
 type ShouldCacher func(string) bool
 
 func OverlayTarGzip(mountPath string, r io.ReadCloser, persist bool) error {
+	mountPath = common.ResolvePath(".", mountPath)
 	if !persist {
-		underlyingFs := afero.NewMemMapFs()
-		fs, err := tarfs.New(r, underlyingFs)
+		underlyingFS, err := mem.NewFS()
 		if err != nil {
 			return err
 		}
-		return filesystem.Mount(mountPath, fs)
+		fs, err := tarfs.New(r, underlyingFS)
+		if err != nil {
+			return err
+		}
+		return filesystem.AddMount(mountPath, fs)
 	}
 
 	const tarfsDoneMarker = ".tarfs-complete"
 
-	underlyingFs, err := newPersistDB(mountPath, func(string) bool { return true })
+	underlyingFS, err := newPersistDB(mountPath, func(string) bool { return true })
 	if err != nil {
 		return err
 	}
 
-	_, err = underlyingFs.Stat(tarfsDoneMarker)
+	_, err = underlyingFS.Stat(tarfsDoneMarker)
 	if err == nil {
 		// tarfs already completed successfully and is persisted,
 		// so close tarfs reader and mount the existing files
 		r.Close()
-		return filesystem.Mount(mountPath, afero.NewReadOnlyFs(underlyingFs))
+
+		type readOnly struct {
+			hackpadfs.FS
+		}
+
+		return filesystem.AddMount(mountPath, &readOnly{underlyingFS})
 	} else {
 		// either never untar'd or did not finish untaring, so start again
 		// should be idempotent, but rewriting buffers from JS is expensive, so just delete everything
-		err := underlyingFs.Clear()
+		err := underlyingFS.Clear(context.Background())
 		if err != nil {
 			return err
 		}
 	}
 
-	fs, err := tarfs.New(r, underlyingFs)
+	fs, err := tarfs.New(r, underlyingFS)
 	if err != nil {
 		return err
 	}
@@ -92,20 +104,24 @@ func OverlayTarGzip(mountPath string, r io.ReadCloser, persist bool) error {
 			log.Errorf("Failed to initialize mount %q: %v", mountPath, err)
 			return
 		}
-		f, err := underlyingFs.Create(tarfsDoneMarker)
+		f, err := hackpadfs.Create(underlyingFS, tarfsDoneMarker)
 		if err != nil {
 			log.Errorf("Failed to mark tarfs overlay %q complete: %v", mountPath, err)
 			return
 		}
 		f.Close()
 	}()
-	return filesystem.Mount(mountPath, fs)
+	return filesystem.AddMount(mountPath, fs)
 }
 
 // Dump prints out file system statistics
 func Dump(basePath string) interface{} {
 	var total int64
-	err := afero.Walk(filesystem, basePath, func(path string, info os.FileInfo, err error) error {
+	err := hackpadfs.WalkDir(filesystem, basePath, func(path string, dirEntry hackpadfs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		info, err := dirEntry.Info()
 		if err != nil {
 			return err
 		}

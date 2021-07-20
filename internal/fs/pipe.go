@@ -20,14 +20,18 @@ func (f *FileDescriptors) Pipe() [2]FID {
 func newPipe(newFID func() FID) (r, w *fileDescriptor) {
 	readerFID, writerFID := newFID(), newFID()
 	pipeC := newPipeChan(readerFID, writerFID)
+	rPipe := &namedPipe{pipeChan: pipeC, fid: readerFID}
 	r = newIrregularFileDescriptor(
 		readerFID,
-		&pipeReadOnly{&namedPipe{pipeChan: pipeC, fid: readerFID}},
+		rPipe.Name(),
+		&pipeReadOnly{rPipe},
 		os.ModeNamedPipe,
 	)
+	wPipe := &namedPipe{pipeChan: pipeC, fid: writerFID}
 	w = newIrregularFileDescriptor(
 		writerFID,
-		&pipeWriteOnly{&namedPipe{pipeChan: pipeC, fid: writerFID}},
+		wPipe.Name(),
+		&pipeWriteOnly{wPipe},
 		os.ModeNamedPipe,
 	)
 	return

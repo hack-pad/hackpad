@@ -4,68 +4,59 @@ import (
 	"archive/tar"
 	"compress/gzip"
 	"context"
-	"fmt"
 	"io"
-	"os"
-	"path/filepath"
+	"path"
 	"runtime"
 	"sync"
-	"syscall"
-	"time"
 
+	"github.com/hack-pad/hackpadfs"
 	"github.com/johnstarich/go-wasm/internal/bufferpool"
+	"github.com/johnstarich/go-wasm/internal/common"
 	"github.com/johnstarich/go-wasm/internal/fsutil"
 	"github.com/johnstarich/go-wasm/internal/pubsub"
 	"github.com/johnstarich/go-wasm/log"
 	"github.com/pkg/errors"
-	"github.com/spf13/afero"
 )
 
-const (
-	pathSeparatorRune = '/'
-	pathSeparator     = string(pathSeparatorRune)
-)
-
-type Fs struct {
-	underlyingFs, underlyingReadOnlyFs afero.Fs
-	ps                                 pubsub.PubSub
-	ctx                                context.Context
-	cancel                             context.CancelFunc
-	initErr                            error
+type FS struct {
+	underlyingFS BaseFS
+	ps           pubsub.PubSub
+	ctx          context.Context
+	cancel       context.CancelFunc
+	initErr      error
 }
 
-var _ afero.Fs = &Fs{}
+var _ hackpadfs.FS = &FS{}
 
-func New(r io.Reader, underlyingFs afero.Fs) (_ *Fs, retErr error) {
+type BaseFS interface {
+	hackpadfs.OpenFileFS
+	hackpadfs.ChmodFS
+	hackpadfs.MkdirFS
+}
+
+func New(r io.Reader, underlyingFS BaseFS) (_ *FS, retErr error) {
 	defer func() { retErr = errors.Wrap(retErr, "tarfs") }()
 
-	err := underlyingFs.MkdirAll("/", 0700) // ensure root exists
-	if err != nil {
-		return nil, errors.Wrap(err, "Failed to ensure root '/' directory on underlying FS")
-	}
-
-	root, err := underlyingFs.Open("/")
-	if err != nil {
-		return nil, errors.Wrap(err, "Error reading root '/' on underlying FS")
-	}
-	defer root.Close()
-	if names, err := root.Readdirnames(-1); err != nil || len(names) != 0 {
-		return nil, errors.New("Root '/' must be an empty directory")
+	if dirEntries, err := hackpadfs.ReadDir(underlyingFS, "."); err != nil || len(dirEntries) != 0 {
+		var names []string
+		for _, dirEntry := range dirEntries {
+			names = append(names, dirEntry.Name())
+		}
+		return nil, errors.Errorf("Root '/' must be an empty directory, got: %T %v %s", underlyingFS, err, names)
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
-	fs := &Fs{
-		underlyingFs:         underlyingFs,
-		underlyingReadOnlyFs: afero.NewReadOnlyFs(underlyingFs),
-		ps:                   pubsub.New(ctx),
-		ctx:                  ctx,
-		cancel:               cancel,
+	fs := &FS{
+		underlyingFS: underlyingFS,
+		ps:           pubsub.New(ctx),
+		ctx:          ctx,
+		cancel:       cancel,
 	}
 	go fs.downloadGzip(r)
 	return fs, nil
 }
 
-func (fs *Fs) downloadGzip(r io.Reader) {
+func (fs *FS) downloadGzip(r io.Reader) {
 	err := fs.downloadGzipErr(r)
 	if err != nil {
 		fs.initErr = err
@@ -78,7 +69,7 @@ func (fs *Fs) downloadGzip(r io.Reader) {
 	}
 }
 
-func (fs *Fs) downloadGzipErr(r io.Reader) error {
+func (fs *FS) downloadGzipErr(r io.Reader) error {
 	compressor, err := gzip.NewReader(r)
 	if err != nil {
 		return errors.Wrap(err, "gzip reader")
@@ -102,11 +93,11 @@ func (fs *Fs) downloadGzipErr(r io.Reader) error {
 	defer runtime.GC() // forcefully clean up memory pools
 
 	mkdirCache := make(map[string]bool)
-	cachedMkdirAll := func(path string, perm os.FileMode) error {
+	cachedMkdirAll := func(path string, perm hackpadfs.FileMode) error {
 		if _, ok := mkdirCache[path]; ok {
 			return nil
 		}
-		err := fs.underlyingFs.MkdirAll(path, perm)
+		err := hackpadfs.MkdirAll(fs.underlyingFS, path, perm)
 		if err == nil {
 			mkdirCache[path] = true
 		}
@@ -147,10 +138,10 @@ func (fs *Fs) downloadGzipErr(r io.Reader) error {
 	}
 }
 
-func (fs *Fs) initProcessFile(
+func (fs *FS) initProcessFile(
 	header *tar.Header, r io.Reader,
 	wg *sync.WaitGroup, errs chan error,
-	mkdirAll func(string, os.FileMode) error,
+	mkdirAll func(string, hackpadfs.FileMode) error,
 	bigPool, smallPool *bufferpool.Pool,
 ) error {
 	select {
@@ -160,10 +151,10 @@ func (fs *Fs) initProcessFile(
 	}
 
 	originalName := header.Name
-	path := fsutil.NormalizePath(originalName)
+	p := common.ResolvePath(".", originalName)
 	info := header.FileInfo()
 
-	dir := fsutil.NormalizePath(filepath.Dir(path))
+	dir := path.Dir(p)
 	err := mkdirAll(dir, 0700)
 	if err != nil {
 		return errors.Wrap(err, "prepping base dir")
@@ -174,13 +165,13 @@ func (fs *Fs) initProcessFile(
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			err := fs.underlyingFs.Mkdir(path, info.Mode())
+			err := fs.underlyingFS.Mkdir(p, info.Mode())
 			if err != nil {
-				if !os.IsExist(err) {
+				if !errors.Is(err, hackpadfs.ErrExist) {
 					errs <- errors.Wrap(err, "copying dir")
 					return
 				}
-				err = fs.underlyingFs.Chmod(path, info.Mode())
+				err = fs.underlyingFS.Chmod(p, info.Mode())
 				if err != nil {
 					errs <- errors.Wrap(err, "copying dir")
 					return
@@ -198,7 +189,7 @@ func (fs *Fs) initProcessFile(
 	case io.EOF:
 		wg.Add(1)
 		go func() {
-			err := fs.writeFile(path, info, smallBuf, n, nil, nil)
+			err := fs.writeFile(p, info, smallBuf, n, nil, nil)
 			smallBuf.Done()
 			if err != nil {
 				errs <- err
@@ -208,7 +199,7 @@ func (fs *Fs) initProcessFile(
 		return nil
 	case nil:
 		bigBuf := bigPool.Wait()
-		err := fs.writeFile(path, info, smallBuf, n, reader, bigBuf)
+		err := fs.writeFile(p, info, smallBuf, n, reader, bigBuf)
 		bigBuf.Done()
 		smallBuf.Done()
 		return err
@@ -217,8 +208,8 @@ func (fs *Fs) initProcessFile(
 	}
 }
 
-func (fs *Fs) writeFile(path string, info os.FileInfo, initialBuf *bufferpool.Buffer, n int, r io.Reader, copyBuf *bufferpool.Buffer) (returnedErr error) {
-	f, err := fs.underlyingFs.OpenFile(path, syscall.O_WRONLY|syscall.O_CREAT|syscall.O_TRUNC, info.Mode())
+func (fs *FS) writeFile(path string, info hackpadfs.FileInfo, initialBuf *bufferpool.Buffer, n int, r io.Reader, copyBuf *bufferpool.Buffer) (returnedErr error) {
+	f, err := fs.underlyingFS.OpenFile(path, hackpadfs.FlagWriteOnly|hackpadfs.FlagCreate|hackpadfs.FlagTruncate, info.Mode())
 	if err != nil {
 		return errors.Wrap(err, "opening destination file")
 	}
@@ -229,7 +220,12 @@ func (fs *Fs) writeFile(path string, info os.FileInfo, initialBuf *bufferpool.Bu
 		}
 	}()
 
-	_, err = f.Write(initialBuf.Data[:n])
+	fWriter, ok := f.(io.Writer)
+	if !ok {
+		return hackpadfs.ErrNotImplemented
+	}
+
+	_, err = fWriter.Write(initialBuf.Data[:n])
 	if err != nil {
 		return errors.Wrap(err, "write: copying file")
 	}
@@ -240,7 +236,7 @@ func (fs *Fs) writeFile(path string, info os.FileInfo, initialBuf *bufferpool.Bu
 		return nil
 	}
 
-	_, err = io.CopyBuffer(f, r, copyBuf.Data)
+	_, err = io.CopyBuffer(fWriter, r, copyBuf.Data)
 	return errors.Wrap(err, "copybuf: copying file")
 }
 
@@ -256,54 +252,25 @@ func (f fullReader) Read(p []byte) (n int, err error) {
 	return
 }
 
-func (fs *Fs) ensurePath(path string) (normalizedPath string, err error) {
+func (fs *FS) ensurePath(path string) (normalizedPath string, err error) {
 	path = fsutil.NormalizePath(path)
 	fs.ps.Wait(path)
 	return path, fs.initErr
 }
 
-func (fs *Fs) Open(path string) (afero.File, error) {
+func (fs *FS) Open(path string) (hackpadfs.File, error) {
 	path, err := fs.ensurePath(path)
 	if err != nil {
 		return nil, err
 	}
-	return fs.underlyingReadOnlyFs.Open(path)
+	return fs.underlyingFS.Open(path)
 }
 
-func (fs *Fs) OpenFile(name string, flag int, perm os.FileMode) (afero.File, error) {
-	name, err := fs.ensurePath(name)
-	if err != nil {
-		return nil, err
-	}
-	return fs.underlyingReadOnlyFs.OpenFile(name, flag, perm)
-}
-
-func (fs *Fs) Stat(path string) (os.FileInfo, error) {
-	path, err := fs.ensurePath(path)
-	if err != nil {
-		return nil, err
-	}
-	return fs.underlyingReadOnlyFs.Stat(path)
-}
-
-func (fs *Fs) Name() string {
-	return fmt.Sprintf("tarfs.Fs(%q)", fs.underlyingFs.Name())
-}
-
-func (fs *Fs) Create(name string) (afero.File, error)                      { return nil, syscall.EPERM }
-func (fs *Fs) Mkdir(name string, perm os.FileMode) error                   { return syscall.EPERM }
-func (fs *Fs) MkdirAll(path string, perm os.FileMode) error                { return syscall.EPERM }
-func (fs *Fs) Remove(name string) error                                    { return syscall.EPERM }
-func (fs *Fs) RemoveAll(path string) error                                 { return syscall.EPERM }
-func (fs *Fs) Rename(oldname, newname string) error                        { return syscall.EPERM }
-func (fs *Fs) Chmod(name string, mode os.FileMode) error                   { return syscall.EPERM }
-func (fs *Fs) Chtimes(name string, atime time.Time, mtime time.Time) error { return syscall.EPERM }
-
-func (fs *Fs) Done() <-chan struct{} {
+func (fs *FS) Done() <-chan struct{} {
 	return fs.ctx.Done()
 }
 
-func (fs *Fs) InitErr() error {
+func (fs *FS) InitErr() error {
 	return fs.initErr
 }
 
@@ -311,11 +278,11 @@ type clearerFs interface {
 	Clear() error
 }
 
-func (fs *Fs) Clear() (err error) {
-	if clearer, ok := fs.underlyingFs.(clearerFs); ok {
+func (fs *FS) Clear() (err error) {
+	if clearer, ok := fs.underlyingFS.(clearerFs); ok {
 		fs.initErr = context.Canceled
 		fs.cancel()
 		return clearer.Clear()
 	}
-	return errors.Errorf("Unsupported operation for fs: %s", fs.underlyingFs.Name())
+	return errors.New("Unsupported operation for base FS")
 }

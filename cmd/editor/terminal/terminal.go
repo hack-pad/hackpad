@@ -7,9 +7,10 @@ import (
 	"os/exec"
 	"syscall/js"
 
+	"github.com/hack-pad/hackpadfs/indexeddb/idbblob"
+	"github.com/hack-pad/hackpadfs/keyvalue/blob"
 	"github.com/johnstarich/go-wasm/cmd/editor/dom"
 	"github.com/johnstarich/go-wasm/cmd/editor/ide"
-	"github.com/johnstarich/go-wasm/internal/blob"
 	"github.com/johnstarich/go-wasm/internal/common"
 	"github.com/johnstarich/go-wasm/log"
 )
@@ -111,7 +112,7 @@ func (t *terminal) Close() error {
 	}
 	t.closed = true
 	const colorRed = "\033[1;31m"
-	t.xterm.Call("write", blob.NewFromBytes([]byte("\n\r"+colorRed+"[exited]\n\r")))
+	t.xterm.Call("write", idbblob.FromBlob(blob.NewBytes([]byte("\n\r"+colorRed+"[exited]\n\r"))))
 	var err error
 	for _, closer := range t.closables {
 		cErr := closer()
@@ -129,7 +130,7 @@ func (t *terminal) readOutputPipes(r io.Reader) {
 		_, err := r.Read(buf)
 		switch err {
 		case nil:
-			t.xterm.Call("write", blob.NewFromBytes(buf))
+			t.xterm.Call("write", idbblob.FromBlob(blob.NewBytes(buf)))
 		case io.EOF:
 			t.Close()
 			return

@@ -55,7 +55,7 @@ func TestFs(t *testing.T) {
 	fstest.RunReadOnly(t, tarFS, memFS, cleanup, rebuildTarFromMem)
 }
 
-func newTarFromFS(src afero.Fs) (*Fs, error) {
+func newTarFromFS(src afero.Fs) (*FS, error) {
 	r, err := buildTarFromFS(src)
 	if err != nil {
 		return nil, err

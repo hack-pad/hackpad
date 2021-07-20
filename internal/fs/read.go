@@ -3,7 +3,9 @@ package fs
 import (
 	"io"
 
-	"github.com/johnstarich/go-wasm/internal/blob"
+	"github.com/hack-pad/hackpadfs"
+	"github.com/hack-pad/hackpadfs/indexeddb/idbblob"
+	"github.com/hack-pad/hackpadfs/keyvalue/blob"
 	"github.com/johnstarich/go-wasm/internal/interop"
 )
 
@@ -18,15 +20,20 @@ func (f *FileDescriptors) Read(fd FID, buffer blob.Blob, offset, length int, pos
 	if position == nil {
 		readBuf, n, err = blob.Read(fileDescriptor.file, length)
 	} else {
-		readBuf, n, err = blob.ReadAt(fileDescriptor.file, length, *position)
+		readerAt, ok := fileDescriptor.file.(io.ReaderAt)
+		if ok {
+			readBuf, n, err = blob.ReadAt(readerAt, length, *position)
+		} else {
+			err = &hackpadfs.PathError{Op: "read", Path: fileDescriptor.openedName, Err: hackpadfs.ErrNotImplemented}
+		}
 	}
 	if err == io.EOF {
 		err = nil
 	}
 	if readBuf != nil {
-		_, setErr := buffer.Set(readBuf, int64(offset))
+		_, setErr := blob.Set(buffer, readBuf, int64(offset))
 		if err == nil && setErr != nil {
-			err = setErr
+			err = &hackpadfs.PathError{Op: "read", Path: fileDescriptor.openedName, Err: setErr}
 		}
 	}
 	return
@@ -44,7 +51,10 @@ func (f *FileDescriptors) ReadFile(path string) (blob.Blob, error) {
 		return nil, err
 	}
 
-	buf := blob.NewWithLength(int(info.Size()))
+	buf, err := idbblob.NewLength(int(info.Size()))
+	if err != nil {
+		return nil, err
+	}
 	_, err = f.Read(fd, buf, 0, buf.Len(), nil)
 	return buf, err
 }

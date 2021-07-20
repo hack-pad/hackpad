@@ -3,12 +3,13 @@ package fs
 import (
 	"fmt"
 	"os"
+	"path"
 	"strings"
 	"sync"
 
+	"github.com/hack-pad/hackpadfs"
 	"github.com/johnstarich/go-wasm/internal/common"
 	"github.com/johnstarich/go-wasm/log"
-	"github.com/spf13/afero"
 	"go.uber.org/atomic"
 )
 
@@ -20,7 +21,7 @@ type fileDescriptor struct {
 }
 
 type fileCore struct {
-	file afero.File
+	file hackpadfs.File
 	mode os.FileMode
 
 	openMu     sync.Mutex
@@ -30,15 +31,11 @@ type fileCore struct {
 
 func NewFileDescriptor(fid FID, absPath string, flags int, mode os.FileMode) (*fileDescriptor, error) {
 	file, err := getFile(absPath, flags, mode)
-	descriptor := newIrregularFileDescriptor(fid, file, mode)
+	descriptor := newIrregularFileDescriptor(fid, path.Base(absPath), file, mode)
 	return descriptor, err
 }
 
-func newIrregularFileDescriptor(fid FID, file afero.File, mode os.FileMode) *fileDescriptor {
-	var name string
-	if file != nil {
-		name = file.Name()
-	}
+func newIrregularFileDescriptor(fid FID, name string, file hackpadfs.File, mode hackpadfs.FileMode) *fileDescriptor {
 	return &fileDescriptor{
 		id: fid,
 		fileCore: &fileCore{
@@ -57,7 +54,7 @@ func (fd *fileDescriptor) Dup(fid FID) *fileDescriptor {
 }
 
 func (fd *fileDescriptor) FileName() string {
-	return fd.file.Name()
+	return fd.openedName
 }
 
 func (fd *fileDescriptor) String() string {

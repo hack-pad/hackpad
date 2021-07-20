@@ -5,7 +5,7 @@ package terminal
 import (
 	"syscall/js"
 
-	"github.com/johnstarich/go-wasm/internal/blob"
+	"github.com/hack-pad/hackpadfs/indexeddb/idbblob"
 	"github.com/johnstarich/go-wasm/internal/fs"
 	"github.com/johnstarich/go-wasm/internal/interop"
 	"github.com/johnstarich/go-wasm/internal/process"
@@ -72,7 +72,7 @@ func Open(args []js.Value) error {
 	}
 
 	f := js.FuncOf(func(this js.Value, args []js.Value) interface{} {
-		chunk, err := blob.NewFromJS(args[0])
+		chunk, err := idbblob.New(args[0])
 		if err != nil {
 			log.Error("blob: Failed to write to terminal:", err)
 			return nil
@@ -99,7 +99,10 @@ func pipe(files *fs.FileDescriptors) (r, w fs.FID) {
 }
 
 func readOutputPipes(term js.Value, files *fs.FileDescriptors, output fs.FID) {
-	buf := blob.NewWithLength(1)
+	buf, err := idbblob.NewLength(1)
+	if err != nil {
+		panic(err)
+	}
 	for {
 		_, err := files.Read(output, buf, 0, buf.Len(), nil)
 		if err != nil {

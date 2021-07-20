@@ -6,19 +6,22 @@ import (
 	"archive/zip"
 	"bytes"
 	"io"
-	"os"
 	"path/filepath"
 	"strings"
 
+	"github.com/hack-pad/hackpadfs"
 	"github.com/johnstarich/go-wasm/internal/interop"
-	"github.com/spf13/afero"
 )
 
 // DumpZip starts a zip download of everything in the given directory
 func DumpZip(path string) error {
 	var buf bytes.Buffer
 	z := zip.NewWriter(&buf)
-	err := afero.Walk(filesystem, path, func(path string, info os.FileInfo, err error) error {
+	err := hackpadfs.WalkDir(filesystem, path, func(path string, dirEntry hackpadfs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		info, err := dirEntry.Info()
 		if err != nil {
 			return err
 		}

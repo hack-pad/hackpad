@@ -9,11 +9,12 @@ import (
 	"syscall/js"
 	"time"
 
-	"github.com/johnstarich/go-wasm/internal/blob"
+	"github.com/hack-pad/hackpadfs"
+	"github.com/hack-pad/hackpadfs/indexeddb/idbblob"
+	"github.com/hack-pad/hackpadfs/keyvalue/blob"
 	"github.com/johnstarich/go-wasm/internal/fsutil"
 	"github.com/johnstarich/go-wasm/internal/promise"
 	"github.com/johnstarich/go-wasm/log"
-	"github.com/spf13/afero"
 )
 
 var jsWasm = js.Global().Get("WebAssembly")
@@ -37,7 +38,7 @@ func initWasmCache() {
 }
 
 func shouldCache(path string) bool {
-	return strings.HasPrefix(path, "/usr/local/go/")
+	return strings.HasPrefix(path, "usr/local/go/")
 }
 
 func newWasmCacheFs(underlying rootFs) (*wasmCacheFs, error) {
@@ -48,7 +49,6 @@ func newWasmCacheFs(underlying rootFs) (*wasmCacheFs, error) {
 }
 
 func (w *wasmCacheFs) readFile(path string) (blob.Blob, error) {
-	path = fsutil.NormalizePath(path)
 	f, err := w.Open(path)
 	if err != nil {
 		return nil, err
@@ -68,7 +68,6 @@ func (w *wasmCacheFs) readFile(path string) (blob.Blob, error) {
 }
 
 func (w *wasmCacheFs) WasmInstance(path string, importObject js.Value) (js.Value, error) {
-	path = fsutil.NormalizePath(path)
 	log.Debug("Checking wasm instance cache")
 	module, memCacheHit := w.memCache[path]
 	if memCacheHit {
@@ -80,7 +79,7 @@ func (w *wasmCacheFs) WasmInstance(path string, importObject js.Value) (js.Value
 			log.Debug("reading file failed: ", path)
 			return js.Value{}, err
 		}
-		module = moduleBlob.JSValue()
+		module = idbblob.FromBlob(moduleBlob).JSValue()
 		if !module.Truthy() {
 			log.Debug("fs miss: ", path, module.Length())
 		}
@@ -112,28 +111,28 @@ func (w *wasmCacheFs) dropModuleCache(path string) error {
 	return nil
 }
 
-func (w *wasmCacheFs) Create(name string) (afero.File, error) {
+func (w *wasmCacheFs) Create(name string) (hackpadfs.File, error) {
 	if err := w.dropModuleCache(fsutil.NormalizePath(name)); err != nil {
 		return nil, err
 	}
-	return w.rootFs.Create(name)
+	return hackpadfs.Create(w.rootFs, name)
 }
 
-func (w *wasmCacheFs) OpenFile(name string, flag int, perm os.FileMode) (afero.File, error) {
+func (w *wasmCacheFs) OpenFile(name string, flag int, perm os.FileMode) (hackpadfs.File, error) {
 	if flag != os.O_RDONLY {
 		err := w.dropModuleCache(fsutil.NormalizePath(name))
 		if err != nil {
 			return nil, err
 		}
 	}
-	return w.rootFs.OpenFile(name, flag, perm)
+	return hackpadfs.OpenFile(w.rootFs, name, flag, perm)
 }
 
 func (w *wasmCacheFs) Remove(name string) error {
 	if err := w.dropModuleCache(fsutil.NormalizePath(name)); err != nil {
 		return err
 	}
-	return w.rootFs.Remove(name)
+	return hackpadfs.Remove(w.rootFs, name)
 }
 
 func (w *wasmCacheFs) RemoveAll(path string) error {
@@ -141,7 +140,7 @@ func (w *wasmCacheFs) RemoveAll(path string) error {
 	if err := w.dropModuleCache(fsutil.NormalizePath(path)); err != nil {
 		return err
 	}
-	return w.rootFs.RemoveAll(path)
+	return hackpadfs.RemoveAll(w.rootFs, path)
 }
 
 func (w *wasmCacheFs) Rename(oldname, newname string) error {
@@ -152,9 +151,9 @@ func (w *wasmCacheFs) Rename(oldname, newname string) error {
 	if err := w.dropModuleCache(fsutil.NormalizePath(newname)); err != nil {
 		return err
 	}
-	return w.rootFs.Rename(oldname, newname)
+	return hackpadfs.Rename(w.rootFs, oldname, newname)
 }
 
 func (w *wasmCacheFs) Chtimes(name string, atime time.Time, mtime time.Time) error {
-	return w.rootFs.Chtimes(name, atime, mtime)
+	return hackpadfs.Chtimes(w.rootFs, name, atime, mtime)
 }
