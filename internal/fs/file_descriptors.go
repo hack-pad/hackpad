@@ -3,6 +3,7 @@ package fs
 import (
 	"io"
 	"os"
+	"path"
 	"sort"
 	"strings"
 	"sync"
@@ -93,7 +94,7 @@ func (f *FileDescriptors) WorkingDirectory() string {
 	if err != nil {
 		panic(err)
 	}
-	return wd
+	return path.Join("/", wd)
 }
 
 func (f *FileDescriptors) resolvePath(path string) string {
@@ -205,7 +206,7 @@ func (f *FileDescriptors) MkdirAll(path string, mode os.FileMode) error {
 
 func (f *FileDescriptors) Unlink(path string) error {
 	path = f.resolvePath(path)
-	info, err := f.Stat(path)
+	info, err := hackpadfs.Stat(filesystem, path)
 	if err != nil {
 		return err
 	}
@@ -247,7 +248,11 @@ func (f *FileDescriptors) Fsync(fd FID) error {
 	if fileDescriptor == nil {
 		return interop.BadFileNumber(fd)
 	}
-	return hackpadfs.SyncFile(fileDescriptor.file)
+	err := hackpadfs.SyncFile(fileDescriptor.file)
+	if errors.Is(err, hackpadfs.ErrNotImplemented) {
+		err = nil // not all FS implement Sync(), so fall back to a no-op
+	}
+	return err
 }
 
 func (f *FileDescriptors) Rename(oldPath, newPath string) error {
