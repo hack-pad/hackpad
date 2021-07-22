@@ -5,6 +5,7 @@ import (
 
 	"github.com/hack-pad/hackpadfs"
 	"github.com/hack-pad/hackpadfs/indexeddb"
+	"github.com/pkg/errors"
 )
 
 type FS struct {
@@ -25,13 +26,19 @@ func (fs *FS) Open(name string) (hackpadfs.File, error) {
 	return fs.OpenFile(name, hackpadfs.FlagReadOnly, 0)
 }
 
-func (fs *FS) OpenFile(name string, flag int, mode hackpadfs.FileMode) (hackpadfs.File, error) {
-	f, err := fs.FS.OpenFile(name, flag, mode)
-	if flag&(hackpadfs.FlagReadWrite|hackpadfs.FlagWriteOnly) != 0 {
-		fs.infoCache.Delete(name)
-	}
+func (fs *FS) OpenFile(name string, flag int, mode hackpadfs.FileMode) (_ hackpadfs.File, err error) {
+	defer func() {
+		if v := recover(); v != nil {
+			err = errors.Errorf("%v", v)
+		}
+	}()
+
 	if flag&hackpadfs.FlagCreate != 0 {
 		fs.dirEntriesCache.Delete(name)
+	}
+	f, err := fs.FS.OpenFile(name, flag, mode)
+	if err == nil && flag&(hackpadfs.FlagReadWrite|hackpadfs.FlagWriteOnly) != 0 {
+		f = newFile(name, fs, f.(keyvalueFile))
 	}
 	return f, err
 }
