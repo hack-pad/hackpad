@@ -24,7 +24,6 @@ import (
 	"github.com/johnstarich/go-wasm/internal/fs"
 	"github.com/johnstarich/go-wasm/internal/interop"
 	"github.com/johnstarich/go-wasm/internal/promise"
-	"github.com/johnstarich/go-wasm/internal/statcache"
 	"github.com/johnstarich/go-wasm/log"
 )
 
@@ -110,10 +109,8 @@ func OverlayIndexedDB(args []js.Value) (err error) {
 	}
 
 	durability := idb.DurabilityDefault
-	shouldCache := func(string) bool { return false }
 	if cacheEnabled, ok := options["cacheInfo"]; ok && cacheEnabled.Bool() {
 		durability = idb.DurabilityRelaxed
-		shouldCache = func(string) bool { return true }
 	}
 
 	idbFS, err := indexeddb.NewFS(context.Background(), mountPath, indexeddb.Options{
@@ -122,8 +119,7 @@ func OverlayIndexedDB(args []js.Value) (err error) {
 	if err != nil {
 		return err
 	}
-	cachedFS := statcache.NewFS(idbFS, shouldCache)
-	return fs.Overlay(mountPath, cachedFS)
+	return fs.Overlay(mountPath, idbFS)
 }
 
 func overlayTarGzip(this js.Value, args []js.Value) interface{} {
