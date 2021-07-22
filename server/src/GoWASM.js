@@ -23,10 +23,10 @@ async function init() {
 
   const mkdir = promisify(fs.mkdir)
   await mkdir("/bin", {mode: 0o700})
-  await goWasm.overlayIndexedDB('/bin', {cacheInfo: true})
+  await goWasm.overlayIndexedDB('/bin', {cache: true})
   await goWasm.overlayIndexedDB('/home/me')
   await mkdir("/home/me/.cache", {recursive: true, mode: 0o700})
-  await goWasm.overlayIndexedDB('/home/me/.cache', {cacheInfo: true})
+  await goWasm.overlayIndexedDB('/home/me/.cache', {cache: true})
 
   await mkdir("/usr/local/go", {recursive: true, mode: 0o700})
   await goWasm.overlayTarGzip('/usr/local/go', 'wasm/go.tar.gz', {
