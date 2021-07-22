@@ -109,7 +109,7 @@ func OverlayIndexedDB(args []js.Value) (err error) {
 	}
 
 	durability := idb.DurabilityDefault
-	if cacheEnabled, ok := options["cacheInfo"]; ok && cacheEnabled.Bool() {
+	if cacheEnabled, ok := options["cache"]; ok && cacheEnabled.Bool() {
 		durability = idb.DurabilityRelaxed
 	}
 
