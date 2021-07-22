@@ -8,7 +8,7 @@ type persistFs struct {
 	afero.Fs
 }
 
-func newPersistDB(name string, shouldCache ShouldCacher) (*persistFs, error) {
+func newPersistDB(name string, relaxedDurability bool, shouldCache ShouldCacher) (*persistFs, error) {
 	panic("not implemented")
 }
 

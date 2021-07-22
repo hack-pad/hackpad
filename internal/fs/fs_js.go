@@ -13,7 +13,13 @@ type persistFs struct {
 	*indexeddb.FS
 }
 
-func newPersistDB(name string, shouldCache ShouldCacher) (*persistFs, error) {
-	fs, err := indexeddb.NewFS(context.Background(), name, idb.Global())
+func newPersistDB(name string, relaxedDurability bool, shouldCache ShouldCacher) (*persistFs, error) {
+	durability := idb.DurabilityDefault
+	if relaxedDurability {
+		durability = idb.DurabilityRelaxed
+	}
+	fs, err := indexeddb.NewFS(context.Background(), name, indexeddb.Options{
+		TransactionDurability: durability,
+	})
 	return &persistFs{fs}, err
 }

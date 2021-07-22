@@ -108,13 +108,14 @@ func OverlayIndexedDB(args []js.Value) (err error) {
 		options = interop.Entries(args[1])
 	}
 
-	//shouldCache := func(string) bool { return false }
+	durability := idb.DurabilityDefault
 	if cacheEnabled, ok := options["cacheInfo"]; ok && cacheEnabled.Bool() {
-		panic("cache not implemented")
-		//shouldCache = func(string) bool { return true }
+		durability = idb.DurabilityRelaxed
 	}
 
-	idbFS, err := indexeddb.NewFS(context.Background(), mountPath, idb.Global())
+	idbFS, err := indexeddb.NewFS(context.Background(), mountPath, indexeddb.Options{
+		TransactionDurability: durability,
+	})
 	if err != nil {
 		return err
 	}
