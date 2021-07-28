@@ -7,10 +7,10 @@ github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSs
 github.com/fatih/color v1.9.0 h1:8xPHl4/q1VyqGIPif1F+1V3Y3lSmrq01EabUW3CoW5s=
 github.com/fatih/color v1.9.0/go.mod h1:eQcE1qtQxscV5RaZvpXrrb8Drkc3/DdQ+uUYCNjL+zU=
 github.com/google/renameio v0.1.0/go.mod h1:KWCgfxg9yswjAJkECMjeO8J8rahYeXnNhOm40UhjYkI=
-github.com/hack-pad/go-indexeddb v0.0.0-20210725225828-552e7c407090 h1:CVuJ/4qGfYmIcYDiPUriwbEuimA4O34zf/EsrSKDpS4=
-github.com/hack-pad/go-indexeddb v0.0.0-20210725225828-552e7c407090/go.mod h1:NH8CaojufPNcKYDhy5JkjfyBXE/72oJPeiywlabN/lM=
-github.com/hack-pad/hackpadfs v0.0.0-20210728023418-c0d176de33ad h1:X98BtOtlhzejdiKec+i0xmTl2UFuYcuv/Vl243vSZro=
-github.com/hack-pad/hackpadfs v0.0.0-20210728023418-c0d176de33ad/go.mod h1:Ecy1tNXrYbhYs5Bdd9MnEBOvDTCjLMfI99hTQ9oV5uA=
+github.com/hack-pad/go-indexeddb v0.1.0 h1:UzRAl6WiKxLJePkgi2uaQa9MMPWcjO29zI3pt9D+rNs=
+github.com/hack-pad/go-indexeddb v0.1.0/go.mod h1:NH8CaojufPNcKYDhy5JkjfyBXE/72oJPeiywlabN/lM=
+github.com/hack-pad/hackpadfs v0.1.0 h1:3bItjrgASvPwOU9WZEzcA8pHJRy7FK8Dk6NaQN89SM4=
+github.com/hack-pad/hackpadfs v0.1.0/go.mod h1:8bsINHOQhQUioUUiCzCyZZNLfEXjs0RwBIf3lTG+CEg=
 github.com/johnstarich/go/datasize v0.0.1 h1:Hjswen8gwmO7trXtQ8Xl8NUOQAKKm1wvus3/xK5eHGY=
 github.com/johnstarich/go/datasize v0.0.1/go.mod h1:4eHLMGz7Q5uCmZeS9rZdahvAih1QmBg1EW3bBXTJpi4=
 github.com/kr/pretty v0.1.0/go.mod h1:dAy3ld7l9f0ibDNOQOHHMYYIIbhfbHSm3C4ZsoJORNo=
