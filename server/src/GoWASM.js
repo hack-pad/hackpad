@@ -31,6 +31,10 @@ async function init() {
   await mkdir("/usr/local/go", {recursive: true, mode: 0o700})
   await goWasm.overlayTarGzip('/usr/local/go', 'wasm/go.tar.gz', {
     persist: true,
+    skipCacheDirs: [
+      '/usr/local/go/bin/js_wasm',
+      '/usr/local/go/pkg/tool/js_wasm',
+    ],
     progress: percentage => {
       overlayProgress = percentage
       progressListeners.forEach(c => c(percentage))
