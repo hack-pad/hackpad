@@ -78,7 +78,6 @@ func Init() {
 
 	global.Set("getMounts", js.FuncOf(getMounts))
 	global.Set("destroyMount", js.FuncOf(destroyMount))
-	global.Set("overlayZip", js.FuncOf(overlayZip))
 	global.Set("overlayTarGzip", js.FuncOf(overlayTarGzip))
 	global.Set("overlayIndexedDB", js.FuncOf(overlayIndexedDB))
 	global.Set("dumpZip", js.FuncOf(dumpZip))

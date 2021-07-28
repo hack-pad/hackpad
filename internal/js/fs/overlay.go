@@ -3,12 +3,9 @@
 package fs
 
 import (
-	"archive/zip"
-	"bytes"
 	"context"
 	"errors"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"net/url"
 	"path"
@@ -19,8 +16,6 @@ import (
 	"github.com/hack-pad/hackpadfs"
 	"github.com/hack-pad/hackpadfs/indexeddb"
 	"github.com/machinebox/progress"
-	"github.com/spf13/afero"
-	"github.com/spf13/afero/zipfs"
 
 	"github.com/johnstarich/go-wasm/internal/common"
 	"github.com/johnstarich/go-wasm/internal/fs"
@@ -30,63 +25,6 @@ import (
 	"github.com/johnstarich/go-wasm/log"
 	"github.com/johnstarich/go/datasize"
 )
-
-func overlayZip(this js.Value, args []js.Value) interface{} {
-	resolve, reject, prom := promise.New()
-	log.Debug("Backgrounding overlay request")
-	go func() {
-		err := OverlayZip(args)
-		if err != nil {
-			reject(interop.WrapAsJSError(err, "Failed overlaying zip FS"))
-		} else {
-			log.Debug("Successfully overlayed zip FS")
-			resolve(nil)
-		}
-	}()
-	return prom
-}
-
-func OverlayZip(args []js.Value) error {
-	if len(args) != 2 {
-		return errors.New("overlayZip: mount path and zip URL path is required")
-	}
-
-	mountPath := args[0].String()
-	zipPath := args[1].String()
-	log.Debug("Downloading overlay zip FS: ", zipPath)
-	u, err := url.Parse(zipPath)
-	if err != nil {
-		return err
-	}
-	resp, err := http.Get(u.Path) // only download from current server, not just any URL
-	if err != nil {
-		return err
-	}
-	log.Debug("Download response received. Reading body...")
-
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return err
-	}
-	log.Debug("Finished reading download data. Overlaying FS...")
-	if err := resp.Body.Close(); err != nil {
-		return err
-	}
-
-	z, err := zip.NewReader(bytes.NewReader(body), resp.ContentLength)
-	if err != nil {
-		return err
-	}
-	return fs.Overlay(mountPath, &zipFS{zipfs.New(z)})
-}
-
-type zipFS struct {
-	afero.Fs
-}
-
-func (z *zipFS) Open(name string) (hackpadfs.File, error) {
-	return z.Fs.Open(name)
-}
 
 func overlayIndexedDB(this js.Value, args []js.Value) interface{} {
 	resolve, reject, prom := promise.New()

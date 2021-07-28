@@ -2,10 +2,8 @@
 
 package fs
 
-import "github.com/spf13/afero"
-
 type persistFs struct {
-	afero.Fs
+	hackpadfs.FS
 }
 
 func newPersistDB(name string, relaxedDurability bool, shouldCache ShouldCacher) (*persistFs, error) {
