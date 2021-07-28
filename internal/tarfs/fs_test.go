@@ -5,65 +5,46 @@ import (
 	"bytes"
 	"compress/gzip"
 	"io"
-	"os"
-	goPath "path"
-	"path/filepath"
 	"runtime"
-	"strings"
 	"testing"
 	"time"
 
-	"github.com/johnstarich/go-wasm/internal/fstest"
-	"github.com/johnstarich/go-wasm/internal/fsutil"
+	"github.com/hack-pad/hackpadfs"
+	"github.com/hack-pad/hackpadfs/fstest"
+	"github.com/hack-pad/hackpadfs/mem"
 	"github.com/pkg/errors"
-	"github.com/spf13/afero"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-type swappableFS struct {
-	afero.Fs
-}
+func TestFS(t *testing.T) {
+	options := fstest.FSOptions{
+		Name: "tar",
+		Setup: fstest.TestSetupFunc(func(tb testing.TB) (fstest.SetupFS, func() hackpadfs.FS) {
+			setupFS, err := mem.NewFS()
+			require.NoError(tb, err)
 
-func newSwappableFS(fs afero.Fs) *swappableFS {
-	return &swappableFS{fs}
-}
-
-func (s *swappableFS) Swap(fs afero.Fs) {
-	s.Fs = fs
-}
-
-func TestFs(t *testing.T) {
-	tarFS := newSwappableFS(nil)
-	memFS := newSwappableFS(afero.NewMemMapFs())
-
-	rebuildTarFromMem := func() error {
-		tmpTarFS, err := newTarFromFS(memFS)
-		if err == nil {
-			tarFS.Swap(tmpTarFS)
-		}
-		return err
+			return setupFS, func() hackpadfs.FS {
+				return newTarFromFS(tb, setupFS)
+			}
+		}),
 	}
-	require.NoError(t, rebuildTarFromMem())
-
-	cleanup := func() error {
-		memFS.Swap(afero.NewMemMapFs())
-		err := rebuildTarFromMem()
-		return err
-	}
-
-	fstest.RunReadOnly(t, tarFS, memFS, cleanup, rebuildTarFromMem)
+	fstest.FS(t, options)
+	fstest.File(t, options)
 }
 
-func newTarFromFS(src afero.Fs) (*FS, error) {
+func newTarFromFS(tb testing.TB, src hackpadfs.FS) *FS {
 	r, err := buildTarFromFS(src)
-	if err != nil {
-		return nil, err
-	}
-	return New(r, afero.NewMemMapFs())
+	require.NoError(tb, err)
+	memFS, err := mem.NewFS()
+	require.NoError(tb, err)
+
+	fs, err := New(r, memFS)
+	require.NoError(tb, err)
+	return fs
 }
 
-func buildTarFromFS(src afero.Fs) (io.Reader, error) {
+func buildTarFromFS(src hackpadfs.FS) (io.Reader, error) {
 	var buf bytes.Buffer
 	compressor := gzip.NewWriter(&buf)
 	defer compressor.Close()
@@ -71,12 +52,16 @@ func buildTarFromFS(src afero.Fs) (io.Reader, error) {
 	archive := tar.NewWriter(compressor)
 	defer archive.Close()
 
-	err := afero.Walk(src, "/", copyTarWalk(src, archive))
+	err := hackpadfs.WalkDir(src, "/", copyTarWalk(src, archive))
 	return &buf, errors.Wrap(err, "Failed building tar from FS walk")
 }
 
-func copyTarWalk(src afero.Fs, archive *tar.Writer) filepath.WalkFunc {
-	return func(path string, info os.FileInfo, err error) error {
+func copyTarWalk(src hackpadfs.FS, archive *tar.Writer) hackpadfs.WalkDirFunc {
+	return func(path string, dir hackpadfs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		info, err := dir.Info()
 		if err != nil {
 			return err
 		}
@@ -92,7 +77,7 @@ func copyTarWalk(src afero.Fs, archive *tar.Writer) filepath.WalkFunc {
 		if err != nil {
 			return err
 		}
-		fileBytes, err := afero.ReadFile(src, path)
+		fileBytes, err := hackpadfs.ReadFile(src, path)
 		if err != nil {
 			return err
 		}
@@ -104,44 +89,45 @@ func copyTarWalk(src afero.Fs, archive *tar.Writer) filepath.WalkFunc {
 func TestNewFromFs(t *testing.T) {
 	for _, tc := range []struct {
 		description string
-		do          func(t *testing.T, fs afero.Fs)
+		do          func(t *testing.T, fs hackpadfs.FS)
 	}{
 		{
 			description: "empty",
-			do:          func(t *testing.T, fs afero.Fs) {},
+			do:          func(t *testing.T, fs hackpadfs.FS) {},
 		},
 		{
 			description: "one file",
-			do: func(t *testing.T, fs afero.Fs) {
-				_, err := fs.Create("foo")
+			do: func(t *testing.T, fs hackpadfs.FS) {
+				_, err := hackpadfs.Create(fs, "foo")
 				require.NoError(t, err)
 			},
 		},
 		{
 			description: "one dir",
-			do: func(t *testing.T, fs afero.Fs) {
-				err := fs.Mkdir("foo", 0700)
+			do: func(t *testing.T, fs hackpadfs.FS) {
+				err := hackpadfs.Mkdir(fs, "foo", 0700)
 				require.NoError(t, err)
 			},
 		},
 		{
 			description: "dir with one nested file",
-			do: func(t *testing.T, fs afero.Fs) {
-				err := fs.Mkdir("foo", 0700)
+			do: func(t *testing.T, fs hackpadfs.FS) {
+				err := hackpadfs.Mkdir(fs, "foo", 0700)
 				require.NoError(t, err)
-				_, err = fs.Create("foo/bar")
+				_, err = hackpadfs.Create(fs, "foo/bar")
 				require.NoError(t, err)
 			},
 		},
 	} {
 		t.Run(tc.description, func(t *testing.T) {
-			memFS := afero.NewMemMapFs()
+			memFS, err := mem.NewFS()
+			require.NoError(t, err)
 			tc.do(t, memFS)
 			timer := time.NewTimer(50 * time.Millisecond)
 			done := make(chan struct{})
 
 			go func() {
-				tarFS, err := newTarFromFS(memFS)
+				tarFS := newTarFromFS(t, memFS)
 				assert.NoError(t, err)
 				assert.NotNil(t, tarFS)
 				close(done)
@@ -157,68 +143,4 @@ func TestNewFromFs(t *testing.T) {
 			}
 		})
 	}
-}
-
-func TestDirsFromPath(t *testing.T) {
-	for _, tc := range []struct {
-		description string
-		path        string
-		expect      []string
-	}{
-		{
-			description: "empty path",
-			path:        "",
-			expect:      []string{"/"},
-		},
-		{
-			description: "slash",
-			path:        "/",
-			expect:      []string{"/"},
-		},
-		{
-			description: "file",
-			path:        "/foo",
-			expect:      []string{"/"},
-		},
-		{
-			description: "dir",
-			path:        "/foo/",
-			expect:      []string{"/foo", "/"},
-		},
-		{
-			description: "nested dir",
-			path:        "/foo/bar/",
-			expect:      []string{"/foo/bar", "/foo", "/"},
-		},
-		{
-			description: "nested file",
-			path:        "/foo/bar",
-			expect:      []string{"/foo", "/"},
-		},
-	} {
-		t.Run(tc.description, func(t *testing.T) {
-			assert.Equal(t, tc.expect, dirsFromPath(tc.path))
-		})
-	}
-}
-
-// dirsFromPath returns all directory segments in 'path'. Assumes 'path' is a raw header name from a tar.
-func dirsFromPath(path string) []string {
-	var dirs []string
-	if strings.HasSuffix(path, pathSeparator) {
-		// denotes a tar directory path, so clean it and add it before pop
-		path = fsutil.NormalizePath(path)
-		dirs = append(dirs, path)
-	}
-	if path == pathSeparator {
-		return dirs
-	}
-	path = fsutil.NormalizePath(path) // make absolute + clean
-	path = goPath.Dir(path)           // pop normal files from the end
-	var prevPath string
-	for ; path != prevPath; path = goPath.Dir(path) {
-		dirs = append(dirs, path)
-		prevPath = path
-	}
-	return dirs
 }

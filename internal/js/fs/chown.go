@@ -25,6 +25,6 @@ func chownSync(args []js.Value) (interface{}, error) {
 }
 
 func Chown(path string, uid, gid int) error {
-	// TODO no-op, consider adding user and group ID support to afero
+	// TODO no-op, consider adding user and group ID support to hackpadfs
 	return nil
 }

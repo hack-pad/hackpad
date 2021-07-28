@@ -3,13 +3,12 @@ package interop
 import (
 	"fmt"
 	"io"
-	"os"
 	"os/exec"
 
+	"github.com/hack-pad/hackpadfs"
 	"github.com/johnstarich/go-wasm/internal/common"
 	"github.com/johnstarich/go-wasm/log"
 	"github.com/pkg/errors"
-	"github.com/spf13/afero"
 )
 
 var (
@@ -55,24 +54,20 @@ func mapToErrNo(err error, debugMessage string) string {
 		return mapToErrNo(err.Unwrap(), debugMessage)
 	}
 	switch err {
-	case io.EOF, os.ErrNotExist, exec.ErrNotFound:
+	case io.EOF, exec.ErrNotFound:
 		return "ENOENT"
-	case os.ErrExist:
-		return "EEXIST"
-	case os.ErrPermission:
-		return "EPERM"
-	}
-	switch err.Error() {
-	case os.ErrClosed.Error(), afero.ErrFileClosed.Error():
-		return "EBADF" // if it was already closed, then the file descriptor was invalid
 	}
 	switch {
-	case os.IsNotExist(err):
+	case errors.Is(err, hackpadfs.ErrClosed):
+		return "EBADF" // if it was already closed, then the file descriptor was invalid
+	case errors.Is(err, hackpadfs.ErrNotExist):
 		return "ENOENT"
-	case os.IsExist(err):
+	case errors.Is(err, hackpadfs.ErrExist):
 		return "EEXIST"
-	case afero.IsDirErr(err):
+	case errors.Is(err, hackpadfs.ErrIsDir):
 		return "EISDIR"
+	case errors.Is(err, hackpadfs.ErrPermission):
+		return "EPERM"
 	default:
 		log.Errorf("Unknown error type: (%T) %+v\n\n%s", err, err, debugMessage)
 		return "EPERM"

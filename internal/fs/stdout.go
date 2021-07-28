@@ -5,13 +5,13 @@ import (
 	"sync"
 	"time"
 
+	"github.com/hack-pad/hackpadfs"
 	"github.com/johnstarich/go-wasm/log"
-	"github.com/spf13/afero"
 )
 
 var (
-	stdout afero.File = &bufferedLogger{name: "dev/stdout", printFn: log.Print}
-	stderr afero.File = &bufferedLogger{name: "dev/stderr", printFn: log.Error}
+	stdout hackpadfs.File = &bufferedLogger{name: "dev/stdout", printFn: log.Print}
+	stderr hackpadfs.File = &bufferedLogger{name: "dev/stderr", printFn: log.Error}
 )
 
 type bufferedLogger struct {

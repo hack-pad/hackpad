@@ -11,10 +11,7 @@ require (
 	github.com/machinebox/progress v0.2.0
 	github.com/mattn/go-tty v0.0.3
 	github.com/pkg/errors v0.9.1
-	github.com/spf13/afero v1.3.0
 	github.com/stretchr/testify v1.5.1
 	go.uber.org/atomic v1.6.0
 	mvdan.cc/sh/v3 v3.1.2
 )
-
-replace github.com/spf13/afero v1.3.0 => github.com/johnstarich/afero v1.3.2-0.20210214021553-81c4e4e83b19

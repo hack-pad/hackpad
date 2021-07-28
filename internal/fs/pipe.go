@@ -70,7 +70,7 @@ func (p pipeStat) Sys() interface{}   { return nil }
 
 func (p *pipeChan) Stat() (os.FileInfo, error) {
 	return &pipeStat{
-		name: p.Name(),
+		name: "",
 		size: int64(len(p.buf)),
 		mode: os.ModeNamedPipe,
 	}, nil
