@@ -12,7 +12,6 @@ import (
 	"github.com/hack-pad/hackpadfs"
 	"github.com/johnstarich/go-wasm/internal/bufferpool"
 	"github.com/johnstarich/go-wasm/internal/common"
-	"github.com/johnstarich/go-wasm/internal/fsutil"
 	"github.com/johnstarich/go-wasm/internal/pubsub"
 	"github.com/johnstarich/go-wasm/log"
 	"github.com/pkg/errors"
@@ -252,18 +251,15 @@ func (f fullReader) Read(p []byte) (n int, err error) {
 	return
 }
 
-func (fs *FS) ensurePath(path string) (normalizedPath string, err error) {
-	path = fsutil.NormalizePath(path)
-	fs.ps.Wait(path)
-	return path, fs.initErr
-}
-
-func (fs *FS) Open(path string) (hackpadfs.File, error) {
-	path, err := fs.ensurePath(path)
-	if err != nil {
-		return nil, err
+func (fs *FS) Open(name string) (hackpadfs.File, error) {
+	if !hackpadfs.ValidPath(name) {
+		return nil, &hackpadfs.PathError{Op: "open", Path: name, Err: hackpadfs.ErrInvalid}
 	}
-	return fs.underlyingFS.Open(path)
+	fs.ps.Wait(name)
+	if fs.initErr != nil {
+		return nil, &hackpadfs.PathError{Op: "open", Path: name, Err: fs.initErr}
+	}
+	return fs.underlyingFS.Open(name)
 }
 
 func (fs *FS) Done() <-chan struct{} {

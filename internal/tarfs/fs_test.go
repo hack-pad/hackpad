@@ -52,7 +52,7 @@ func buildTarFromFS(src hackpadfs.FS) (io.Reader, error) {
 	archive := tar.NewWriter(compressor)
 	defer archive.Close()
 
-	err := hackpadfs.WalkDir(src, "/", copyTarWalk(src, archive))
+	err := hackpadfs.WalkDir(src, ".", copyTarWalk(src, archive))
 	return &buf, errors.Wrap(err, "Failed building tar from FS walk")
 }
 

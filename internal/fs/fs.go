@@ -86,7 +86,7 @@ func OverlayTarGzip(mountPath string, r io.ReadCloser, persist bool, shouldCache
 		},
 	}
 
-	_, err = underlyingFS.Stat(tarfsDoneMarker)
+	_, err = hackpadfs.Stat(underlyingFS, tarfsDoneMarker)
 	if err == nil {
 		// tarfs already completed successfully and is persisted,
 		// so close tarfs reader and mount the existing files
