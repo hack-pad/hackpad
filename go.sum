@@ -9,10 +9,14 @@ github.com/fatih/color v1.9.0/go.mod h1:eQcE1qtQxscV5RaZvpXrrb8Drkc3/DdQ+uUYCNjL
 github.com/google/renameio v0.1.0/go.mod h1:KWCgfxg9yswjAJkECMjeO8J8rahYeXnNhOm40UhjYkI=
 github.com/hack-pad/go-indexeddb v0.0.0-20210627055059-75ac2a19af43 h1:L1SDHWiwFsHGy67AVE4JzQUaU1CgPVhF21YVlYzxQLQ=
 github.com/hack-pad/go-indexeddb v0.0.0-20210627055059-75ac2a19af43/go.mod h1:NH8CaojufPNcKYDhy5JkjfyBXE/72oJPeiywlabN/lM=
+github.com/hack-pad/go-indexeddb v0.0.0-20210725225828-552e7c407090 h1:CVuJ/4qGfYmIcYDiPUriwbEuimA4O34zf/EsrSKDpS4=
+github.com/hack-pad/go-indexeddb v0.0.0-20210725225828-552e7c407090/go.mod h1:NH8CaojufPNcKYDhy5JkjfyBXE/72oJPeiywlabN/lM=
 github.com/hack-pad/hackpadfs v0.0.0-20210721055107-9de55e3d77dd h1:UvK03UVIO2Jv1g0mwa6HM4SEf2avgtv31x5Crf9dneI=
 github.com/hack-pad/hackpadfs v0.0.0-20210721055107-9de55e3d77dd/go.mod h1:zXCMPoXvOxqv/hQh5drtWQmJZ1MtKKejvF+qaI+aPmo=
 github.com/hack-pad/hackpadfs v0.0.0-20210721061701-8173de332f89 h1:N78BVvRpFvF1i14tQsobYzCa3cZmnwegbU7z8JsnEuE=
 github.com/hack-pad/hackpadfs v0.0.0-20210721061701-8173de332f89/go.mod h1:zXCMPoXvOxqv/hQh5drtWQmJZ1MtKKejvF+qaI+aPmo=
+github.com/hack-pad/hackpadfs v0.0.0-20210728023418-c0d176de33ad h1:X98BtOtlhzejdiKec+i0xmTl2UFuYcuv/Vl243vSZro=
+github.com/hack-pad/hackpadfs v0.0.0-20210728023418-c0d176de33ad/go.mod h1:Ecy1tNXrYbhYs5Bdd9MnEBOvDTCjLMfI99hTQ9oV5uA=
 github.com/johnstarich/afero v1.3.2-0.20200824034706-e0c81fb79d7b h1:8XJ1QRVoSx+rcCoch3GI3lOCEIWLu7bsoU5xd+GO3sk=
 github.com/johnstarich/afero v1.3.2-0.20200824034706-e0c81fb79d7b/go.mod h1:5KUK8ByomD5Ti5Artl0RtHeI5pTF7MIDuXL3yY520V4=
 github.com/johnstarich/afero v1.3.2-0.20210214021553-81c4e4e83b19 h1:dF789piTv5rw9ztiRTsTEWyVeVo90AC+5W1XIPawBEo=
