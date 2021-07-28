@@ -11,6 +11,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
+	"path"
 	"syscall/js"
 	"time"
 
@@ -21,10 +22,13 @@ import (
 	"github.com/spf13/afero"
 	"github.com/spf13/afero/zipfs"
 
+	"github.com/johnstarich/go-wasm/internal/common"
 	"github.com/johnstarich/go-wasm/internal/fs"
 	"github.com/johnstarich/go-wasm/internal/interop"
+	"github.com/johnstarich/go-wasm/internal/process"
 	"github.com/johnstarich/go-wasm/internal/promise"
 	"github.com/johnstarich/go-wasm/log"
+	"github.com/johnstarich/go/datasize"
 )
 
 func overlayZip(this js.Value, args []js.Value) interface{} {
@@ -167,7 +171,18 @@ func OverlayTarGzip(args []js.Value) error {
 		})
 	}
 	persist := options["persist"].Truthy()
-	return fs.OverlayTarGzip(mountPath, reader, persist)
+	shouldCache := func(string, hackpadfs.FileInfo) bool { return true }
+	if options["skipCacheDirs"].Type() == js.TypeObject {
+		skipDirs := make(map[string]bool)
+		for _, d := range interop.StringsFromJSValue(options["skipCacheDirs"]) {
+			skipDirs[common.ResolvePath(process.Current().WorkingDirectory(), d)] = true
+		}
+		maxFileBytes := datasize.Kibibytes(100).Bytes()
+		shouldCache = func(name string, info hackpadfs.FileInfo) bool {
+			return !skipDirs[path.Dir(name)] && info.Size() < maxFileBytes
+		}
+	}
+	return fs.OverlayTarGzip(mountPath, reader, persist, shouldCache)
 }
 
 func wrapProgress(r io.ReadCloser, contentLength int64, setProgress func(float64)) io.ReadCloser {
