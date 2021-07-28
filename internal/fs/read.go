@@ -4,7 +4,6 @@ import (
 	"io"
 
 	"github.com/hack-pad/hackpadfs"
-	"github.com/hack-pad/hackpadfs/indexeddb/idbblob"
 	"github.com/hack-pad/hackpadfs/keyvalue/blob"
 	"github.com/johnstarich/go-wasm/internal/interop"
 )
@@ -51,7 +50,7 @@ func (f *FileDescriptors) ReadFile(path string) (blob.Blob, error) {
 		return nil, err
 	}
 
-	buf, err := idbblob.NewLength(int(info.Size()))
+	buf, err := newBlobLength(int(info.Size()))
 	if err != nil {
 		return nil, err
 	}

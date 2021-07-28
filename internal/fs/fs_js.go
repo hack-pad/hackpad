@@ -7,6 +7,8 @@ import (
 
 	"github.com/hack-pad/go-indexeddb/idb"
 	"github.com/hack-pad/hackpadfs/indexeddb"
+	"github.com/hack-pad/hackpadfs/indexeddb/idbblob"
+	"github.com/hack-pad/hackpadfs/keyvalue/blob"
 )
 
 type persistFs struct {
@@ -22,4 +24,8 @@ func newPersistDB(name string, relaxedDurability bool, shouldCache ShouldCacher)
 		TransactionDurability: durability,
 	})
 	return &persistFs{fs}, err
+}
+
+func newBlobLength(i int) (blob.Blob, error) {
+	return idbblob.NewLength(i)
 }
