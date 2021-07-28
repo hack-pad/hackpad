@@ -41,8 +41,8 @@ func Mounts() []mount.Point {
 
 func DestroyMount(path string) error {
 	mount, _ := filesystem.Mount(path)
-	if clearFs, ok := mount.(interface{ Clear() error }); ok {
-		return clearFs.Clear()
+	if clearFs, ok := mount.(clearFS); ok {
+		return clearFs.Clear(context.Background())
 	}
 	return &hackpadfs.PathError{Op: "clear", Path: path, Err: hackpadfs.ErrNotImplemented}
 }
@@ -75,15 +75,21 @@ func OverlayTarGzip(mountPath string, r io.ReadCloser, persist bool, shouldCache
 		return err
 	}
 
-	memFS, err := mem.NewFS()
-	if err != nil {
-		return err
-	}
-
 	cacheOptions := cache.ReadOnlyOptions{
 		RetainData: func(name string, info hackpadfs.FileInfo) bool {
 			return shouldCache(path.Join(mountPath, name), info)
 		},
+	}
+	newCacheFS := func(underlyingFS clearFS) (clearFS, error) {
+		memFS, err := mem.NewFS()
+		if err != nil {
+			return nil, err
+		}
+		fs, err := cache.NewReadOnlyFS(underlyingFS, memFS, cacheOptions)
+		if err != nil {
+			return nil, err
+		}
+		return newClearUnderlyingFS(fs, underlyingFS), nil
 	}
 
 	_, err = hackpadfs.Stat(underlyingFS, tarfsDoneMarker)
@@ -92,7 +98,7 @@ func OverlayTarGzip(mountPath string, r io.ReadCloser, persist bool, shouldCache
 		// so close tarfs reader and mount the existing files
 		r.Close()
 
-		cacheFS, err := cache.NewReadOnlyFS(underlyingFS, memFS, cacheOptions)
+		cacheFS, err := newCacheFS(underlyingFS)
 		if err != nil {
 			return err
 		}
@@ -110,7 +116,7 @@ func OverlayTarGzip(mountPath string, r io.ReadCloser, persist bool, shouldCache
 	if err != nil {
 		return err
 	}
-	cacheFS, err := cache.NewReadOnlyFS(tarFS, memFS, cacheOptions)
+	cacheFS, err := newCacheFS(tarFS)
 	if err != nil {
 		return err
 	}

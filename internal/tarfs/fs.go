@@ -270,15 +270,15 @@ func (fs *FS) InitErr() error {
 	return fs.initErr
 }
 
-type clearerFs interface {
-	Clear() error
+type clearFS interface {
+	Clear(ctx context.Context) error
 }
 
-func (fs *FS) Clear() (err error) {
-	if clearer, ok := fs.underlyingFS.(clearerFs); ok {
+func (fs *FS) Clear(ctx context.Context) (err error) {
+	if clearFS, ok := fs.underlyingFS.(clearFS); ok {
 		fs.initErr = context.Canceled
 		fs.cancel()
-		return clearer.Clear()
+		return clearFS.Clear(ctx)
 	}
 	return errors.New("Unsupported operation for base FS")
 }

@@ -64,7 +64,7 @@ func newSettingsDropdown(attachTo *dom.Element) *dropdown {
 		return promise.From(global.Get("destroyMount").Invoke(path))
 	}
 	listenButton("reset", "Erase all data and reload?", func() {
-		mounts := interop.Keys(global.Get("getMounts").Invoke())
+		mounts := interop.StringsFromJSValue(global.Get("getMounts").Invoke())
 		var promises []promise.Promise
 		for _, mount := range mounts {
 			promises = append(promises, destroyMount(mount))
