@@ -71,10 +71,9 @@ cache/go${GO_VERSION}: cache
 		git clone \
 			--depth 1 \
 			--single-branch \
-			--branch go${GO_VERSION} \
-			https://github.com/golang/go.git \
+			--branch hackpad-go${GO_VERSION} \
+			https://github.com/hack-pad/go.git \
 			"$$TMP"; \
-		$(MAKE) -e TMP_GO="$$TMP" go-ext; \
 		pushd "$$TMP/src"; \
 		./make.bash; \
 		export PATH="$$TMP/bin:$$PATH"; \
@@ -99,20 +98,6 @@ server/public/wasm/main.wasm: server/public/wasm go
 
 server/public/wasm/wasm_exec.js: go
 	cp cache/go/misc/wasm/wasm_exec.js server/public/wasm/wasm_exec.js
-
-.PHONY: go-ext
-go-ext:
-	[[ -d "${TMP_GO}" ]]
-	sed -i'' -e '/^func Pipe(/,/^}/d' "${TMP_GO}"/src/syscall/fs_js.go
-	sed -i'' -e '/^func StartProcess(/,/^}/d' "${TMP_GO}"/src/syscall/syscall_js.go
-	sed -i'' -e '/^func Wait4(/,/^}/d' "${TMP_GO}"/src/syscall/syscall_js.go
-	sed -i'' -e '/^func (w WaitStatus) ExitStatus() int/d' "${TMP_GO}"/src/syscall/syscall_js.go
-	sed -i'' -e '/^func (w WaitStatus) Exited() bool/d' "${TMP_GO}"/src/syscall/syscall_js.go
-	cp internal/testdata/fs_* "${TMP_GO}"/src/syscall/
-	cp internal/testdata/syscall_* "${TMP_GO}"/src/syscall/
-	cp internal/testdata/filelock_* "${TMP_GO}"/src/cmd/go/internal/lockedfile/internal/filelock/
-	sed -i'' -e 's/+build\( [^j].*\)*$$/+build\1 js,wasm/' "${TMP_GO}"/src/os/exec/lp_unix.go
-	rm "${TMP_GO}"/src/os/exec/lp_js.go
 
 .PHONY: watch
 watch:
