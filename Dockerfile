@@ -8,7 +8,6 @@ RUN apk add --no-cache \
 
 WORKDIR /src
 # Cache go installation first
-COPY internal/testdata /src/internal/testdata
 COPY Makefile /src
 RUN make go
 # Build command binaries and static assets
