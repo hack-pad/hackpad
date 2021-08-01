@@ -7,7 +7,7 @@
     --app-controls-background: #fff;
     --app-controls-background-light: rgba(224, 224, 224, 0.5);
     --app-controls-highlight: rgba(119, 0, 136, 0.1);
-    --app-title-highlight: var(--app-accent);
+    --app-title-highlight: rgba(199, 146, 234);
     --app-accent-alternate: rgba(50, 0, 135);
 }
 
@@ -38,7 +38,7 @@ h1 pre, h2 pre, h3 pre, h4 pre, h5 pre, h6 pre {
 }
 
 h1.app-title {
-    font-size: 1em;
+    font-size: 1.1em;
     cursor: default;
     user-select: none;
 
@@ -49,23 +49,22 @@ h1.app-title {
 }
 
 .app-title {
-    font-family: var(--font-mono);
-    font-weight: 800;
+    font-family: var(--font-title);
+    font-weight: 400;
+    letter-spacing: 0.03em;
     margin: 0 0.3em;
 }
 
-.app-title-go {
-    color: var(--app-title-highlight);
+.app-title-hack {
     display: inline-block;
-    transition: transform 0.2s 0s ease-in;
 }
 
-.app-title:hover .app-title-go {
-    transform: matrix(1, 0, -0.25, 1, 2, 0);
+.app-title-hack {
+    color: #f07178;
 }
 
-.app-title-wasm:after {
-    content: "()";
+.app-title-pad {
+    color: var(--app-title-highlight);
 }
 
 @media screen and (prefers-color-scheme: dark) {
@@ -73,14 +72,6 @@ h1.app-title {
         border-right: 1px solid rgb(45, 45, 45);
     }
 
-    .app-title-wasm {
-        color: #f07178;
-    }
-
-    .app-title-wasm:after {
-        color: white;
-        content: "()";
-    }
 }
 
 .console {

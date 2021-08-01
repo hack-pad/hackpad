@@ -1,5 +1,6 @@
 :root {
     --font-mono: Menlo, Courier, monospace;
+    --font-title: Roboto, Menlo, Courier, monospace;
 }
 
 html, body {

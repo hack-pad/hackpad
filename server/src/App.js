@@ -2,6 +2,7 @@ import React from 'react';
 import './App.css';
 
 import './Tabs.css';
+import "@fontsource/roboto";
 import '@fortawesome/fontawesome-free/css/all.css';
 import Compat from './Compat';
 import Loading from './Loading';

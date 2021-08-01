@@ -14,7 +14,7 @@ export default function Loading({ percentage }) {
         </div>
         <p>
           installing <span className="app-title">
-            <span className="app-title-go">go</span> <span className="app-title-wasm">wasm</span>
+            <span className="app-title-hack">hack</span><span className="app-title-pad">pad</span>
           </span>
         </p>
         <p><em>please wait...</em></p>

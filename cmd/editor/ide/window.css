@@ -73,7 +73,7 @@
 }
 
 .ide .controls .control:hover {
-    color: var(--app-title-highlight);
+    color: var(--app-accent);
     background-color: var(--app-controls-highlight);
 }
 
