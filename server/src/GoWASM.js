@@ -19,7 +19,7 @@ async function init() {
   }
   go.run(cmd.instance)
   const { goWasm, fs } = window
-  console.debug(`go-wasm status: ${goWasm.ready ? 'ready' : 'not ready'}`)
+  console.debug(`hackpad status: ${goWasm.ready ? 'ready' : 'not ready'}`)
 
   const mkdir = promisify(fs.mkdir)
   await mkdir("/bin", {mode: 0o700})

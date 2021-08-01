@@ -1,6 +1,6 @@
 {
-  "short_name": "Go Wasm",
-  "name": "Go Wasm",
+  "short_name": "Hackpad",
+  "name": "Hackpad",
   "icons": [
     {
       "src": "favicon.ico",

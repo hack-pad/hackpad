@@ -41,7 +41,7 @@ func TraceProfileJS(this js.Value, args []js.Value) interface{} {
 		log.Error("Failed to create memory profile: ", err)
 		return nil
 	}
-	StartDownload("", "go-wasm-trace.pprof", buf)
+	StartDownload("", "hackpad-trace.pprof", buf)
 	return nil
 }
 
@@ -61,7 +61,7 @@ func MemoryProfileJS(this js.Value, args []js.Value) interface{} {
 		log.Error("Failed to create memory profile: ", err)
 		return nil
 	}
-	StartDownload("", "go-wasm-mem.pprof", buf)
+	StartDownload("", "hackpad-mem.pprof", buf)
 	return nil
 }
 
@@ -75,7 +75,7 @@ func StartCPUProfile(ctx context.Context) error {
 	go func() {
 		<-ctx.Done()
 		pprof.StopCPUProfile()
-		StartDownload("", "go-wasm-cpu.pprof", buf.Bytes())
+		StartDownload("", "hackpad-cpu.pprof", buf.Bytes())
 	}()
 	return nil
 }

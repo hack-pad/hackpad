@@ -116,11 +116,11 @@ build: static
 
 .PHONY: docker
 docker:
-	docker build -t go-wasm .
+	docker build -t hackpad .
 
 .PHONY: docker-run
 docker-run: docker
 	docker run -it --rm \
-		--name go-wasm \
+		--name hackpad \
 		-p 8080:80 \
-		go-wasm:latest
+		hackpad:latest
