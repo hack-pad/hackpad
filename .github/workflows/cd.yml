@@ -10,7 +10,7 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     - name: Build
-      run: docker build -t go-wasm .
+      run: docker build -t hackpad .
     - name: Publish
       run: |
         git config --global user.email ""
@@ -18,9 +18,9 @@ jobs:
         git checkout --orphan gh-pages
         git rm -rf .
         out=$(mktemp -d)
-        docker cp $(docker create --rm go-wasm):/usr/share/nginx/html "$out"
+        docker cp $(docker create --rm hackpad):/usr/share/nginx/html "$out"
         find "$out/html" -mindepth 1 -maxdepth 1 -exec cp -r {} ./ \;  # Glob doesn't always pick up hidden files by default
-        echo go-wasm.johnstarich.com > CNAME
+        echo hackpad.org > CNAME
         git add .
         git commit -am "Deploy to GitHub Pages"
         git push --force origin gh-pages
