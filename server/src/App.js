@@ -5,7 +5,7 @@ import './Tabs.css';
 import '@fortawesome/fontawesome-free/css/all.css';
 import Compat from './Compat';
 import Loading from './Loading';
-import { install, run, observeGoDownloadProgress } from './GoWASM';
+import { install, run, observeGoDownloadProgress } from './Hackpad';
 import { newEditor } from './Editor';
 import { newTerminal } from './Terminal';
 

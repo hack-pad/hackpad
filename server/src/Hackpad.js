@@ -18,18 +18,18 @@ async function init() {
     'PATH': '/bin:/home/me/go/bin:/usr/local/go/bin/js_wasm:/usr/local/go/pkg/tool/js_wasm',
   }
   go.run(cmd.instance)
-  const { goWasm, fs } = window
-  console.debug(`hackpad status: ${goWasm.ready ? 'ready' : 'not ready'}`)
+  const { hackpad, fs } = window
+  console.debug(`hackpad status: ${hackpad.ready ? 'ready' : 'not ready'}`)
 
   const mkdir = promisify(fs.mkdir)
   await mkdir("/bin", {mode: 0o700})
-  await goWasm.overlayIndexedDB('/bin', {cache: true})
-  await goWasm.overlayIndexedDB('/home/me')
+  await hackpad.overlayIndexedDB('/bin', {cache: true})
+  await hackpad.overlayIndexedDB('/home/me')
   await mkdir("/home/me/.cache", {recursive: true, mode: 0o700})
-  await goWasm.overlayIndexedDB('/home/me/.cache', {cache: true})
+  await hackpad.overlayIndexedDB('/home/me/.cache', {cache: true})
 
   await mkdir("/usr/local/go", {recursive: true, mode: 0o700})
-  await goWasm.overlayTarGzip('/usr/local/go', 'wasm/go.tar.gz', {
+  await hackpad.overlayTarGzip('/usr/local/go', 'wasm/go.tar.gz', {
     persist: true,
     skipCacheDirs: [
       '/usr/local/go/bin/js_wasm',
@@ -44,11 +44,11 @@ async function init() {
   console.debug("Startup took", (new Date().getTime() - startTime) / 1000, "seconds")
 }
 
-const initOnce = init(); // always wait on this to ensure goWasm window object is ready
+const initOnce = init(); // always wait on this to ensure hackpad window object is ready
 
 export async function install(name) {
   await initOnce
-  return window.goWasm.install(name)
+  return window.hackpad.install(name)
 }
 
 export async function run(name, ...args) {
@@ -85,8 +85,8 @@ export async function spawn({ name, args, ...options }) {
 
 export async function spawnTerminal(term, options) {
   await initOnce
-  const { goWasm } = window
-  return goWasm.spawnTerminal(term, options)
+  const { hackpad } = window
+  return hackpad.spawnTerminal(term, options)
 }
 
 export async function mkdirAll(path) {

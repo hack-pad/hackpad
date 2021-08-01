@@ -4,7 +4,7 @@ package global
 
 import "syscall/js"
 
-const globalKey = "goWasm"
+const globalKey = "hackpad"
 
 var globals js.Value
 
