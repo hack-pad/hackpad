@@ -1,8 +1,8 @@
-# Go Wasm
+# hackpad
 
-Go Wasm is a [Go][] development environment with the essentials to write and run code entirely within the browser, using the power of [WebAssembly (Wasm)][wasm].
+Hackpad is a [Go][] development environment with the essentials to write and run code entirely within the browser, using the power of [WebAssembly (Wasm)][wasm].
 
-Check out the article announcement on [Medium][], and the demo at https://go-wasm.johnstarich.com
+Check out the article announcement on [Medium][], and the site at https://hackpad.org
 
 
 [Go]: https://golang.org
@@ -13,4 +13,4 @@ Check out the article announcement on [Medium][], and the demo at https://go-was
 
 Want to discuss an idea or a bug? Open up a new [issue][] and we can talk about it. Pull requests are welcome.
 
-[issue]: https://github.com/JohnStarich/go-wasm/issues
+[issue]: https://github.com/hack-pad/hackpad/issues
