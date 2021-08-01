@@ -1,10 +1,7 @@
-FROM node:14-alpine as builder
+FROM node:14 as builder
 
-RUN apk add --no-cache \
-        bash \
-        git \
-        go \
-        make
+RUN apt-get update && \
+        apt-get install -y golang
 
 WORKDIR /src
 # Cache go installation first
