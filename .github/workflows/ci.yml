@@ -41,8 +41,7 @@ jobs:
         out=$HOME/out
         mkdir "$out"
         docker cp $(docker create --rm go-wasm):/usr/share/nginx/html "$out"
-        cp -r "$out"/* ./
-        cp -r "$out"/.* ./  # Glob doesn't always pick up hidden files by default
+        find "$out" -maxdepth 1 -exec cp -r {} ./ \;  # Glob doesn't always pick up hidden files by default
         git add .
         git commit -am "Deploy to GitHub Pages"
         git push --force origin gh-pages
