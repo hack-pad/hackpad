@@ -6,7 +6,7 @@ import (
 	"syscall/js"
 	"time"
 
-	"github.com/johnstarich/go-wasm/internal/process"
+	"github.com/hack-pad/hackpad/internal/process"
 	"github.com/pkg/errors"
 )
 

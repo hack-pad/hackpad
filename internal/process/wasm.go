@@ -7,9 +7,9 @@ import (
 	"runtime"
 	"syscall/js"
 
-	"github.com/johnstarich/go-wasm/internal/interop"
-	"github.com/johnstarich/go-wasm/internal/promise"
-	"github.com/johnstarich/go-wasm/log"
+	"github.com/hack-pad/hackpad/internal/interop"
+	"github.com/hack-pad/hackpad/internal/promise"
+	"github.com/hack-pad/hackpad/log"
 )
 
 var (

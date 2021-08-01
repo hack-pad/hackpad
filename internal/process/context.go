@@ -4,8 +4,8 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/johnstarich/go-wasm/internal/fs"
-	"github.com/johnstarich/go-wasm/log"
+	"github.com/hack-pad/hackpad/internal/fs"
+	"github.com/hack-pad/hackpad/log"
 )
 
 const initialDirectory = "/home/me"

@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"syscall/js"
 
-	"github.com/johnstarich/go-wasm/cmd/editor/dom"
+	"github.com/hack-pad/hackpad/cmd/editor/dom"
 )
 
 var sheet = createStyleSheet()

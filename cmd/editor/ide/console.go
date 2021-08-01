@@ -5,7 +5,7 @@ package ide
 import (
 	"context"
 
-	"github.com/johnstarich/go-wasm/cmd/editor/dom"
+	"github.com/hack-pad/hackpad/cmd/editor/dom"
 )
 
 type ConsoleBuilder interface {

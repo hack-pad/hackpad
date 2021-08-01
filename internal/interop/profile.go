@@ -11,7 +11,7 @@ import (
 	"syscall/js"
 	"time"
 
-	"github.com/johnstarich/go-wasm/log"
+	"github.com/hack-pad/hackpad/log"
 )
 
 func ProfileJS(this js.Value, args []js.Value) interface{} {

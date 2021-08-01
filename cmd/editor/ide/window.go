@@ -10,9 +10,9 @@ import (
 	"syscall/js"
 
 	"github.com/avct/uasurfer"
-	"github.com/johnstarich/go-wasm/cmd/editor/css"
-	"github.com/johnstarich/go-wasm/cmd/editor/dom"
-	"github.com/johnstarich/go-wasm/log"
+	"github.com/hack-pad/hackpad/cmd/editor/css"
+	"github.com/hack-pad/hackpad/cmd/editor/dom"
+	"github.com/hack-pad/hackpad/log"
 	"go.uber.org/atomic"
 )
 

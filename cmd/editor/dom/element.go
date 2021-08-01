@@ -6,9 +6,9 @@ import (
 	"runtime/debug"
 	"syscall/js"
 
-	"github.com/johnstarich/go-wasm/internal/common"
-	"github.com/johnstarich/go-wasm/internal/interop"
-	"github.com/johnstarich/go-wasm/log"
+	"github.com/hack-pad/hackpad/internal/common"
+	"github.com/hack-pad/hackpad/internal/interop"
+	"github.com/hack-pad/hackpad/log"
 )
 
 type Element struct {

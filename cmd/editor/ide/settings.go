@@ -8,11 +8,11 @@ import (
 	"os"
 	"syscall/js"
 
-	"github.com/johnstarich/go-wasm/cmd/editor/css"
-	"github.com/johnstarich/go-wasm/cmd/editor/dom"
-	"github.com/johnstarich/go-wasm/internal/global"
-	"github.com/johnstarich/go-wasm/internal/interop"
-	"github.com/johnstarich/go-wasm/internal/promise"
+	"github.com/hack-pad/hackpad/cmd/editor/css"
+	"github.com/hack-pad/hackpad/cmd/editor/dom"
+	"github.com/hack-pad/hackpad/internal/global"
+	"github.com/hack-pad/hackpad/internal/interop"
+	"github.com/hack-pad/hackpad/internal/promise"
 )
 
 var (

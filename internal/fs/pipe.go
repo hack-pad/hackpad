@@ -5,7 +5,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/johnstarich/go-wasm/internal/interop"
+	"github.com/hack-pad/hackpad/internal/interop"
 )
 
 func (f *FileDescriptors) Pipe() [2]FID {

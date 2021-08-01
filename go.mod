@@ -1,4 +1,4 @@
-module github.com/johnstarich/go-wasm
+module github.com/hack-pad/hackpad
 
 go 1.16
 

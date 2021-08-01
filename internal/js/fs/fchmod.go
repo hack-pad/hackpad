@@ -6,8 +6,8 @@ import (
 	"os"
 	"syscall/js"
 
-	"github.com/johnstarich/go-wasm/internal/common"
-	"github.com/johnstarich/go-wasm/internal/process"
+	"github.com/hack-pad/hackpad/internal/common"
+	"github.com/hack-pad/hackpad/internal/process"
 	"github.com/pkg/errors"
 )
 

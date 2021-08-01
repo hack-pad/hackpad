@@ -6,13 +6,13 @@ import (
 	"path/filepath"
 	"syscall/js"
 
-	"github.com/johnstarich/go-wasm/internal/global"
-	"github.com/johnstarich/go-wasm/internal/interop"
-	"github.com/johnstarich/go-wasm/internal/js/fs"
-	"github.com/johnstarich/go-wasm/internal/js/process"
-	libProcess "github.com/johnstarich/go-wasm/internal/process"
-	"github.com/johnstarich/go-wasm/internal/terminal"
-	"github.com/johnstarich/go-wasm/log"
+	"github.com/hack-pad/hackpad/internal/global"
+	"github.com/hack-pad/hackpad/internal/interop"
+	"github.com/hack-pad/hackpad/internal/js/fs"
+	"github.com/hack-pad/hackpad/internal/js/process"
+	libProcess "github.com/hack-pad/hackpad/internal/process"
+	"github.com/hack-pad/hackpad/internal/terminal"
+	"github.com/hack-pad/hackpad/log"
 )
 
 func main() {

@@ -5,7 +5,7 @@ package log
 import (
 	"syscall/js"
 
-	"github.com/johnstarich/go-wasm/internal/global"
+	"github.com/hack-pad/hackpad/internal/global"
 )
 
 var (

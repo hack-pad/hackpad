@@ -9,12 +9,12 @@ import (
 	"syscall/js"
 	"time"
 
+	"github.com/hack-pad/hackpad/internal/fsutil"
+	"github.com/hack-pad/hackpad/internal/promise"
+	"github.com/hack-pad/hackpad/log"
 	"github.com/hack-pad/hackpadfs"
 	"github.com/hack-pad/hackpadfs/indexeddb/idbblob"
 	"github.com/hack-pad/hackpadfs/keyvalue/blob"
-	"github.com/johnstarich/go-wasm/internal/fsutil"
-	"github.com/johnstarich/go-wasm/internal/promise"
-	"github.com/johnstarich/go-wasm/log"
 )
 
 var jsWasm = js.Global().Get("WebAssembly")

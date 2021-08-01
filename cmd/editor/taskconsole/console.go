@@ -10,8 +10,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/johnstarich/go-wasm/cmd/editor/dom"
-	"github.com/johnstarich/go-wasm/cmd/editor/ide"
+	"github.com/hack-pad/hackpad/cmd/editor/dom"
+	"github.com/hack-pad/hackpad/cmd/editor/ide"
 )
 
 type builder struct{}

@@ -5,7 +5,7 @@ package process
 import (
 	"syscall/js"
 
-	"github.com/johnstarich/go-wasm/internal/interop"
+	"github.com/hack-pad/hackpad/internal/interop"
 )
 
 var (

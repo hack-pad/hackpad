@@ -8,7 +8,7 @@ import (
 	"syscall/js"
 	"unicode"
 
-	"github.com/johnstarich/go-wasm/log"
+	"github.com/hack-pad/hackpad/log"
 )
 
 var (

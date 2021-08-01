@@ -8,7 +8,7 @@ import (
 	"strings"
 	"syscall/js"
 
-	"github.com/johnstarich/go-wasm/log"
+	"github.com/hack-pad/hackpad/log"
 	"github.com/pkg/errors"
 )
 

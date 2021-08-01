@@ -2,7 +2,7 @@
 
 package ide
 
-import "github.com/johnstarich/go-wasm/cmd/editor/dom"
+import "github.com/hack-pad/hackpad/cmd/editor/dom"
 
 type EditorBuilder interface {
 	New(elem *dom.Element) Editor

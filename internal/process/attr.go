@@ -1,7 +1,7 @@
 package process
 
 import (
-	"github.com/johnstarich/go-wasm/internal/fs"
+	"github.com/hack-pad/hackpad/internal/fs"
 )
 
 // ProcAttr is functionally identical to os.ProcAttr.

@@ -7,10 +7,10 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/hack-pad/hackpad/internal/common"
+	"github.com/hack-pad/hackpad/internal/fs"
+	"github.com/hack-pad/hackpad/log"
 	"github.com/hack-pad/hackpadfs/keyvalue/blob"
-	"github.com/johnstarich/go-wasm/internal/common"
-	"github.com/johnstarich/go-wasm/internal/fs"
-	"github.com/johnstarich/go-wasm/log"
 	"github.com/pkg/errors"
 	"go.uber.org/atomic"
 )

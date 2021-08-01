@@ -6,9 +6,9 @@ import (
 	"io/ioutil"
 	"syscall/js"
 
-	"github.com/johnstarich/go-wasm/cmd/editor/dom"
-	"github.com/johnstarich/go-wasm/cmd/editor/ide"
-	"github.com/johnstarich/go-wasm/log"
+	"github.com/hack-pad/hackpad/cmd/editor/dom"
+	"github.com/hack-pad/hackpad/cmd/editor/ide"
+	"github.com/hack-pad/hackpad/log"
 )
 
 type textAreaBuilder struct {

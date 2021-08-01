@@ -7,9 +7,9 @@ import (
 	"os"
 	"syscall/js"
 
-	"github.com/johnstarich/go-wasm/cmd/editor/dom"
-	"github.com/johnstarich/go-wasm/cmd/editor/ide"
-	"github.com/johnstarich/go-wasm/log"
+	"github.com/hack-pad/hackpad/cmd/editor/dom"
+	"github.com/hack-pad/hackpad/cmd/editor/ide"
+	"github.com/hack-pad/hackpad/log"
 )
 
 // editorJSFunc is a JS function that opens on a JS element and returns a JS object with the following spec:

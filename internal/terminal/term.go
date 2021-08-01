@@ -5,11 +5,11 @@ package terminal
 import (
 	"syscall/js"
 
+	"github.com/hack-pad/hackpad/internal/fs"
+	"github.com/hack-pad/hackpad/internal/interop"
+	"github.com/hack-pad/hackpad/internal/process"
+	"github.com/hack-pad/hackpad/log"
 	"github.com/hack-pad/hackpadfs/indexeddb/idbblob"
-	"github.com/johnstarich/go-wasm/internal/fs"
-	"github.com/johnstarich/go-wasm/internal/interop"
-	"github.com/johnstarich/go-wasm/internal/process"
-	"github.com/johnstarich/go-wasm/log"
 	"github.com/pkg/errors"
 )
 

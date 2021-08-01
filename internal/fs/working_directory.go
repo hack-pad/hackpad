@@ -3,8 +3,8 @@ package fs
 import (
 	"time"
 
+	"github.com/hack-pad/hackpad/log"
 	"github.com/hack-pad/hackpadfs"
-	"github.com/johnstarich/go-wasm/log"
 	"go.uber.org/atomic"
 )
 

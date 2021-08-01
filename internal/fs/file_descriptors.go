@@ -11,9 +11,9 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/hack-pad/hackpad/internal/common"
+	"github.com/hack-pad/hackpad/internal/interop"
 	"github.com/hack-pad/hackpadfs"
-	"github.com/johnstarich/go-wasm/internal/common"
-	"github.com/johnstarich/go-wasm/internal/interop"
 	"github.com/pkg/errors"
 )
 

@@ -5,8 +5,8 @@ package process
 import (
 	"syscall/js"
 
-	"github.com/johnstarich/go-wasm/internal/interop"
-	"github.com/johnstarich/go-wasm/internal/process"
+	"github.com/hack-pad/hackpad/internal/interop"
+	"github.com/hack-pad/hackpad/internal/process"
 )
 
 var jsProcess = js.Global().Get("process")

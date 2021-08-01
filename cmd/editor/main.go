@@ -8,13 +8,13 @@ import (
 	"os"
 	"syscall/js"
 
-	"github.com/johnstarich/go-wasm/cmd/editor/dom"
-	"github.com/johnstarich/go-wasm/cmd/editor/ide"
-	"github.com/johnstarich/go-wasm/cmd/editor/plaineditor"
-	"github.com/johnstarich/go-wasm/cmd/editor/taskconsole"
-	"github.com/johnstarich/go-wasm/cmd/editor/terminal"
-	"github.com/johnstarich/go-wasm/internal/interop"
-	"github.com/johnstarich/go-wasm/log"
+	"github.com/hack-pad/hackpad/cmd/editor/dom"
+	"github.com/hack-pad/hackpad/cmd/editor/ide"
+	"github.com/hack-pad/hackpad/cmd/editor/plaineditor"
+	"github.com/hack-pad/hackpad/cmd/editor/taskconsole"
+	"github.com/hack-pad/hackpad/cmd/editor/terminal"
+	"github.com/hack-pad/hackpad/internal/interop"
+	"github.com/hack-pad/hackpad/log"
 )
 
 const (

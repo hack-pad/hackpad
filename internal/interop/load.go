@@ -2,7 +2,7 @@
 
 package interop
 
-import "github.com/johnstarich/go-wasm/internal/global"
+import "github.com/hack-pad/hackpad/internal/global"
 
 func SetInitialized() {
 	global.Set("ready", true)

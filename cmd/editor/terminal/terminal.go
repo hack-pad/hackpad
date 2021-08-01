@@ -7,12 +7,12 @@ import (
 	"os/exec"
 	"syscall/js"
 
+	"github.com/hack-pad/hackpad/cmd/editor/dom"
+	"github.com/hack-pad/hackpad/cmd/editor/ide"
+	"github.com/hack-pad/hackpad/internal/common"
+	"github.com/hack-pad/hackpad/log"
 	"github.com/hack-pad/hackpadfs/indexeddb/idbblob"
 	"github.com/hack-pad/hackpadfs/keyvalue/blob"
-	"github.com/johnstarich/go-wasm/cmd/editor/dom"
-	"github.com/johnstarich/go-wasm/cmd/editor/ide"
-	"github.com/johnstarich/go-wasm/internal/common"
-	"github.com/johnstarich/go-wasm/log"
 )
 
 type terminalBuilder struct {

@@ -9,8 +9,8 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/hack-pad/hackpad/internal/interop"
 	"github.com/hack-pad/hackpadfs"
-	"github.com/johnstarich/go-wasm/internal/interop"
 )
 
 // DumpZip starts a zip download of everything in the given directory

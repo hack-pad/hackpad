@@ -3,9 +3,9 @@ package fs
 import (
 	"io"
 
+	"github.com/hack-pad/hackpad/internal/interop"
 	"github.com/hack-pad/hackpadfs"
 	"github.com/hack-pad/hackpadfs/keyvalue/blob"
-	"github.com/johnstarich/go-wasm/internal/interop"
 )
 
 func (f *FileDescriptors) Read(fd FID, buffer blob.Blob, offset, length int, position *int64) (n int, err error) {

@@ -3,8 +3,8 @@ package fs
 import (
 	"os"
 
+	"github.com/hack-pad/hackpad/internal/interop"
 	"github.com/hack-pad/hackpadfs"
-	"github.com/johnstarich/go-wasm/internal/interop"
 )
 
 var _ hackpadfs.File = &unimplementedFile{}

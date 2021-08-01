@@ -5,7 +5,7 @@ package ide
 import (
 	"syscall/js"
 
-	"github.com/johnstarich/go-wasm/cmd/editor/dom"
+	"github.com/hack-pad/hackpad/cmd/editor/dom"
 )
 
 type Tabber interface {

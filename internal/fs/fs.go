@@ -5,13 +5,13 @@ import (
 	"io"
 	"path"
 
+	"github.com/hack-pad/hackpad/internal/common"
+	"github.com/hack-pad/hackpad/internal/tarfs"
+	"github.com/hack-pad/hackpad/log"
 	"github.com/hack-pad/hackpadfs"
 	"github.com/hack-pad/hackpadfs/cache"
 	"github.com/hack-pad/hackpadfs/mem"
 	"github.com/hack-pad/hackpadfs/mount"
-	"github.com/johnstarich/go-wasm/internal/common"
-	"github.com/johnstarich/go-wasm/internal/tarfs"
-	"github.com/johnstarich/go-wasm/log"
 	"github.com/johnstarich/go/datasize"
 )
 

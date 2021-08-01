@@ -6,8 +6,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/johnstarich/go-wasm/internal/promise"
-	"github.com/johnstarich/go-wasm/log"
+	"github.com/hack-pad/hackpad/internal/promise"
+	"github.com/hack-pad/hackpad/log"
 )
 
 const (
