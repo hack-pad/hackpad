@@ -14,6 +14,8 @@ github.com/hack-pad/hackpadfs v0.1.0 h1:3bItjrgASvPwOU9WZEzcA8pHJRy7FK8Dk6NaQN89
 github.com/hack-pad/hackpadfs v0.1.0/go.mod h1:8bsINHOQhQUioUUiCzCyZZNLfEXjs0RwBIf3lTG+CEg=
 github.com/hack-pad/hush v0.0.0-20210730065049-bd589dbef3a3 h1:0WBvEONkD8zXBRe7+5+mp34L2Upmok0yPKvOqOzpksw=
 github.com/hack-pad/hush v0.0.0-20210730065049-bd589dbef3a3/go.mod h1:NqjEIfyA2YtlnEPlI/1K3tNuyXGByWFadPxPlGrDPms=
+github.com/hack-pad/hush v0.1.0 h1:lm/iUaRpVsKkpbN6U9wf45arVnCXzTqsMG1jyihIgkI=
+github.com/hack-pad/hush v0.1.0/go.mod h1:NqjEIfyA2YtlnEPlI/1K3tNuyXGByWFadPxPlGrDPms=
 github.com/johnstarich/go/datasize v0.0.1 h1:Hjswen8gwmO7trXtQ8Xl8NUOQAKKm1wvus3/xK5eHGY=
 github.com/johnstarich/go/datasize v0.0.1/go.mod h1:4eHLMGz7Q5uCmZeS9rZdahvAih1QmBg1EW3bBXTJpi4=
 github.com/kr/pretty v0.1.0/go.mod h1:dAy3ld7l9f0ibDNOQOHHMYYIIbhfbHSm3C4ZsoJORNo=
