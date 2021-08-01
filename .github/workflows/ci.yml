@@ -34,6 +34,8 @@ jobs:
       run: docker build -t go-wasm .
     - name: Publish
       run: |
+        git config --global user.email ""
+        git config --global user.name "GitHub Pages Deploy"
         git checkout --orphan gh-pages
         git rm -rf .
         docker cp $(docker create --rm go-wasm):/usr/share/nginx/html .
