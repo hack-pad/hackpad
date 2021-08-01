@@ -1,11 +1,11 @@
 import React from 'react';
 
 import 'xterm/css/xterm.css';
-import { Terminal } from 'xterm';
+import { Terminal as XTerminal } from 'xterm';
 import { FitAddon } from 'xterm-addon-fit';
 import { listenColorScheme } from './ColorScheme';
 
-export default function({ args, ...props }) {
+export default function Terminal({ args, ...props }) {
   const elem = React.useRef(null)
   React.useEffect(() => {
     if (elem) {
@@ -20,7 +20,7 @@ const fontScale = 0.85
 
 export function newTerminal(elem) {
   const fitAddon = new FitAddon()
-  const term = new Terminal({
+  const term = new XTerminal({
   })
   term.loadAddon(fitAddon)
 
