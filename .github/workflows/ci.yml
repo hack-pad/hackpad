@@ -38,8 +38,7 @@ jobs:
         git config --global user.name "GitHub Pages Deploy"
         git checkout --orphan gh-pages
         git rm -rf .
-        out=$HOME/out
-        mkdir "$out"
+        out=$(mktemp -d)
         docker cp $(docker create --rm go-wasm):/usr/share/nginx/html "$out"
         find "$out" -maxdepth 1 -exec cp -r {} ./ \;  # Glob doesn't always pick up hidden files by default
         git add .
