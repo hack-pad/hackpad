@@ -14,3 +14,8 @@ Check out the article announcement on [Medium][], and the site at https://hackpa
 Want to discuss an idea or a bug? Open up a new [issue][] and we can talk about it. Pull requests are welcome.
 
 [issue]: https://github.com/hack-pad/hackpad/issues
+
+
+## Known issues
+* Slow compile times - Rewrite runtime to [parallelize with Web Workers](https://github.com/hack-pad/hackpad/issues/11)
+* Safari crashes - Regularly crashes due to Wasm memory bugs. [WebKit #222097](https://bugs.webkit.org/show_bug.cgi?id=222097), [#227421](https://bugs.webkit.org/show_bug.cgi?id=227421), [#220313](https://bugs.webkit.org/show_bug.cgi?id=220313)
