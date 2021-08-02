@@ -8,8 +8,8 @@ import (
 	"syscall/js"
 
 	"github.com/hack-pad/hackpad/internal/interop"
+	"github.com/hack-pad/hackpad/internal/log"
 	"github.com/hack-pad/hackpad/internal/promise"
-	"github.com/hack-pad/hackpad/log"
 )
 
 var (

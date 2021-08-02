@@ -12,7 +12,7 @@ import (
 	"github.com/avct/uasurfer"
 	"github.com/hack-pad/hackpad/cmd/editor/css"
 	"github.com/hack-pad/hackpad/cmd/editor/dom"
-	"github.com/hack-pad/hackpad/log"
+	"github.com/hack-pad/hackpad/internal/log"
 	"go.uber.org/atomic"
 )
 

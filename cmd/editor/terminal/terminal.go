@@ -10,7 +10,7 @@ import (
 	"github.com/hack-pad/hackpad/cmd/editor/dom"
 	"github.com/hack-pad/hackpad/cmd/editor/ide"
 	"github.com/hack-pad/hackpad/internal/common"
-	"github.com/hack-pad/hackpad/log"
+	"github.com/hack-pad/hackpad/internal/log"
 	"github.com/hack-pad/hackpadfs/indexeddb/idbblob"
 	"github.com/hack-pad/hackpadfs/keyvalue/blob"
 )

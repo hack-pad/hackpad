@@ -5,7 +5,7 @@ import (
 	"syscall"
 
 	"github.com/hack-pad/hackpad/internal/fs"
-	"github.com/hack-pad/hackpad/log"
+	"github.com/hack-pad/hackpad/internal/log"
 )
 
 const initialDirectory = "/home/me"

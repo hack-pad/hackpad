@@ -7,7 +7,7 @@ import (
 	"syscall/js"
 
 	"github.com/hack-pad/hackpad/internal/interop"
-	"github.com/hack-pad/hackpad/log"
+	"github.com/hack-pad/hackpad/internal/log"
 )
 
 var jsPromise = js.Global().Get("Promise")

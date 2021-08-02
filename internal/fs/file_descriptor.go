@@ -8,7 +8,7 @@ import (
 	"sync"
 
 	"github.com/hack-pad/hackpad/internal/common"
-	"github.com/hack-pad/hackpad/log"
+	"github.com/hack-pad/hackpad/internal/log"
 	"github.com/hack-pad/hackpadfs"
 	"go.uber.org/atomic"
 )

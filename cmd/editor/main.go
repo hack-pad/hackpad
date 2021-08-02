@@ -14,7 +14,7 @@ import (
 	"github.com/hack-pad/hackpad/cmd/editor/taskconsole"
 	"github.com/hack-pad/hackpad/cmd/editor/terminal"
 	"github.com/hack-pad/hackpad/internal/interop"
-	"github.com/hack-pad/hackpad/log"
+	"github.com/hack-pad/hackpad/internal/log"
 )
 
 const (

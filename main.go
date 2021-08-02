@@ -10,9 +10,9 @@ import (
 	"github.com/hack-pad/hackpad/internal/interop"
 	"github.com/hack-pad/hackpad/internal/js/fs"
 	"github.com/hack-pad/hackpad/internal/js/process"
+	"github.com/hack-pad/hackpad/internal/log"
 	libProcess "github.com/hack-pad/hackpad/internal/process"
 	"github.com/hack-pad/hackpad/internal/terminal"
-	"github.com/hack-pad/hackpad/log"
 )
 
 func main() {

@@ -11,8 +11,8 @@ import (
 
 	"github.com/hack-pad/hackpad/internal/bufferpool"
 	"github.com/hack-pad/hackpad/internal/common"
+	"github.com/hack-pad/hackpad/internal/log"
 	"github.com/hack-pad/hackpad/internal/pubsub"
-	"github.com/hack-pad/hackpad/log"
 	"github.com/hack-pad/hackpadfs"
 	"github.com/pkg/errors"
 )

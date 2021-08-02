@@ -10,8 +10,8 @@ import (
 	"time"
 
 	"github.com/hack-pad/hackpad/internal/fsutil"
+	"github.com/hack-pad/hackpad/internal/log"
 	"github.com/hack-pad/hackpad/internal/promise"
-	"github.com/hack-pad/hackpad/log"
 	"github.com/hack-pad/hackpadfs"
 	"github.com/hack-pad/hackpadfs/indexeddb/idbblob"
 	"github.com/hack-pad/hackpadfs/keyvalue/blob"

@@ -6,8 +6,8 @@ import (
 	"path"
 
 	"github.com/hack-pad/hackpad/internal/common"
+	"github.com/hack-pad/hackpad/internal/log"
 	"github.com/hack-pad/hackpad/internal/tarfs"
-	"github.com/hack-pad/hackpad/log"
 	"github.com/hack-pad/hackpadfs"
 	"github.com/hack-pad/hackpadfs/cache"
 	"github.com/hack-pad/hackpadfs/mem"

@@ -5,7 +5,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/hack-pad/hackpad/log"
+	"github.com/hack-pad/hackpad/internal/log"
 	"github.com/hack-pad/hackpadfs"
 )
 

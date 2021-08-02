@@ -8,7 +8,7 @@ import (
 	"syscall/js"
 	"unicode"
 
-	"github.com/hack-pad/hackpad/log"
+	"github.com/hack-pad/hackpad/internal/log"
 )
 
 var (

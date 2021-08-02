@@ -6,8 +6,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hack-pad/hackpad/internal/log"
 	"github.com/hack-pad/hackpad/internal/promise"
-	"github.com/hack-pad/hackpad/log"
 )
 
 const (

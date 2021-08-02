@@ -9,7 +9,7 @@ import (
 
 	"github.com/hack-pad/hackpad/internal/common"
 	"github.com/hack-pad/hackpad/internal/fs"
-	"github.com/hack-pad/hackpad/log"
+	"github.com/hack-pad/hackpad/internal/log"
 	"github.com/hack-pad/hackpadfs/keyvalue/blob"
 	"github.com/pkg/errors"
 	"go.uber.org/atomic"

@@ -9,7 +9,7 @@ import (
 
 	"github.com/hack-pad/hackpad/cmd/editor/dom"
 	"github.com/hack-pad/hackpad/cmd/editor/ide"
-	"github.com/hack-pad/hackpad/log"
+	"github.com/hack-pad/hackpad/internal/log"
 )
 
 // editorJSFunc is a JS function that opens on a JS element and returns a JS object with the following spec:
