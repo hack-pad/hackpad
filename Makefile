@@ -1,5 +1,5 @@
 SHELL := /usr/bin/env bash
-GO_VERSION = 1.16.6
+GO_VERSION = 1.16
 GOROOT =
 PATH := ${PWD}/cache/go/bin:${PWD}/cache/go/misc/wasm:${PATH}
 GOOS = js
@@ -71,7 +71,7 @@ cache/go${GO_VERSION}: cache
 		git clone \
 			--depth 1 \
 			--single-branch \
-			--branch hackpad-go${GO_VERSION} \
+			--branch hackpad/release-branch.go${GO_VERSION} \
 			https://github.com/hack-pad/go.git \
 			"$$TMP"; \
 		pushd "$$TMP/src"; \
