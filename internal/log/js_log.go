@@ -34,25 +34,27 @@ func SetLevel(level consoleType) {
 }
 
 func DebugJSValues(args ...interface{}) int {
-	return logJSValues(LevelDebug, args...)
+	return logJSValues(LevelDebug, 1, args...)
 }
 
 func PrintJSValues(args ...interface{}) int {
-	return logJSValues(LevelLog, args...)
+	return logJSValues(LevelLog, 1, args...)
 }
 
 func WarnJSValues(args ...interface{}) int {
-	return logJSValues(LevelWarn, args...)
+	return logJSValues(LevelWarn, 1, args...)
 }
 
 func ErrorJSValues(args ...interface{}) int {
-	return logJSValues(LevelError, args...)
+	return logJSValues(LevelError, 1, args...)
 }
 
-func logJSValues(kind consoleType, args ...interface{}) int {
+func logJSValues(kind consoleType, skip int, args ...interface{}) int {
 	if kind < logLevel {
 		return 0
 	}
+	caller := getCaller(skip + 1)
+	args = append([]interface{}{caller}, args...)
 	console.Call(kind.String(), args...)
 	return 0
 }

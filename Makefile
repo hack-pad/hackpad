@@ -7,6 +7,8 @@ GOARCH = wasm
 export
 LINT_VERSION=1.27.0
 
+BUILD_FLAGS = -trimpath
+
 .PHONY: serve
 serve:
 	go run ./server
@@ -91,10 +93,10 @@ cache/go${GO_VERSION}: cache
 	touch cache/go.mod  # Makes it so linters will ignore this dir
 
 server/public/wasm/%.wasm: server/public/wasm go
-	go build -o $@ ./cmd/$*
+	go build ${BUILD_FLAGS} -o $@ ./cmd/$*
 
 server/public/wasm/main.wasm: server/public/wasm go
-	go build -o server/public/wasm/main.wasm .
+	go build ${BUILD_FLAGS} -o server/public/wasm/main.wasm .
 
 server/public/wasm/wasm_exec.js: go
 	cp cache/go/misc/wasm/wasm_exec.js server/public/wasm/wasm_exec.js
