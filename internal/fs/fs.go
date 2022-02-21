@@ -1,17 +1,18 @@
 package fs
 
 import (
+	"compress/gzip"
 	"context"
 	"io"
 	"path"
 
 	"github.com/hack-pad/hackpad/internal/common"
 	"github.com/hack-pad/hackpad/internal/log"
-	"github.com/hack-pad/hackpad/internal/tarfs"
 	"github.com/hack-pad/hackpadfs"
 	"github.com/hack-pad/hackpadfs/cache"
 	"github.com/hack-pad/hackpadfs/mem"
 	"github.com/hack-pad/hackpadfs/mount"
+	"github.com/hack-pad/hackpadfs/tar"
 	"github.com/johnstarich/go/datasize"
 )
 
@@ -54,14 +55,21 @@ func Overlay(mountPath string, fs hackpadfs.FS) error {
 
 type ShouldCacher func(name string, info hackpadfs.FileInfo) bool
 
-func OverlayTarGzip(mountPath string, r io.ReadCloser, persist bool, shouldCache ShouldCacher) error {
+func OverlayTarGzip(mountPath string, gzipReader io.ReadCloser, persist bool, shouldCache ShouldCacher) error {
+	r, err := gzip.NewReader(gzipReader)
+	if err != nil {
+		return err
+	}
+
 	mountPath = common.ResolvePath(".", mountPath)
 	if !persist {
 		underlyingFS, err := mem.NewFS()
 		if err != nil {
 			return err
 		}
-		fs, err := tarfs.New(r, underlyingFS)
+		fs, err := tar.NewReaderFS(context.Background(), r, tar.ReaderFSOptions{
+			UnarchiveFS: underlyingFS,
+		})
 		if err != nil {
 			return err
 		}
@@ -95,8 +103,8 @@ func OverlayTarGzip(mountPath string, r io.ReadCloser, persist bool, shouldCache
 	_, err = hackpadfs.Stat(underlyingFS, tarfsDoneMarker)
 	if err == nil {
 		// tarfs already completed successfully and is persisted,
-		// so close tarfs reader and mount the existing files
-		r.Close()
+		// so close top-level reader and mount the existing files
+		gzipReader.Close()
 
 		cacheFS, err := newCacheFS(underlyingFS)
 		if err != nil {
@@ -112,17 +120,22 @@ func OverlayTarGzip(mountPath string, r io.ReadCloser, persist bool, shouldCache
 		}
 	}
 
-	tarFS, err := tarfs.New(r, underlyingFS)
+	readCtx, readCancel := context.WithCancel(context.Background())
+	tarFS, err := tar.NewReaderFS(readCtx, r, tar.ReaderFSOptions{
+		UnarchiveFS: underlyingFS,
+	})
 	if err != nil {
+		readCancel()
 		return err
 	}
-	cacheFS, err := newCacheFS(tarFS)
+	tarClearFS := newClearCtxFS(underlyingFS, readCancel, tarFS.Done())
+	cacheFS, err := newCacheFS(tarClearFS)
 	if err != nil {
 		return err
 	}
 	go func() {
 		<-tarFS.Done()
-		err := tarFS.InitErr()
+		err := tarFS.UnarchiveErr()
 		if err != nil {
 			log.Errorf("Failed to initialize mount %q: %v", mountPath, err)
 			return
@@ -135,6 +148,34 @@ func OverlayTarGzip(mountPath string, r io.ReadCloser, persist bool, shouldCache
 		f.Close()
 	}()
 	return filesystem.AddMount(mountPath, cacheFS)
+}
+
+type clearCtxFS struct {
+	cancel context.CancelFunc
+	wait   <-chan struct{}
+	fs     clearFS
+}
+
+func newClearCtxFS(fs clearFS, cancel context.CancelFunc, wait <-chan struct{}) *clearCtxFS {
+	return &clearCtxFS{
+		cancel: cancel,
+		wait:   wait,
+		fs:     fs,
+	}
+}
+
+func (c *clearCtxFS) Open(name string) (hackpadfs.File, error) {
+	return c.fs.Open(name)
+}
+
+func (c *clearCtxFS) Clear(ctx context.Context) error {
+	c.cancel()
+	select {
+	case <-c.wait:
+		return c.fs.Clear(ctx)
+	case <-ctx.Done():
+		return ctx.Err()
+	}
 }
 
 // Dump prints out file system statistics
