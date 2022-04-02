@@ -16,11 +16,11 @@ var (
 	jsObject = js.Global().Get("Object")
 )
 
-func (p *process) newWasmInstance(path string, importObject js.Value) (js.Value, error) {
+func (p *Process) newWasmInstance(path string, importObject js.Value) (js.Value, error) {
 	return p.Files().WasmInstance(path, importObject)
 }
 
-func (p *process) run(path string) {
+func (p *Process) run(path string) {
 	defer func() {
 		go runtime.GC()
 	}()
@@ -36,7 +36,7 @@ func (p *process) run(path string) {
 	p.handleErr(err)
 }
 
-func (p *process) startWasmPromise(path string, exitChan chan<- int) (promise.Promise, error) {
+func (p *Process) startWasmPromise(path string, exitChan chan<- int) (promise.Promise, error) {
 	p.state = stateCompiling
 	goInstance := jsGo.New()
 	goInstance.Set("argv", interop.SliceFromStrings(p.args))

@@ -12,7 +12,7 @@ var (
 	jsGo = js.Global().Get("Go")
 )
 
-func (p *process) JSValue() js.Value {
+func (p *Process) JSValue() js.Value {
 	return js.ValueOf(map[string]interface{}{
 		"pid":   p.pid,
 		"ppid":  p.parentPID,
@@ -20,6 +20,6 @@ func (p *process) JSValue() js.Value {
 	})
 }
 
-func (p *process) StartCPUProfile() error {
+func (p *Process) StartCPUProfile() error {
 	return interop.StartCPUProfile(p.ctx)
 }

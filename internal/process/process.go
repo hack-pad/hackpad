@@ -32,22 +32,11 @@ const (
 )
 
 var (
-	pids    = make(map[PID]*process)
+	pids    = make(map[PID]*Process)
 	lastPID = atomic.NewUint64(minPID)
 )
 
-type Process interface {
-	PID() PID
-	ParentPID() PID
-
-	Start() error
-	Wait() (exitCode int, err error)
-	Files() *fs.FileDescriptors
-	WorkingDirectory() string
-	SetWorkingDirectory(wd string) error
-}
-
-type process struct {
+type Process struct {
 	pid, parentPID  PID
 	command         string
 	args            []string
@@ -61,18 +50,18 @@ type process struct {
 	setFilesWD      func(wd string) error
 }
 
-func New(command string, args []string, attr *ProcAttr) (Process, error) {
+func New(command string, args []string, attr *ProcAttr) (*Process, error) {
 	return newWithCurrent(Current(), PID(lastPID.Inc()), command, args, attr)
 }
 
-func newWithCurrent(current Process, newPID PID, command string, args []string, attr *ProcAttr) (*process, error) {
+func newWithCurrent(current *Process, newPID PID, command string, args []string, attr *ProcAttr) (*Process, error) {
 	wd := current.WorkingDirectory()
 	if attr.Dir != "" {
 		wd = attr.Dir
 	}
 	files, setFilesWD, err := fs.NewFileDescriptors(newPID, wd, current.Files(), attr.Files)
 	ctx, cancel := context.WithCancel(context.Background())
-	return &process{
+	return &Process{
 		pid:             newPID,
 		command:         command,
 		args:            args,
@@ -86,19 +75,19 @@ func newWithCurrent(current Process, newPID PID, command string, args []string, 
 	}, err
 }
 
-func (p *process) PID() PID {
+func (p *Process) PID() PID {
 	return p.pid
 }
 
-func (p *process) ParentPID() PID {
+func (p *Process) ParentPID() PID {
 	return p.parentPID
 }
 
-func (p *process) Files() *fs.FileDescriptors {
+func (p *Process) Files() *fs.FileDescriptors {
 	return p.fileDescriptors
 }
 
-func (p *process) Start() error {
+func (p *Process) Start() error {
 	err := p.start()
 	if p.err == nil {
 		p.err = err
@@ -106,7 +95,7 @@ func (p *process) Start() error {
 	return p.err
 }
 
-func (p *process) start() error {
+func (p *Process) start() error {
 	pids[p.pid] = p
 	log.Debugf("Spawning process: %v", p)
 	go func() {
@@ -120,7 +109,7 @@ func (p *process) start() error {
 	return nil
 }
 
-func (p *process) prepExecutable() (command string, err error) {
+func (p *Process) prepExecutable() (command string, err error) {
 	fs := p.Files()
 	command, err = lookPath(fs.Stat, os.Getenv("PATH"), p.command)
 	if err != nil {
@@ -143,13 +132,13 @@ func (p *process) prepExecutable() (command string, err error) {
 	return command, nil
 }
 
-func (p *process) Done() {
+func (p *Process) Done() {
 	log.Debug("PID ", p.pid, " is done.\n", p.fileDescriptors)
 	p.fileDescriptors.CloseAll()
 	p.ctxDone()
 }
 
-func (p *process) handleErr(err error) {
+func (p *Process) handleErr(err error) {
 	p.state = stateDone
 	if err != nil {
 		log.Errorf("Failed to start process: %s", err.Error())
@@ -159,20 +148,20 @@ func (p *process) handleErr(err error) {
 	p.Done()
 }
 
-func (p *process) Wait() (exitCode int, err error) {
+func (p *Process) Wait() (exitCode int, err error) {
 	<-p.ctx.Done()
 	return p.exitCode, p.err
 }
 
-func (p *process) WorkingDirectory() string {
+func (p *Process) WorkingDirectory() string {
 	return p.Files().WorkingDirectory()
 }
 
-func (p *process) SetWorkingDirectory(wd string) error {
+func (p *Process) SetWorkingDirectory(wd string) error {
 	return p.setFilesWD(wd)
 }
 
-func (p *process) String() string {
+func (p *Process) String() string {
 	return fmt.Sprintf("PID=%s, Command=%v, State=%s, WD=%s, Attr=%+v, Err=%+v, Files:\n%v", p.pid, p.args, p.state, p.WorkingDirectory(), p.attr, p.err, p.fileDescriptors)
 }
 

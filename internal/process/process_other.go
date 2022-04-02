@@ -8,7 +8,7 @@ import (
 	"os/exec"
 )
 
-func (p *process) run(path string) {
+func (p *Process) run(path string) {
 	cmd := exec.Command(path, p.args...)
 	if p.attr.Env == nil {
 		cmd.Env = os.Environ()

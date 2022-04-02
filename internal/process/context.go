@@ -23,7 +23,7 @@ func Init(switchedContext func(PID, PID)) {
 		panic(err)
 	}
 	p, err := newWithCurrent(
-		&process{fileDescriptors: fileDescriptors},
+		&Process{fileDescriptors: fileDescriptors},
 		minPID,
 		"",
 		nil,
@@ -51,12 +51,12 @@ func switchContext(pid PID) (prev PID) {
 	return
 }
 
-func Current() Process {
+func Current() *Process {
 	process, _ := Get(currentPID)
 	return process
 }
 
-func Get(pid PID) (process Process, ok bool) {
+func Get(pid PID) (process *Process, ok bool) {
 	p, ok := pids[pid]
 	return p, ok
 }
