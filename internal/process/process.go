@@ -12,11 +12,6 @@ import (
 	"github.com/hack-pad/hackpad/internal/log"
 	"github.com/hack-pad/hackpadfs/keyvalue/blob"
 	"github.com/pkg/errors"
-	"go.uber.org/atomic"
-)
-
-const (
-	minPID = 1
 )
 
 type PID = common.PID
@@ -32,8 +27,7 @@ const (
 )
 
 var (
-	pids    = make(map[PID]*Process)
-	lastPID = atomic.NewUint64(minPID)
+	pids = make(map[PID]*Process)
 )
 
 type Process struct {
@@ -41,7 +35,7 @@ type Process struct {
 	command         string
 	args            []string
 	state           processState
-	attr            *ProcAttr
+	env             map[string]string
 	ctx             context.Context
 	ctxDone         context.CancelFunc
 	exitCode        int
@@ -50,23 +44,15 @@ type Process struct {
 	setFilesWD      func(wd string) error
 }
 
-func New(command string, args []string, attr *ProcAttr) (*Process, error) {
-	return newWithCurrent(Current(), PID(lastPID.Inc()), command, args, attr)
-}
-
-func newWithCurrent(current *Process, newPID PID, command string, args []string, attr *ProcAttr) (*Process, error) {
-	wd := current.WorkingDirectory()
-	if attr.Dir != "" {
-		wd = attr.Dir
-	}
-	files, setFilesWD, err := fs.NewFileDescriptors(newPID, wd, current.Files(), attr.Files)
+func New(newPID PID, command string, args []string, workingDirectory string, openFiles []common.OpenFileAttr, env map[string]string) (*Process, error) {
+	files, setFilesWD, err := fs.NewFileDescriptors(newPID, workingDirectory, openFiles)
 	ctx, cancel := context.WithCancel(context.Background())
 	return &Process{
 		pid:             newPID,
 		command:         command,
 		args:            args,
 		state:           statePending,
-		attr:            attr,
+		env:             env,
 		ctx:             ctx,
 		ctxDone:         cancel,
 		err:             err,
@@ -162,7 +148,7 @@ func (p *Process) SetWorkingDirectory(wd string) error {
 }
 
 func (p *Process) String() string {
-	return fmt.Sprintf("PID=%s, Command=%v, State=%s, WD=%s, Attr=%+v, Err=%+v, Files:\n%v", p.pid, p.args, p.state, p.WorkingDirectory(), p.attr, p.err, p.fileDescriptors)
+	return fmt.Sprintf("PID=%s, Command=%v, State=%s, WD=%s, Attr=%+v, Err=%+v, Files:\n%v", p.pid, p.args, p.state, p.WorkingDirectory(), p.env, p.err, p.fileDescriptors)
 }
 
 func Dump() interface{} {

@@ -49,35 +49,63 @@ func NewStdFileDescriptors(parentPID common.PID, workingDirectory string) (*File
 	return f, err
 }
 
-func NewFileDescriptors(parentPID common.PID, workingDirectory string, parentFiles *FileDescriptors, inheritFDs []Attr) (*FileDescriptors, func(wd string) error, error) {
+func NewFileDescriptors(parentPID common.PID, workingDirectory string, openFiles []common.OpenFileAttr) (_ *FileDescriptors, _ func(wd string) error, returnedErr error) {
 	f := &FileDescriptors{
 		parentPID:        parentPID,
 		previousFID:      0,
 		files:            make(map[FID]*fileDescriptor),
 		workingDirectory: newWorkingDirectory(workingDirectory),
 	}
-	if len(inheritFDs) == 0 {
-		inheritFDs = []Attr{{FID: 0}, {FID: 1}, {FID: 2}}
+	type openFile struct {
+		attr common.OpenFileAttr
+		file hackpadfs.File
 	}
-	if len(inheritFDs) < 3 {
-		return nil, nil, errors.Errorf("Invalid number of inherited file descriptors, must be 0 or at least 3: %#v", inheritFDs)
+	var files []openFile
+	defer func() {
+		if returnedErr != nil {
+			for _, f := range files {
+				f.file.Close()
+			}
+		}
+	}()
+	switch {
+	case len(openFiles) == 0:
+		stdin, err := getFile("/dev/stdin", 0, 0)
+		if err != nil {
+			return nil, nil, err
+		}
+		stdout, err := getFile("/dev/stdout", 0, 0)
+		if err != nil {
+			return nil, nil, err
+		}
+		stderr, err := getFile("/dev/stderr", 0, 0)
+		if err != nil {
+			return nil, nil, err
+		}
+		files = append(files,
+			openFile{common.OpenFileAttr{FilePath: "/dev/stdin"}, stdin},
+			openFile{common.OpenFileAttr{FilePath: "/dev/stdout"}, stdout},
+			openFile{common.OpenFileAttr{FilePath: "/dev/stderr"}, stderr},
+		)
+	case len(openFiles) < 3:
+		return nil, nil, errors.Errorf("Invalid number of inherited file descriptors, must be 0 or at least 3: %#v", openFiles)
+	default:
+		for _, attr := range openFiles {
+			file, err := getFile(attr.FilePath, attr.Flags, attr.Mode)
+			if err != nil {
+				return nil, nil, err
+			}
+			files = append(files, openFile{attr, file})
+			_, err = hackpadfs.SeekFile(file, attr.SeekOffset, io.SeekStart)
+			if err != nil {
+				return nil, nil, err
+			}
+		}
 	}
-	for _, attr := range inheritFDs {
-		var inheritFD FID
-		switch {
-		case attr.Ignore:
-			return nil, nil, errors.New("Ignored file descriptors are unsupported") // TODO be sure to align FDs properly when skipping iterations
-		case attr.Pipe:
-			return nil, nil, errors.New("Pipe file descriptors are unsupported") // TODO align FDs like Ignore, but child FIDs on stdio property must be different than the real FIDs (see node docs)
-		default:
-			inheritFD = attr.FID
-		}
-		parentFD := parentFiles.files[inheritFD]
-		if parentFD == nil {
-			return nil, nil, errors.Errorf("Invalid parent FID %d", attr.FID)
-		}
+
+	for _, file := range files {
 		fid := f.newFID()
-		fd := parentFD.Dup(fid)
+		fd := newIrregularFileDescriptor(fid, path.Base(file.attr.FilePath), file.file, file.attr.Mode)
 		f.addFileDescriptor(fd)
 		fd.Open(parentPID)
 	}
