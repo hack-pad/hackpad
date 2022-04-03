@@ -5,8 +5,10 @@ package terminal
 import (
 	"syscall/js"
 
+	"github.com/hack-pad/hackpad/internal/common"
 	"github.com/hack-pad/hackpad/internal/fs"
 	"github.com/hack-pad/hackpad/internal/interop"
+	"github.com/hack-pad/hackpad/internal/kernel"
 	"github.com/hack-pad/hackpad/internal/log"
 	"github.com/hack-pad/hackpad/internal/process"
 	"github.com/hack-pad/hackpadfs/indexeddb/idbblob"
@@ -50,19 +52,22 @@ func Open(args []js.Value) error {
 		workingDirectory = wd.String()
 	}
 
-	files := process.Current().Files()
-	stdinR, stdinW := pipe(files)
-	stdoutR, stdoutW := pipe(files)
-	stderrR, stderrW := pipe(files)
+	var files *fs.FileDescriptors
+	panic("not implemented")
+	//files := process.Current().Files()
+	//stdinR, stdinW := pipe(files)
+	//stdoutR, stdoutW := pipe(files)
+	//stderrR, stderrW := pipe(files)
+	var stdoutR, stderrR, stdinW common.FID
 
-	proc, err := process.New(procArgs[0], procArgs, &process.ProcAttr{
+	proc, err := process.New(kernel.ReservePID(), procArgs[0], procArgs, workingDirectory, nil, nil) /*&process.ProcAttr{
 		Dir: workingDirectory,
 		Files: []fs.Attr{
 			{FID: stdinR},
 			{FID: stdoutW},
 			{FID: stderrW},
 		},
-	})
+	}*/
 	if err != nil {
 		return err
 	}

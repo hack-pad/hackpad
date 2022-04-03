@@ -21,15 +21,14 @@ import (
 	"github.com/hack-pad/hackpad/internal/fs"
 	"github.com/hack-pad/hackpad/internal/interop"
 	"github.com/hack-pad/hackpad/internal/log"
-	"github.com/hack-pad/hackpad/internal/process"
 	"github.com/hack-pad/hackpad/internal/promise"
 	"github.com/johnstarich/go/datasize"
 )
 
-func overlayIndexedDB(this js.Value, args []js.Value) interface{} {
+func (s fileShim) overlayIndexedDB(this js.Value, args []js.Value) interface{} {
 	resolve, reject, prom := promise.New()
 	go func() {
-		err := OverlayIndexedDB(args)
+		err := s.OverlayIndexedDB(args)
 		if err != nil {
 			reject(interop.WrapAsJSError(err, "Failed overlaying IndexedDB FS"))
 		} else {
@@ -40,7 +39,7 @@ func overlayIndexedDB(this js.Value, args []js.Value) interface{} {
 	return prom
 }
 
-func OverlayIndexedDB(args []js.Value) (err error) {
+func (s fileShim) OverlayIndexedDB(args []js.Value) (err error) {
 	if len(args) == 0 {
 		return errors.New("overlayIndexedDB: mount path is required")
 	}
@@ -64,11 +63,11 @@ func OverlayIndexedDB(args []js.Value) (err error) {
 	return fs.Overlay(mountPath, idbFS)
 }
 
-func overlayTarGzip(this js.Value, args []js.Value) interface{} {
+func (s fileShim) overlayTarGzip(this js.Value, args []js.Value) interface{} {
 	resolve, reject, prom := promise.New()
 	log.Debug("Backgrounding overlay request")
 	go func() {
-		err := OverlayTarGzip(args)
+		err := s.OverlayTarGzip(args)
 		if err != nil {
 			reject(interop.WrapAsJSError(err, "Failed overlaying .tar.gz FS"))
 		} else {
@@ -79,7 +78,7 @@ func overlayTarGzip(this js.Value, args []js.Value) interface{} {
 	return prom
 }
 
-func OverlayTarGzip(args []js.Value) error {
+func (s fileShim) OverlayTarGzip(args []js.Value) error {
 	if len(args) < 2 {
 		return errors.New("overlayTarGzip: mount path and .tar.gz URL path is required")
 	}
@@ -113,7 +112,7 @@ func OverlayTarGzip(args []js.Value) error {
 	if options["skipCacheDirs"].Type() == js.TypeObject {
 		skipDirs := make(map[string]bool)
 		for _, d := range interop.StringsFromJSValue(options["skipCacheDirs"]) {
-			skipDirs[common.ResolvePath(process.Current().WorkingDirectory(), d)] = true
+			skipDirs[common.ResolvePath(s.process.WorkingDirectory(), d)] = true
 		}
 		maxFileBytes := datasize.Kibibytes(100).Bytes()
 		shouldCache = func(name string, info hackpadfs.FileInfo) bool {

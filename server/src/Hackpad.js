@@ -19,6 +19,11 @@ async function init() {
   }
   go.run(cmd.instance)
   const { hackpad, fs } = window
+  const maxInitWaitMillis = 3000
+  await messageOrTimeout(message => {
+    console.debug("message:", message)
+    return message === "ready"
+  }, maxInitWaitMillis)
   console.debug(`hackpad status: ${hackpad.ready ? 'ready' : 'not ready'}`)
 
   const mkdir = promisify(fs.mkdir)
@@ -113,5 +118,31 @@ function promisify(fn) {
       })
       fn(...newArgs)
     })
+  }
+}
+
+async function messageOrTimeout(doneListener, timeout) {
+  let messageListener, errorListener
+  let timeoutID
+  try {
+    await new Promise((resolve, reject) => {
+      messageListener = ev => {
+        if (doneListener(ev.data) === true) {
+          resolve({data: ev.data})
+        }
+      }
+      errorListener = ev => {
+        if (messageListener(ev.data) === true) {
+          reject({error: ev.data})
+        }
+      }
+      window.addEventListener("message", messageListener)
+      window.addEventListener("messageerror", errorListener)
+      timeoutID = setTimeout(() => reject({error: "timed out"}), timeout)
+    })
+  } finally {
+    window.removeEventListener("message", messageListener)
+    window.removeEventListener("messageerror", errorListener)
+    clearTimeout(timeoutID)
   }
 }

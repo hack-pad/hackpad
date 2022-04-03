@@ -11,14 +11,13 @@ import (
 
 	"github.com/hack-pad/hackpad/internal/interop"
 	"github.com/hack-pad/hackpad/internal/log"
-	"github.com/hack-pad/hackpad/internal/process"
 	"github.com/hack-pad/hackpad/internal/promise"
 )
 
-func installFunc(this js.Value, args []js.Value) interface{} {
+func (s domShim) installFunc(this js.Value, args []js.Value) interface{} {
 	resolve, reject, prom := promise.New()
 	go func() {
-		err := install(args)
+		err := s.install(args)
 		if err != nil {
 			reject(interop.WrapAsJSError(err, "Failed to install binary"))
 			return
@@ -28,7 +27,7 @@ func installFunc(this js.Value, args []js.Value) interface{} {
 	return prom
 }
 
-func install(args []js.Value) error {
+func (s domShim) install(args []js.Value) error {
 	if len(args) != 1 {
 		return errors.New("Expected command name to install")
 	}
@@ -44,13 +43,12 @@ func install(args []js.Value) error {
 		return err
 	}
 	defer runtime.GC()
-	fs := process.Current().Files()
-	fd, err := fs.Open("/bin/"+command, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0750)
+	file, err := os.OpenFile("/bin/"+command, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0750)
 	if err != nil {
 		return err
 	}
-	defer fs.Close(fd)
-	if _, err := fs.Write(fd, body, 0, body.Len(), nil); err != nil {
+	defer file.Close()
+	if _, err := file.Write(body.Bytes()); err != nil {
 		return err
 	}
 	log.Print("Install completed: ", command)

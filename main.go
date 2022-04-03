@@ -1,45 +1,42 @@
+//go:build js
 // +build js
 
 package main
 
 import (
-	"path/filepath"
 	"syscall/js"
 
 	"github.com/hack-pad/hackpad/internal/global"
 	"github.com/hack-pad/hackpad/internal/interop"
-	"github.com/hack-pad/hackpad/internal/js/fs"
-	"github.com/hack-pad/hackpad/internal/js/process"
-	"github.com/hack-pad/hackpad/internal/log"
-	libProcess "github.com/hack-pad/hackpad/internal/process"
-	"github.com/hack-pad/hackpad/internal/terminal"
+	"github.com/hack-pad/hackpad/internal/jsworker"
+	"github.com/hack-pad/hackpad/internal/worker"
 )
 
+type domShim struct {
+	dom *worker.DOM
+}
+
 func main() {
-	process.Init()
-	fs.Init()
-	global.Set("spawnTerminal", js.FuncOf(terminal.SpawnTerminal))
-	global.Set("dump", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
-		go func() {
-			basePath := ""
-			if len(args) >= 1 {
-				basePath = args[0].String()
-				if filepath.IsAbs(basePath) {
-					basePath = filepath.Clean(basePath)
-				} else {
-					basePath = filepath.Join(libProcess.Current().WorkingDirectory(), basePath)
-				}
-			}
-			var fsDump interface{}
-			if basePath != "" {
-				fsDump = fs.Dump(basePath)
-			}
-			log.Error("Process:\n", process.Dump(), "\n\nFiles:\n", fsDump)
-		}()
-		return nil
-	}))
+	dom, err := worker.ExecDOM(
+		jsworker.GetLocal(),
+		"editor",
+		[]string{"-editor=editor"},
+		"/home/me",
+		map[string]string{
+			"GOMODCACHE": "/home/me/.cache/go-mod",
+			"GOPROXY":    "https://proxy.golang.org/",
+			"GOROOT":     "/usr/local/go",
+			"HOME":       "/home/me",
+			"PATH":       "/bin:/home/me/go/bin:/usr/local/go/bin/js_wasm:/usr/local/go/pkg/tool/js_wasm",
+		},
+	)
+	if err != nil {
+		panic(err)
+	}
+
+	shim := domShim{dom}
 	global.Set("profile", js.FuncOf(interop.ProfileJS))
-	global.Set("install", js.FuncOf(installFunc))
-	interop.SetInitialized()
+	global.Set("install", js.FuncOf(shim.installFunc))
+	//global.Set("spawnTerminal", js.FuncOf(terminal.SpawnTerminal))
 	select {}
 }

@@ -10,30 +10,32 @@ import (
 	"github.com/pkg/errors"
 )
 
-func wait(args []js.Value) ([]interface{}, error) {
-	ret, err := waitSync(args)
+func (s processShim) wait(args []js.Value) ([]interface{}, error) {
+	ret, err := s.waitSync(args)
 	return []interface{}{ret}, err
 }
 
-func waitSync(args []js.Value) (interface{}, error) {
+func (s processShim) waitSync(args []js.Value) (interface{}, error) {
 	if len(args) != 1 {
 		return nil, errors.Errorf("Invalid number of args, expected 1: %v", args)
 	}
 	pid := process.PID(args[0].Int())
 	waitStatus := new(syscall.WaitStatus)
-	wpid, err := Wait(pid, waitStatus, 0, nil)
+	wpid, err := s.Wait(pid, waitStatus, 0, nil)
 	return map[string]interface{}{
 		"pid":      wpid,
 		"exitCode": waitStatus.ExitStatus(),
 	}, err
 }
 
-func Wait(pid process.PID, wstatus *syscall.WaitStatus, options int, rusage *syscall.Rusage) (wpid process.PID, err error) {
+func (s processShim) Wait(pid process.PID, wstatus *syscall.WaitStatus, options int, rusage *syscall.Rusage) (wpid process.PID, err error) {
+	panic("not implemented")
 	// TODO support options and rusage
-	p, ok := process.Get(pid)
-	if !ok {
-		return 0, errors.Errorf("Unknown child process: %d", pid)
-	}
+	var p *process.Process
+	//p, ok := process.Get(pid)
+	//if !ok {
+	//return 0, errors.Errorf("Unknown child process: %d", pid)
+	//}
 
 	exitCode, err := p.Wait()
 	if wstatus != nil {

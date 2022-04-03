@@ -9,14 +9,14 @@ const (
 	groupID = 0
 )
 
-func geteuid(args []js.Value) (interface{}, error) {
+func (s processShim) geteuid(args []js.Value) (interface{}, error) {
 	return userID, nil
 }
 
-func getegid(args []js.Value) (interface{}, error) {
+func (s processShim) getegid(args []js.Value) (interface{}, error) {
 	return groupID, nil
 }
 
-func getgroups(args []js.Value) (interface{}, error) {
+func (s processShim) getgroups(args []js.Value) (interface{}, error) {
 	return groupID, nil
 }

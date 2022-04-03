@@ -11,7 +11,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-func spawn(args []js.Value) (interface{}, error) {
+func (s processShim) spawn(args []js.Value) (interface{}, error) {
 	if len(args) == 0 {
 		return nil, errors.Errorf("Invalid number of args, expected command name: %v", args)
 	}
@@ -32,15 +32,16 @@ func spawn(args []js.Value) (interface{}, error) {
 	if len(args) >= 3 {
 		argv[0], procAttr = parseProcAttr(command, args[2])
 	}
-	return Spawn(command, argv, procAttr)
+	return s.Spawn(command, argv, procAttr)
 }
 
-func Spawn(command string, args []string, attr *process.ProcAttr) (*process.Process, error) {
-	p, err := process.New(command, args, attr)
-	if err != nil {
-		return p, err
-	}
-	return p, p.Start()
+func (s processShim) Spawn(command string, args []string, attr *process.ProcAttr) (*process.Process, error) {
+	//p, err := process.New(nil, command, args, s.process.WorkingDirectory(), attr, nil) // TODO spawn new worker
+	//if err != nil {
+	//return p, err
+	//}
+	//return p, p.Start()
+	panic("not implemented")
 }
 
 func parseProcAttr(defaultCommand string, value js.Value) (argv0 string, attr *process.ProcAttr) {

@@ -6,7 +6,7 @@ import "syscall/js"
 
 var currentUMask = 0755
 
-func umask(args []js.Value) (interface{}, error) {
+func (s processShim) umask(args []js.Value) (interface{}, error) {
 	if len(args) == 0 {
 		return currentUMask, nil
 	}

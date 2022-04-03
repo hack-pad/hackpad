@@ -16,16 +16,13 @@ import (
 	"github.com/hack-pad/hackpad/internal/promise"
 )
 
-/*
-fchown(fd, uid, gid, callback) { callback(enosys()); },
-lchown(path, uid, gid, callback) { callback(enosys()); },
-link(path, link, callback) { callback(enosys()); },
-readlink(path, callback) { callback(enosys()); },
-symlink(path, link, callback) { callback(enosys()); },
-truncate(path, length, callback) { callback(enosys()); },
-*/
+type fileShim struct {
+	process *process.Process
+}
 
-func Init() {
+func Init(process *process.Process) {
+	shim := fileShim{process}
+
 	fs := js.Global().Get("fs")
 	constants := fs.Get("constants")
 	constants.Set("O_RDONLY", syscall.O_RDONLY)
@@ -35,75 +32,75 @@ func Init() {
 	constants.Set("O_TRUNC", syscall.O_TRUNC)
 	constants.Set("O_APPEND", syscall.O_APPEND)
 	constants.Set("O_EXCL", syscall.O_EXCL)
-	interop.SetFunc(fs, "chmod", chmod)
-	interop.SetFunc(fs, "chmodSync", chmodSync)
-	interop.SetFunc(fs, "chown", chown)
-	interop.SetFunc(fs, "chownSync", chownSync)
-	interop.SetFunc(fs, "close", closeFn)
-	interop.SetFunc(fs, "closeSync", closeSync)
-	interop.SetFunc(fs, "fchmod", fchmod)
-	interop.SetFunc(fs, "fchmodSync", fchmodSync)
-	interop.SetFunc(fs, "flock", flock)
-	interop.SetFunc(fs, "flockSync", flockSync)
-	interop.SetFunc(fs, "fstat", fstat)
-	interop.SetFunc(fs, "fstatSync", fstatSync)
-	interop.SetFunc(fs, "fsync", fsync)
-	interop.SetFunc(fs, "fsyncSync", fsyncSync)
-	interop.SetFunc(fs, "ftruncate", ftruncate)
-	interop.SetFunc(fs, "ftruncateSync", ftruncateSync)
-	interop.SetFunc(fs, "lstat", lstat)
-	interop.SetFunc(fs, "lstatSync", lstatSync)
-	interop.SetFunc(fs, "mkdir", mkdir)
-	interop.SetFunc(fs, "mkdirSync", mkdirSync)
-	interop.SetFunc(fs, "open", open)
-	interop.SetFunc(fs, "openSync", openSync)
-	interop.SetFunc(fs, "pipe", pipe)
-	interop.SetFunc(fs, "pipeSync", pipeSync)
-	interop.SetFunc(fs, "read", read)
-	interop.SetFunc(fs, "readSync", readSync)
-	interop.SetFunc(fs, "readdir", readdir)
-	interop.SetFunc(fs, "readdirSync", readdirSync)
-	interop.SetFunc(fs, "rename", rename)
-	interop.SetFunc(fs, "renameSync", renameSync)
-	interop.SetFunc(fs, "rmdir", rmdir)
-	interop.SetFunc(fs, "rmdirSync", rmdirSync)
-	interop.SetFunc(fs, "stat", stat)
-	interop.SetFunc(fs, "statSync", statSync)
-	interop.SetFunc(fs, "unlink", unlink)
-	interop.SetFunc(fs, "unlinkSync", unlinkSync)
-	interop.SetFunc(fs, "utimes", utimes)
-	interop.SetFunc(fs, "utimesSync", utimesSync)
-	interop.SetFunc(fs, "write", write)
-	interop.SetFunc(fs, "writeSync", writeSync)
+	interop.SetFunc(fs, "chmod", shim.chmod)
+	interop.SetFunc(fs, "chmodSync", shim.chmodSync)
+	interop.SetFunc(fs, "chown", shim.chown)
+	interop.SetFunc(fs, "chownSync", shim.chownSync)
+	interop.SetFunc(fs, "close", shim.closeFn)
+	interop.SetFunc(fs, "closeSync", shim.closeSync)
+	interop.SetFunc(fs, "fchmod", shim.fchmod)
+	interop.SetFunc(fs, "fchmodSync", shim.fchmodSync)
+	interop.SetFunc(fs, "flock", shim.flock)
+	interop.SetFunc(fs, "flockSync", shim.flockSync)
+	interop.SetFunc(fs, "fstat", shim.fstat)
+	interop.SetFunc(fs, "fstatSync", shim.fstatSync)
+	interop.SetFunc(fs, "fsync", shim.fsync)
+	interop.SetFunc(fs, "fsyncSync", shim.fsyncSync)
+	interop.SetFunc(fs, "ftruncate", shim.ftruncate)
+	interop.SetFunc(fs, "ftruncateSync", shim.ftruncateSync)
+	interop.SetFunc(fs, "lstat", shim.lstat)
+	interop.SetFunc(fs, "lstatSync", shim.lstatSync)
+	interop.SetFunc(fs, "mkdir", shim.mkdir)
+	interop.SetFunc(fs, "mkdirSync", shim.mkdirSync)
+	interop.SetFunc(fs, "open", shim.open)
+	interop.SetFunc(fs, "openSync", shim.openSync)
+	interop.SetFunc(fs, "pipe", shim.pipe)
+	interop.SetFunc(fs, "pipeSync", shim.pipeSync)
+	interop.SetFunc(fs, "read", shim.read)
+	interop.SetFunc(fs, "readSync", shim.readSync)
+	interop.SetFunc(fs, "readdir", shim.readdir)
+	interop.SetFunc(fs, "readdirSync", shim.readdirSync)
+	interop.SetFunc(fs, "rename", shim.rename)
+	interop.SetFunc(fs, "renameSync", shim.renameSync)
+	interop.SetFunc(fs, "rmdir", shim.rmdir)
+	interop.SetFunc(fs, "rmdirSync", shim.rmdirSync)
+	interop.SetFunc(fs, "stat", shim.stat)
+	interop.SetFunc(fs, "statSync", shim.statSync)
+	interop.SetFunc(fs, "unlink", shim.unlink)
+	interop.SetFunc(fs, "unlinkSync", shim.unlinkSync)
+	interop.SetFunc(fs, "utimes", shim.utimes)
+	interop.SetFunc(fs, "utimesSync", shim.utimesSync)
+	interop.SetFunc(fs, "write", shim.write)
+	interop.SetFunc(fs, "writeSync", shim.writeSync)
 
-	global.Set("getMounts", js.FuncOf(getMounts))
-	global.Set("destroyMount", js.FuncOf(destroyMount))
-	global.Set("overlayTarGzip", js.FuncOf(overlayTarGzip))
-	global.Set("overlayIndexedDB", js.FuncOf(overlayIndexedDB))
-	global.Set("dumpZip", js.FuncOf(dumpZip))
+	global.Set("getMounts", js.FuncOf(shim.getMounts))
+	global.Set("destroyMount", js.FuncOf(shim.destroyMount))
+	global.Set("overlayTarGzip", js.FuncOf(shim.overlayTarGzip))
+	global.Set("overlayIndexedDB", js.FuncOf(shim.overlayIndexedDB))
+	global.Set("dumpZip", js.FuncOf(shim.dumpZip))
 
 	// Set up system directories
-	files := process.Current().Files()
+	files := process.Files()
 	if err := files.MkdirAll(os.TempDir(), 0777); err != nil {
 		panic(err)
 	}
 }
 
-func Dump(basePath string) interface{} {
-	basePath = common.ResolvePath(process.Current().WorkingDirectory(), basePath)
+func (s fileShim) Dump(basePath string) interface{} {
+	basePath = common.ResolvePath(s.process.WorkingDirectory(), basePath)
 	return fs.Dump(basePath)
 }
 
-func dumpZip(this js.Value, args []js.Value) interface{} {
+func (s fileShim) dumpZip(this js.Value, args []js.Value) interface{} {
 	if len(args) != 1 {
 		return interop.WrapAsJSError(errors.New("dumpZip: file path is required"), "EINVAL")
 	}
 	path := args[0].String()
-	path = common.ResolvePath(process.Current().WorkingDirectory(), path)
+	path = common.ResolvePath(s.process.WorkingDirectory(), path)
 	return interop.WrapAsJSError(fs.DumpZip(path), "dumpZip")
 }
 
-func getMounts(this js.Value, args []js.Value) interface{} {
+func (s fileShim) getMounts(this js.Value, args []js.Value) interface{} {
 	var mounts []string
 	for _, p := range fs.Mounts() {
 		mounts = append(mounts, p.Path)
@@ -111,7 +108,7 @@ func getMounts(this js.Value, args []js.Value) interface{} {
 	return interop.SliceFromStrings(mounts)
 }
 
-func destroyMount(this js.Value, args []js.Value) interface{} {
+func (s fileShim) destroyMount(this js.Value, args []js.Value) interface{} {
 	if len(args) < 1 {
 		return interop.WrapAsJSError(errors.New("destroyMount: mount path is required"), "EINVAL")
 	}

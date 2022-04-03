@@ -70,15 +70,15 @@ func NewFileDescriptors(parentPID common.PID, workingDirectory string, openFiles
 	}()
 	switch {
 	case len(openFiles) == 0:
-		stdin, err := getFile("/dev/stdin", 0, 0)
+		stdin, err := getFile("dev/stdin", 0, 0)
 		if err != nil {
 			return nil, nil, err
 		}
-		stdout, err := getFile("/dev/stdout", 0, 0)
+		stdout, err := getFile("dev/stdout", 0, 0)
 		if err != nil {
 			return nil, nil, err
 		}
-		stderr, err := getFile("/dev/stderr", 0, 0)
+		stderr, err := getFile("dev/stderr", 0, 0)
 		if err != nil {
 			return nil, nil, err
 		}

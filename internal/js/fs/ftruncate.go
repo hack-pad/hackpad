@@ -6,16 +6,15 @@ import (
 	"syscall/js"
 
 	"github.com/hack-pad/hackpad/internal/fs"
-	"github.com/hack-pad/hackpad/internal/process"
 	"github.com/pkg/errors"
 )
 
-func ftruncateSync(args []js.Value) (interface{}, error) {
-	_, err := ftruncate(args)
+func (s fileShim) ftruncateSync(args []js.Value) (interface{}, error) {
+	_, err := s.ftruncate(args)
 	return nil, err
 }
 
-func ftruncate(args []js.Value) ([]interface{}, error) {
+func (s fileShim) ftruncate(args []js.Value) ([]interface{}, error) {
 	// args: fd, len
 	if len(args) == 0 {
 		return nil, errors.Errorf("missing required args, expected fd: %+v", args)
@@ -26,6 +25,5 @@ func ftruncate(args []js.Value) ([]interface{}, error) {
 		length = args[1].Int()
 	}
 
-	p := process.Current()
-	return nil, p.Files().Truncate(fd, int64(length))
+	return nil, s.process.Files().Truncate(fd, int64(length))
 }
