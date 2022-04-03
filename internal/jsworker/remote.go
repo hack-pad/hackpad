@@ -32,27 +32,20 @@ func NewRemote(name, url string) (_ *Remote, err error) {
 	}, err
 }
 
-func NewRemoteWasm(ctx context.Context, name, wasmURL string) (*Remote, error) {
-	ctx, cancel := context.WithCancel(ctx)
-	defer cancel()
-	l, err := NewRemote(name, wasmWorkerScript+"?wasm="+wasmURL)
-	if err != nil {
-		return nil, err
-	}
-	err = l.port.Listen(ctx, func(ev MessageEvent, err error) {
-		if jsString(ev.Data) == "ready" {
-			cancel()
-		}
-	})
-	if err != nil {
-		return nil, err
-	}
-	<-ctx.Done()
-	return l, err
+func NewRemoteWasm(name, wasmURL string) (*Remote, error) {
+	return NewRemote(name, wasmWorkerScript+"?wasm="+wasmURL)
 }
 
-func (l *Remote) Terminate() (err error) {
+func (r *Remote) Terminate() (err error) {
 	defer common.CatchException(&err)
-	l.worker.Call("terminate")
+	r.worker.Call("terminate")
 	return nil
+}
+
+func (r *Remote) PostMessage(message js.Value, transfers []js.Value) error {
+	return r.port.PostMessage(message, transfers)
+}
+
+func (r *Remote) Listen(ctx context.Context, listener func(MessageEvent, error)) error {
+	return r.port.Listen(ctx, listener)
 }

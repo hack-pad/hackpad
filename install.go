@@ -32,6 +32,10 @@ func (s domShim) install(args []js.Value) error {
 		return errors.New("Expected command name to install")
 	}
 	command := args[0].String()
+	return s.Install(command)
+}
+
+func (s domShim) Install(command string) error {
 	command = filepath.Base(command) // ensure no path chars are present
 
 	if err := os.MkdirAll("/bin", 0644); err != nil {

@@ -29,15 +29,8 @@ func (s processShim) waitSync(args []js.Value) (interface{}, error) {
 }
 
 func (s processShim) Wait(pid process.PID, wstatus *syscall.WaitStatus, options int, rusage *syscall.Rusage) (wpid process.PID, err error) {
-	panic("not implemented")
 	// TODO support options and rusage
-	var p *process.Process
-	//p, ok := process.Get(pid)
-	//if !ok {
-	//return 0, errors.Errorf("Unknown child process: %d", pid)
-	//}
-
-	exitCode, err := p.Wait()
+	exitCode, err := s.waiter.Wait(pid)
 	if wstatus != nil {
 		const (
 			// defined in syscall.WaitStatus

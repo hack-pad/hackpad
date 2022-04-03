@@ -35,13 +35,15 @@ func (s processShim) spawn(args []js.Value) (interface{}, error) {
 	return s.Spawn(command, argv, procAttr)
 }
 
-func (s processShim) Spawn(command string, args []string, attr *process.ProcAttr) (*process.Process, error) {
-	//p, err := process.New(nil, command, args, s.process.WorkingDirectory(), attr, nil) // TODO spawn new worker
-	//if err != nil {
-	//return p, err
-	//}
-	//return p, p.Start()
-	panic("not implemented")
+func (s processShim) Spawn(command string, args []string, attr *process.ProcAttr) (map[string]interface{}, error) {
+	pider, err := s.spawner.Spawn(command, args, attr)
+	if err != nil {
+		return nil, err
+	}
+	return map[string]interface{}{
+		"pid":  pider.PID(),
+		"ppid": s.process.PID(),
+	}, nil
 }
 
 func parseProcAttr(defaultCommand string, value js.Value) (argv0 string, attr *process.ProcAttr) {

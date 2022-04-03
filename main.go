@@ -9,6 +9,7 @@ import (
 	"github.com/hack-pad/hackpad/internal/global"
 	"github.com/hack-pad/hackpad/internal/interop"
 	"github.com/hack-pad/hackpad/internal/jsworker"
+	"github.com/hack-pad/hackpad/internal/log"
 	"github.com/hack-pad/hackpad/internal/worker"
 )
 
@@ -38,5 +39,18 @@ func main() {
 	global.Set("profile", js.FuncOf(interop.ProfileJS))
 	global.Set("install", js.FuncOf(shim.installFunc))
 	//global.Set("spawnTerminal", js.FuncOf(terminal.SpawnTerminal))
+
+	if err := shim.Install("editor"); err != nil {
+		panic(err)
+	}
+	if err := shim.Install("sh"); err != nil {
+		panic(err)
+	}
+
+	log.SetLevel(log.LevelDebug)
+	//if err := dom.Start(); err != nil {
+	//panic(err)
+	//}
+
 	select {}
 }

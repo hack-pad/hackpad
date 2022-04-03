@@ -5,6 +5,7 @@ package process
 import (
 	"syscall/js"
 
+	"github.com/hack-pad/hackpad/internal/common"
 	"github.com/hack-pad/hackpad/internal/interop"
 	"github.com/hack-pad/hackpad/internal/process"
 )
@@ -13,10 +14,28 @@ var jsProcess = js.Global().Get("process")
 
 type processShim struct {
 	process *process.Process
+	spawner Spawner
+	waiter  Waiter
 }
 
-func Init(process *process.Process) {
-	shim := processShim{process}
+type PIDer interface {
+	PID() common.PID
+}
+
+type Spawner interface {
+	Spawn(command string, args []string, attr *process.ProcAttr) (PIDer, error)
+}
+
+type Waiter interface {
+	Wait(pid common.PID) (exitCode int, err error)
+}
+
+func Init(process *process.Process, spawner Spawner, waiter Waiter) {
+	shim := processShim{
+		process: process,
+		spawner: spawner,
+		waiter:  waiter,
+	}
 
 	err := process.Files().MkdirAll(process.WorkingDirectory(), 0750) // TODO move to parent initialization
 	if err != nil {
