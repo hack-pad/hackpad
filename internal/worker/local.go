@@ -109,7 +109,7 @@ func (l *Local) listenStart() error {
 		}
 		cancel()
 
-		log.Print("Starting process: ", l.process.PID)
+		log.Print("Starting process: ", l.process.PID())
 		err = l.process.Start()
 		if err != nil {
 			log.Error(err)
@@ -121,7 +121,12 @@ func (l *Local) listenStart() error {
 func (l *Local) Spawn(command string, argv []string, attr *process.ProcAttr) (jsprocess.PIDer, error) {
 	pid := kernel.ReservePID()
 	log.Print("Spawning pid: ", pid, " for command: ", command, argv)
-	return NewRemote(l, pid, command, argv, attr)
+	remote, err := NewRemote(l, pid, command, argv, attr)
+	if err != nil {
+		return nil, err
+	}
+	l.pids[pid] = remote
+	return remote, nil
 }
 
 func (l *Local) Wait(pid common.PID) (exitCode int, err error) {
