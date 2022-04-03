@@ -4,8 +4,11 @@
 package main
 
 import (
+	"os"
+	"runtime/debug"
 	"syscall/js"
 
+	"github.com/hack-pad/hackpad/internal/common"
 	"github.com/hack-pad/hackpad/internal/global"
 	"github.com/hack-pad/hackpad/internal/interop"
 	"github.com/hack-pad/hackpad/internal/jsworker"
@@ -18,6 +21,11 @@ type domShim struct {
 }
 
 func main() {
+	defer common.CatchExceptionHandler(func(err error) {
+		log.Error("Hackpad panic:", err, "\n", string(debug.Stack()))
+		os.Exit(1)
+	})
+
 	dom, err := worker.ExecDOM(
 		jsworker.GetLocal(),
 		"editor",
@@ -47,10 +55,9 @@ func main() {
 		panic(err)
 	}
 
-	log.SetLevel(log.LevelDebug)
-	//if err := dom.Start(); err != nil {
-	//panic(err)
-	//}
+	if err := dom.Start(); err != nil {
+		panic(err)
+	}
 
 	select {}
 }

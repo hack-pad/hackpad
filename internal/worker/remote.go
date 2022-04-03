@@ -24,7 +24,7 @@ type openFile struct {
 	seekOffset uint
 }
 
-func NewRemote(local *Local, pid process.PID, command string, args []string, attr *process.ProcAttr) (*Remote, error) {
+func NewRemote(local *Local, pid process.PID, command string, argv []string, attr *process.ProcAttr) (*Remote, error) {
 	var openFiles []openFile
 	for _, f := range attr.Files {
 		info, err := local.process.Files().Fstat(f.FID)
@@ -41,7 +41,7 @@ func NewRemote(local *Local, pid process.PID, command string, args []string, att
 	if err != nil {
 		return nil, err
 	}
-	err = port.PostMessage(makeInitMessage(command, args, attr.Dir, attr.Env), nil)
+	err = port.PostMessage(makeInitMessage(command, argv, attr.Dir, attr.Env), nil)
 	if err != nil {
 		return nil, err
 	}
@@ -85,11 +85,11 @@ func (r *Remote) PID() common.PID {
 	return r.pid
 }
 
-func makeInitMessage(command string, args []string, workingDirectory string, env map[string]string) js.Value {
+func makeInitMessage(command string, argv []string, workingDirectory string, env map[string]string) js.Value {
 	return js.ValueOf(map[string]interface{}{
 		"init": map[string]interface{}{
 			"command":          command,
-			"args":             interop.SliceFromStrings(args),
+			"argv":             interop.SliceFromStrings(argv),
 			"workingDirectory": workingDirectory,
 			"env":              interop.StringMap(env),
 		},

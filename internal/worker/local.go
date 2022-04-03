@@ -37,7 +37,7 @@ func NewLocal(localJS *jsworker.Local) (_ *Local, err error) {
 	local.process, err = process.New(
 		kernel.ReservePID(),
 		init.Get("command").String(),
-		interop.StringsFromJSValue(init.Get("args")),
+		interop.StringsFromJSValue(init.Get("argv")),
 		init.Get("workingDirectory").String(),
 		nil, // TODO open files
 		interop.StringMapFromJSObject(init.Get("env")),
@@ -118,10 +118,10 @@ func (l *Local) listenStart() error {
 	})
 }
 
-func (l *Local) Spawn(command string, args []string, attr *process.ProcAttr) (jsprocess.PIDer, error) {
+func (l *Local) Spawn(command string, argv []string, attr *process.ProcAttr) (jsprocess.PIDer, error) {
 	pid := kernel.ReservePID()
-	log.Print("Spawning pid: ", pid, " for command: ", command, args)
-	return NewRemote(l, pid, command, args, attr)
+	log.Print("Spawning pid: ", pid, " for command: ", command, argv)
+	return NewRemote(l, pid, command, argv, attr)
 }
 
 func (l *Local) Wait(pid common.PID) (exitCode int, err error) {

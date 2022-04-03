@@ -12,13 +12,14 @@ type DOM struct {
 }
 
 func ExecDOM(localJS *jsworker.Local, command string, args []string, workingDirectory string, env map[string]string) (*DOM, error) {
-	localJS.PostMessage(makeInitMessage(command, args, workingDirectory, env), nil)
+	localJS.PostMessage(makeInitMessage(command, append([]string{command}, args...), workingDirectory, env), nil)
 	local, err := NewLocal(localJS)
 	if err != nil {
 		return nil, err
 	}
 	return &DOM{
 		local: local,
+		port:  localJS,
 	}, nil
 }
 

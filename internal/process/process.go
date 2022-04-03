@@ -3,7 +3,6 @@ package process
 import (
 	"context"
 	"fmt"
-	"os"
 	"sort"
 	"strings"
 
@@ -97,7 +96,7 @@ func (p *Process) start() error {
 
 func (p *Process) prepExecutable() (command string, err error) {
 	fs := p.Files()
-	command, err = lookPath(fs.Stat, os.Getenv("PATH"), p.command)
+	command, err = lookPath(fs.Stat, p.env["PATH"], p.command)
 	if err != nil {
 		return "", err
 	}

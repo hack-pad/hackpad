@@ -35,8 +35,8 @@ func (s processShim) spawn(args []js.Value) (interface{}, error) {
 	return s.Spawn(command, argv, procAttr)
 }
 
-func (s processShim) Spawn(command string, args []string, attr *process.ProcAttr) (map[string]interface{}, error) {
-	pider, err := s.spawner.Spawn(command, args, attr)
+func (s processShim) Spawn(command string, argv []string, attr *process.ProcAttr) (map[string]interface{}, error) {
+	pider, err := s.spawner.Spawn(command, argv, attr)
 	if err != nil {
 		return nil, err
 	}

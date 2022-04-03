@@ -23,7 +23,7 @@ type PIDer interface {
 }
 
 type Spawner interface {
-	Spawn(command string, args []string, attr *process.ProcAttr) (PIDer, error)
+	Spawn(command string, argv []string, attr *process.ProcAttr) (PIDer, error)
 }
 
 type Waiter interface {
