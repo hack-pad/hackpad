@@ -51,7 +51,7 @@ func (p *MessagePort) Listen(ctx context.Context, listener func(MessageEvent, er
 
 	messageHandler := js.FuncOf(func(this js.Value, args []js.Value) interface{} {
 		ev, err := parseMessageEvent(args[0])
-		listener(ev, err)
+		go listener(ev, err)
 		return nil
 	})
 	errorHandler := js.FuncOf(func(this js.Value, args []js.Value) interface{} {
@@ -59,7 +59,7 @@ func (p *MessagePort) Listen(ctx context.Context, listener func(MessageEvent, er
 		if err == nil {
 			err = MessageEventErr{ev}
 		}
-		listener(MessageEvent{}, err)
+		go listener(MessageEvent{}, err)
 		return nil
 	})
 
