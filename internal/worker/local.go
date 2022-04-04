@@ -17,18 +17,18 @@ import (
 )
 
 type Local struct {
-	localJS *jsworker.Local
-	process *process.Process
-	pids    map[common.PID]*Remote
+	localJS         *jsworker.Local
+	process         *process.Process
+	processStartCtx context.Context
+	pids            map[common.PID]*Remote
 }
 
-func NewLocal(localJS *jsworker.Local) (_ *Local, err error) {
+func NewLocal(ctx context.Context, localJS *jsworker.Local) (_ *Local, err error) {
 	local := &Local{
 		localJS: localJS,
 		pids:    make(map[common.PID]*Remote),
 	}
-
-	init, err := local.awaitInit(context.Background())
+	init, err := local.awaitInit(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -52,7 +52,10 @@ func NewLocal(localJS *jsworker.Local) (_ *Local, err error) {
 	localJS.PostMessage(js.ValueOf("ready"), nil)
 	log.Debug("after ready post")
 
-	local.listenStart()
+	err = local.listenStart()
+	if err != nil {
+		return nil, err
+	}
 
 	return local, nil
 }
@@ -60,6 +63,7 @@ func NewLocal(localJS *jsworker.Local) (_ *Local, err error) {
 func (l *Local) awaitInit(ctx context.Context) (js.Value, error) {
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
+	l.processStartCtx = ctx
 
 	type initMessage struct {
 		err  error
@@ -80,6 +84,10 @@ func (l *Local) awaitInit(ctx context.Context) (js.Value, error) {
 		}
 		initChan <- initMessage{init: initData}
 	})
+	if err != nil {
+		return js.Value{}, err
+	}
+	err = l.localJS.PostMessage(js.ValueOf("pending_init"), nil)
 	if err != nil {
 		return js.Value{}, err
 	}
@@ -118,9 +126,17 @@ func (l *Local) listenStart() error {
 	})
 }
 
+func (l *Local) Exit(exitCode int) error {
+	err := l.localJS.PostMessage(makeExitMessage(exitCode), nil)
+	if err != nil {
+		return err
+	}
+	return l.localJS.Close()
+}
+
 func (l *Local) Spawn(command string, argv []string, attr *process.ProcAttr) (jsprocess.PIDer, error) {
 	pid := kernel.ReservePID()
-	log.Print("Spawning pid: ", pid, " for command: ", command, argv)
+	log.Print("Spawning pid ", pid, " for command: ", command, argv)
 	remote, err := NewRemote(l, pid, command, argv, attr)
 	if err != nil {
 		return nil, err
@@ -130,10 +146,24 @@ func (l *Local) Spawn(command string, argv []string, attr *process.ProcAttr) (js
 }
 
 func (l *Local) Wait(pid common.PID) (exitCode int, err error) {
-	log.Print("Waiting on pid: ", pid)
+	log.Print("Waiting on pid ", pid)
 	remote, ok := l.pids[pid]
 	if !ok {
 		return 0, errors.Errorf("Unknown child process: %d", pid)
 	}
 	return remote.Wait()
+}
+
+func (l *Local) Started() <-chan struct{} {
+	return l.processStartCtx.Done()
+}
+
+func (l *Local) PID() common.PID {
+	return l.process.PID()
+}
+
+func makeExitMessage(exitCode int) js.Value {
+	return js.ValueOf(map[string]interface{}{
+		"exitCode": exitCode,
+	})
 }

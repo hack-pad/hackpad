@@ -6,6 +6,7 @@ import (
 	"flag"
 	"io/ioutil"
 	"os"
+	"runtime/debug"
 	"syscall/js"
 
 	"github.com/hack-pad/hackpad/cmd/editor/dom"
@@ -13,6 +14,7 @@ import (
 	"github.com/hack-pad/hackpad/cmd/editor/plaineditor"
 	"github.com/hack-pad/hackpad/cmd/editor/taskconsole"
 	"github.com/hack-pad/hackpad/cmd/editor/terminal"
+	"github.com/hack-pad/hackpad/internal/common"
 	"github.com/hack-pad/hackpad/internal/interop"
 	"github.com/hack-pad/hackpad/internal/log"
 )
@@ -22,6 +24,11 @@ const (
 )
 
 func main() {
+	defer common.CatchExceptionHandler(func(err error) {
+		log.Error("Editor panic:", err, "\n", string(debug.Stack()))
+		os.Exit(1)
+	})
+
 	editorID := flag.String("editor", "", "Editor element ID to attach")
 	flag.Parse()
 

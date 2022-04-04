@@ -1,6 +1,7 @@
 package worker
 
 import (
+	"context"
 	"syscall/js"
 
 	"github.com/hack-pad/hackpad/internal/jsworker"
@@ -11,9 +12,12 @@ type DOM struct {
 	port  *jsworker.Local
 }
 
-func ExecDOM(localJS *jsworker.Local, command string, args []string, workingDirectory string, env map[string]string) (*DOM, error) {
-	localJS.PostMessage(makeInitMessage(command, append([]string{command}, args...), workingDirectory, env), nil)
-	local, err := NewLocal(localJS)
+func ExecDOM(ctx context.Context, localJS *jsworker.Local, command string, args []string, workingDirectory string, env map[string]string) (*DOM, error) {
+	err := localJS.PostMessage(makeInitMessage(command, append([]string{command}, args...), workingDirectory, env), nil)
+	if err != nil {
+		return nil, err
+	}
+	local, err := NewLocal(ctx, localJS)
 	if err != nil {
 		return nil, err
 	}

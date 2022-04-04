@@ -36,3 +36,7 @@ func (l *Local) PostMessage(message js.Value, transfers []js.Value) error {
 func (l *Local) Listen(ctx context.Context, listener func(MessageEvent, error)) error {
 	return l.port.Listen(ctx, listener)
 }
+
+func (l *Local) Close() error {
+	return l.port.Close()
+}

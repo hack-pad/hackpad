@@ -7,6 +7,7 @@ import (
 
 	"github.com/hack-pad/hackpad/internal/common"
 	"github.com/hack-pad/hackpad/internal/interop"
+	"github.com/hack-pad/hackpad/internal/log"
 )
 
 type MessagePort struct {
@@ -36,6 +37,7 @@ func wrapMessagePort(v js.Value) (*MessagePort, error) {
 func (p *MessagePort) PostMessage(message js.Value, transfers []js.Value) (err error) {
 	defer common.CatchException(&err)
 	args := append([]interface{}{message}, interop.SliceFromJSValues(transfers)...)
+	log.PrintJSValues("Post message:", message)
 	p.jsMessagePort.Call("postMessage", args...)
 	return nil
 }
@@ -73,5 +75,11 @@ func (p *MessagePort) Listen(ctx context.Context, listener func(MessageEvent, er
 	if p.jsMessagePort.Get("start").Truthy() {
 		p.jsMessagePort.Call("start")
 	}
+	return nil
+}
+
+func (p *MessagePort) Close() (err error) {
+	defer common.CatchException(&err)
+	p.jsMessagePort.Call("close")
 	return nil
 }
