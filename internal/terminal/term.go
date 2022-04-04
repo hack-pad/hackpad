@@ -31,6 +31,7 @@ func SpawnTerminal(this js.Value, args []js.Value) interface{} {
 }
 
 func Open(args []js.Value) error {
+	return errors.New("not implemented")
 	if len(args) != 2 {
 		return errors.New("Invalid number of args for spawnTerminal. Expected 2: term, options")
 	}

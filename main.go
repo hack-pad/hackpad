@@ -19,6 +19,7 @@ import (
 	"github.com/hack-pad/hackpad/internal/interop"
 	"github.com/hack-pad/hackpad/internal/jsworker"
 	"github.com/hack-pad/hackpad/internal/log"
+	"github.com/hack-pad/hackpad/internal/terminal"
 	"github.com/hack-pad/hackpad/internal/worker"
 	"github.com/hack-pad/hackpadfs"
 	"github.com/hack-pad/hackpadfs/indexeddb"
@@ -59,7 +60,7 @@ func main() {
 	shim := domShim{dom}
 	global.Set("profile", js.FuncOf(interop.ProfileJS))
 	global.Set("install", js.FuncOf(shim.installFunc))
-	//global.Set("spawnTerminal", js.FuncOf(terminal.SpawnTerminal))
+	global.Set("spawnTerminal", js.FuncOf(terminal.SpawnTerminal))
 
 	if err := setUpFS(shim); err != nil {
 		panic(err)
