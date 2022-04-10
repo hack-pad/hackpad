@@ -9,22 +9,11 @@ import (
 	"runtime"
 	"syscall/js"
 
-	"github.com/hack-pad/hackpad/internal/interop"
 	"github.com/hack-pad/hackpad/internal/log"
-	"github.com/hack-pad/hackpad/internal/promise"
 )
 
-func (s domShim) installFunc(this js.Value, args []js.Value) interface{} {
-	resolve, reject, prom := promise.New()
-	go func() {
-		err := s.install(args)
-		if err != nil {
-			reject(interop.WrapAsJSError(err, "Failed to install binary"))
-			return
-		}
-		resolve(nil)
-	}()
-	return prom
+func (s domShim) installFunc(this js.Value, args []js.Value) (js.Wrapper, error) {
+	return nil, s.install(args)
 }
 
 func (s domShim) install(args []js.Value) error {

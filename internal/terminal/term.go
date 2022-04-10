@@ -1,3 +1,4 @@
+//go:build js
 // +build js
 
 package terminal
@@ -8,6 +9,7 @@ import (
 	"github.com/hack-pad/hackpad/internal/common"
 	"github.com/hack-pad/hackpad/internal/fs"
 	"github.com/hack-pad/hackpad/internal/interop"
+	"github.com/hack-pad/hackpad/internal/jsfunc"
 	"github.com/hack-pad/hackpad/internal/kernel"
 	"github.com/hack-pad/hackpad/internal/log"
 	"github.com/hack-pad/hackpad/internal/process"
@@ -16,17 +18,15 @@ import (
 )
 
 func SpawnTerminal(this js.Value, args []js.Value) interface{} {
-	go func() {
-		defer func() {
-			if r := recover(); r != nil {
-				log.Error("Recovered from panic:", r)
-			}
-		}()
-		err := Open(args)
-		if err != nil {
-			log.Error(err)
+	defer func() {
+		if r := recover(); r != nil {
+			log.Error("Recovered from panic:", r)
 		}
 	}()
+	err := Open(args)
+	if err != nil {
+		log.Error(err)
+	}
 	return nil
 }
 
@@ -77,7 +77,7 @@ func Open(args []js.Value) error {
 		return err
 	}
 
-	f := js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+	f := jsfunc.NonBlocking(func(this js.Value, args []js.Value) interface{} {
 		chunk, err := idbblob.New(args[0])
 		if err != nil {
 			log.Error("blob: Failed to write to terminal:", err)

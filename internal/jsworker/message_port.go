@@ -7,6 +7,7 @@ import (
 
 	"github.com/hack-pad/hackpad/internal/common"
 	"github.com/hack-pad/hackpad/internal/interop"
+	"github.com/hack-pad/hackpad/internal/jsfunc"
 	"github.com/hack-pad/hackpad/internal/log"
 )
 
@@ -49,17 +50,17 @@ func (p *MessagePort) Listen(ctx context.Context, listener func(MessageEvent, er
 		cancel()
 	})
 
-	messageHandler := js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+	messageHandler := jsfunc.NonBlocking(func(this js.Value, args []js.Value) interface{} {
 		ev, err := parseMessageEvent(args[0])
-		go listener(ev, err)
+		listener(ev, err)
 		return nil
 	})
-	errorHandler := js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+	errorHandler := jsfunc.NonBlocking(func(this js.Value, args []js.Value) interface{} {
 		ev, err := parseMessageEvent(args[0])
 		if err == nil {
 			err = MessageEventErr{ev}
 		}
-		go listener(MessageEvent{}, err)
+		listener(MessageEvent{}, err)
 		return nil
 	})
 

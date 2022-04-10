@@ -1,3 +1,4 @@
+//go:build js
 // +build js
 
 package interop
@@ -8,6 +9,7 @@ import (
 	"strings"
 	"syscall/js"
 
+	"github.com/hack-pad/hackpad/internal/jserror"
 	"github.com/hack-pad/hackpad/internal/log"
 	"github.com/pkg/errors"
 )
@@ -68,7 +70,7 @@ func setFuncHandler(name string, fn interface{}, args []js.Value) (returnedVal i
 			}()
 
 			ret, err = fn(args)
-			err = wrapAsJSError(err, name, args...)
+			err = jserror.WrapArgs(err, name, args...)
 			ret = append([]interface{}{err}, ret...)
 			callback.Invoke(ret...)
 		}()

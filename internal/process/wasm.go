@@ -9,6 +9,7 @@ import (
 	"syscall/js"
 
 	"github.com/hack-pad/hackpad/internal/interop"
+	"github.com/hack-pad/hackpad/internal/jsfunc"
 	"github.com/hack-pad/hackpad/internal/log"
 	"github.com/hack-pad/hackpad/internal/promise"
 )
@@ -46,7 +47,7 @@ func (p *Process) startWasmPromise(path string, exitChan chan<- int) (promise.Pr
 	}
 	goInstance.Set("env", interop.StringMap(p.env))
 	var resumeFuncPtr *js.Func
-	goInstance.Set("exit", interop.SingleUseFunc(func(this js.Value, args []js.Value) interface{} {
+	goInstance.Set("exit", jsfunc.SingleUse(func(this js.Value, args []js.Value) interface{} {
 		defer func() {
 			if resumeFuncPtr != nil {
 				resumeFuncPtr.Release()

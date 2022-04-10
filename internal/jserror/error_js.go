@@ -1,6 +1,6 @@
 // +build js
 
-package interop
+package jserror
 
 import (
 	"fmt"
@@ -9,11 +9,11 @@ import (
 	"github.com/pkg/errors"
 )
 
-func WrapAsJSError(err error, message string) error {
-	return wrapAsJSError(err, message)
+func Wrap(err error, message string) error {
+	return WrapArgs(err, message)
 }
 
-func wrapAsJSError(err error, message string, args ...js.Value) error {
+func WrapArgs(err error, message string, args ...js.Value) error {
 	if err == nil {
 		return nil
 	}

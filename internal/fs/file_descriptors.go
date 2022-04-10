@@ -13,12 +13,13 @@ import (
 
 	"github.com/hack-pad/hackpad/internal/common"
 	"github.com/hack-pad/hackpad/internal/interop"
+	"github.com/hack-pad/hackpad/internal/jserror"
 	"github.com/hack-pad/hackpadfs"
 	"github.com/pkg/errors"
 )
 
 var (
-	ErrNotDir = interop.NewError("not a directory", "ENOTDIR")
+	ErrNotDir = jserror.New("not a directory", "ENOTDIR")
 )
 
 type FileDescriptors struct {

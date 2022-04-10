@@ -16,6 +16,7 @@ import (
 	"github.com/hack-pad/hackpad/cmd/editor/terminal"
 	"github.com/hack-pad/hackpad/internal/common"
 	"github.com/hack-pad/hackpad/internal/interop"
+	"github.com/hack-pad/hackpad/internal/jsfunc"
 	"github.com/hack-pad/hackpad/internal/log"
 )
 
@@ -40,7 +41,7 @@ func main() {
 	app := dom.GetDocument().GetElementByID(*editorID)
 	app.AddClass("ide")
 	globalEditorProps := js.Global().Get("editor")
-	globalEditorProps.Set("profile", js.FuncOf(interop.ProfileJS))
+	globalEditorProps.Set("profile", jsfunc.NonBlocking(interop.ProfileJS))
 	newEditor := globalEditorProps.Get("newEditor")
 	var editorBuilder ide.EditorBuilder = editorJSFunc(newEditor)
 	if !newEditor.Truthy() {

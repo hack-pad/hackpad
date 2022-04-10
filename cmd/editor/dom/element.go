@@ -8,6 +8,7 @@ import (
 
 	"github.com/hack-pad/hackpad/internal/common"
 	"github.com/hack-pad/hackpad/internal/interop"
+	"github.com/hack-pad/hackpad/internal/jsfunc"
 	"github.com/hack-pad/hackpad/internal/log"
 )
 
@@ -112,7 +113,7 @@ func (e *Element) QuerySelectorAll(query string) []*Element {
 }
 
 func (e *Element) AddEventListener(name string, listener EventListener) {
-	e.elem.Call("addEventListener", name, js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+	e.elem.Call("addEventListener", name, jsfunc.NonBlocking(func(this js.Value, args []js.Value) interface{} {
 		defer common.CatchExceptionHandler(func(err error) {
 			log.Error("recovered from panic: ", err, "\n", string(debug.Stack()))
 		})

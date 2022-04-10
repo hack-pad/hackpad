@@ -10,13 +10,13 @@ import (
 	"os"
 	"path"
 	"runtime/debug"
-	"syscall/js"
 
 	"github.com/hack-pad/go-indexeddb/idb"
 	"github.com/hack-pad/hackpad/internal/common"
 	"github.com/hack-pad/hackpad/internal/fs"
 	"github.com/hack-pad/hackpad/internal/global"
 	"github.com/hack-pad/hackpad/internal/interop"
+	"github.com/hack-pad/hackpad/internal/jsfunc"
 	"github.com/hack-pad/hackpad/internal/jsworker"
 	"github.com/hack-pad/hackpad/internal/log"
 	"github.com/hack-pad/hackpad/internal/terminal"
@@ -58,9 +58,9 @@ func main() {
 	}
 
 	shim := domShim{dom}
-	global.Set("profile", js.FuncOf(interop.ProfileJS))
-	global.Set("install", js.FuncOf(shim.installFunc))
-	global.Set("spawnTerminal", js.FuncOf(terminal.SpawnTerminal))
+	global.Set("profile", jsfunc.NonBlocking(interop.ProfileJS))
+	global.Set("install", jsfunc.Promise(shim.installFunc))
+	global.Set("spawnTerminal", jsfunc.NonBlocking(terminal.SpawnTerminal))
 
 	if err := setUpFS(shim); err != nil {
 		panic(err)

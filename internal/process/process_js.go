@@ -6,6 +6,7 @@ import (
 	"syscall/js"
 
 	"github.com/hack-pad/hackpad/internal/interop"
+	"github.com/hack-pad/hackpad/internal/jserror"
 )
 
 var (
@@ -16,7 +17,7 @@ func (p *Process) JSValue() js.Value {
 	return js.ValueOf(map[string]interface{}{
 		"pid":   p.pid,
 		"ppid":  p.parentPID,
-		"error": interop.WrapAsJSError(p.err, "spawn"),
+		"error": jserror.Wrap(p.err, "spawn"),
 	})
 }
 

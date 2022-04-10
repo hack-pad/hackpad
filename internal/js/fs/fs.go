@@ -12,8 +12,9 @@ import (
 	"github.com/hack-pad/hackpad/internal/fs"
 	"github.com/hack-pad/hackpad/internal/global"
 	"github.com/hack-pad/hackpad/internal/interop"
+	"github.com/hack-pad/hackpad/internal/jserror"
+	"github.com/hack-pad/hackpad/internal/jsfunc"
 	"github.com/hack-pad/hackpad/internal/process"
-	"github.com/hack-pad/hackpad/internal/promise"
 )
 
 type fileShim struct {
@@ -73,11 +74,11 @@ func Init(process *process.Process) {
 	interop.SetFunc(fs, "write", shim.write)
 	interop.SetFunc(fs, "writeSync", shim.writeSync)
 
-	global.Set("getMounts", js.FuncOf(shim.getMounts))
-	global.Set("destroyMount", js.FuncOf(shim.destroyMount))
-	global.Set("overlayTarGzip", js.FuncOf(shim.overlayTarGzip))
-	global.Set("overlayIndexedDB", js.FuncOf(shim.overlayIndexedDB))
-	global.Set("dumpZip", js.FuncOf(shim.dumpZip))
+	global.Set("getMounts", jsfunc.Promise(shim.getMounts))
+	global.Set("destroyMount", jsfunc.Promise(shim.destroyMount))
+	global.Set("overlayTarGzip", jsfunc.Promise(shim.overlayTarGzip))
+	global.Set("overlayIndexedDB", jsfunc.Promise(shim.overlayIndexedDB))
+	global.Set("dumpZip", jsfunc.Promise(shim.dumpZip))
 
 	// Set up system directories
 	files := process.Files()
@@ -91,36 +92,27 @@ func (s fileShim) Dump(basePath string) interface{} {
 	return fs.Dump(basePath)
 }
 
-func (s fileShim) dumpZip(this js.Value, args []js.Value) interface{} {
+func (s fileShim) dumpZip(this js.Value, args []js.Value) (js.Wrapper, error) {
 	if len(args) != 1 {
-		return interop.WrapAsJSError(errors.New("dumpZip: file path is required"), "EINVAL")
+		return nil, jserror.Wrap(errors.New("dumpZip: file path is required"), "EINVAL")
 	}
 	path := args[0].String()
 	path = common.ResolvePath(s.process.WorkingDirectory(), path)
-	return interop.WrapAsJSError(fs.DumpZip(path), "dumpZip")
+	return nil, jserror.Wrap(fs.DumpZip(path), "dumpZip")
 }
 
-func (s fileShim) getMounts(this js.Value, args []js.Value) interface{} {
+func (s fileShim) getMounts(this js.Value, args []js.Value) (js.Wrapper, error) {
 	var mounts []string
 	for _, p := range fs.Mounts() {
 		mounts = append(mounts, p.Path)
 	}
-	return interop.SliceFromStrings(mounts)
+	return interop.SliceFromStrings(mounts), nil
 }
 
-func (s fileShim) destroyMount(this js.Value, args []js.Value) interface{} {
+func (s fileShim) destroyMount(this js.Value, args []js.Value) (js.Wrapper, error) {
 	if len(args) < 1 {
-		return interop.WrapAsJSError(errors.New("destroyMount: mount path is required"), "EINVAL")
+		return nil, jserror.Wrap(errors.New("destroyMount: mount path is required"), "EINVAL")
 	}
-	resolve, reject, prom := promise.New()
 	mountPath := args[0].String()
-	go func() {
-		err := interop.WrapAsJSError(fs.DestroyMount(mountPath), "destroyMount")
-		if err != nil {
-			reject(err)
-		} else {
-			resolve(nil)
-		}
-	}()
-	return prom
+	return nil, jserror.Wrap(fs.DestroyMount(mountPath), "destroyMount")
 }
