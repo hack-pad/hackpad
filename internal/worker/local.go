@@ -143,6 +143,9 @@ func (l *Local) Spawn(command string, argv []string, attr *process.ProcAttr) (js
 
 func (l *Local) Wait(pid common.PID) (exitCode int, err error) {
 	log.Print("Waiting on pid ", pid)
+	if pid == l.process.PID() {
+		return l.process.Wait()
+	}
 	remote, ok := l.pids[pid]
 	if !ok {
 		return 0, errors.Errorf("Unknown child process: %d", pid)
