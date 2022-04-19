@@ -46,12 +46,8 @@ func (p *Process) startWasmPromise(path string, exitChan chan<- int) (promise.Pr
 		p.env = splitEnvPairs(os.Environ())
 	}
 	goInstance.Set("env", interop.StringMap(p.env))
-	var resumeFuncPtr *js.Func
 	goInstance.Set("exit", jsfunc.SingleUse(func(this js.Value, args []js.Value) interface{} {
 		defer func() {
-			if resumeFuncPtr != nil {
-				resumeFuncPtr.Release()
-			}
 			// TODO exit hook for worker
 
 			// TODO free the whole goInstance to fix garbage issues entirely. Freeing individual properties appears to work for now, but is ultimately a bad long-term solution because memory still accumulates.
