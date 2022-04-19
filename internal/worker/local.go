@@ -51,12 +51,6 @@ func NewLocal(ctx context.Context, localJS *jsworker.Local) (_ *Local, err error
 	log.Debug("before ready post")
 	localJS.PostMessage(js.ValueOf("ready"), nil)
 	log.Debug("after ready post")
-
-	err = local.listenStart()
-	if err != nil {
-		return nil, err
-	}
-
 	return local, nil
 }
 
@@ -95,7 +89,8 @@ func (l *Local) awaitInit(ctx context.Context) (js.Value, error) {
 	return message.init, message.err
 }
 
-func (l *Local) listenStart() error {
+func (l *Local) Start() (err error) {
+	defer common.CatchException(&err)
 	startCtx, cancel := context.WithCancel(context.Background())
 	return l.localJS.Listen(startCtx, func(me jsworker.MessageEvent, err error) {
 		if err != nil {

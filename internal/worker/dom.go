@@ -21,6 +21,9 @@ func ExecDOM(ctx context.Context, localJS *jsworker.Local, command string, args 
 	if err != nil {
 		return nil, err
 	}
+	if err := local.Start(); err != nil {
+		return nil, err
+	}
 	return &DOM{
 		local: local,
 		port:  localJS,

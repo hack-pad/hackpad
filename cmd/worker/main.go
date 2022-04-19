@@ -23,20 +23,23 @@ func main() {
 	bootCtx := context.Background()
 	//bootCtx, bootCancel := context.WithTimeout(context.Background(), 30*time.Second)
 	//defer bootCancel()
-	log.Print("booting worker")
+	log.Debug("booting worker")
 	local, err := worker.NewLocal(bootCtx, jsworker.GetLocal())
 	if err != nil {
 		panic(err)
 	}
-	log.Print("worker started")
-
+	log.Debug("worker inited")
 	if err := setUpFS(); err != nil {
 		panic(err)
 	}
-
+	log.Debug("fs is setup")
+	if err := local.Start(); err != nil {
+		panic(err)
+	}
+	log.Debug("worker starting...")
 	<-local.Started()
 	pid := local.PID()
-	log.Print("worker process started PID ", pid)
+	log.Debug("worker process started PID ", pid)
 	exitCode, err := local.Wait(pid)
 	if err != nil {
 		log.Error("Failed to wait for PID ", pid, ":", err)
@@ -53,6 +56,9 @@ func setUpFS() error {
 		return err
 	}
 	if err := overlayIndexedDB("/bin", idb.DurabilityRelaxed); err != nil {
+		return err
+	}
+	if err := os.MkdirAll("/home/me", dirPerm); err != nil {
 		return err
 	}
 	if err := overlayIndexedDB("/home/me", idb.DurabilityDefault); err != nil {
