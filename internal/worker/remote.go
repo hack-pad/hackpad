@@ -45,16 +45,6 @@ func NewRemote(local *Local, pid process.PID, command string, argv []string, att
 	if err != nil {
 		return nil, err
 	}
-	err = awaitMessage(ctx, port, "pending_init")
-	if err != nil {
-		return nil, err
-	}
-	log.Warn("Sending init to worker ", workerName)
-	err = port.PostMessage(makeInitMessage(command, argv, attr.Dir, attr.Env), nil)
-	if err != nil {
-		return nil, err
-	}
-	log.Warn("init sent to worker ", workerName)
 
 	closeCtx, cancel := context.WithCancel(ctx)
 	remote := &Remote{
@@ -83,10 +73,23 @@ func NewRemote(local *Local, pid process.PID, command string, argv []string, att
 		return nil, err
 	}
 
-	err = remote.port.PostMessage(makeStartMessage(), nil)
-	if err != nil {
-		return nil, err
-	}
+	go func() {
+		err := awaitMessage(ctx, port, "pending_init")
+		if err != nil {
+			log.Error("Failed awaiting pending_init:", workerName, err)
+			return
+		}
+		err = port.PostMessage(makeInitMessage(command, argv, attr.Dir, attr.Env), nil)
+		if err != nil {
+			log.Error("Failed sending init to worker:", workerName, err)
+			return
+		}
+		err = remote.port.PostMessage(makeStartMessage(), nil)
+		if err != nil {
+			log.Error("Failed sending start to worker:", workerName, err)
+			return
+		}
+	}()
 
 	return remote, nil
 }
