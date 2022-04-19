@@ -47,6 +47,7 @@ func NewLocal(ctx context.Context, localJS *jsworker.Local) (_ *Local, err error
 	}
 	jsprocess.Init(local.process, local, local)
 	jsfs.Init(local.process)
+	global.Set("workerName", init.Get("workerName"))
 	global.Set("ready", true)
 	log.Debug("before ready post")
 	localJS.PostMessage(js.ValueOf("ready"), nil)

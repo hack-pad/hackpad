@@ -79,7 +79,7 @@ func NewRemote(local *Local, pid process.PID, command string, argv []string, att
 			log.Error("Failed awaiting pending_init:", workerName, err)
 			return
 		}
-		err = port.PostMessage(makeInitMessage(command, argv, attr.Dir, attr.Env), nil)
+		err = port.PostMessage(makeInitMessage(workerName, command, argv, attr.Dir, attr.Env), nil)
 		if err != nil {
 			log.Error("Failed sending init to worker:", workerName, err)
 			return
@@ -122,9 +122,10 @@ func awaitMessage(ctx context.Context, port *jsworker.Remote, messageStr string)
 	}
 }
 
-func makeInitMessage(command string, argv []string, workingDirectory string, env map[string]string) js.Value {
+func makeInitMessage(workerName, command string, argv []string, workingDirectory string, env map[string]string) js.Value {
 	return js.ValueOf(map[string]interface{}{
 		"init": map[string]interface{}{
+			"workerName":       workerName,
 			"command":          command,
 			"argv":             interop.SliceFromStrings(argv),
 			"workingDirectory": workingDirectory,

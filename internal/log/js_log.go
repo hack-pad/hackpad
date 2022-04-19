@@ -54,11 +54,24 @@ func logJSValues(kind consoleType, skip int, args ...interface{}) int {
 		return 0
 	}
 	caller := getCaller(skip + 1)
-	args = append([]interface{}{caller}, args...)
-	console.Call(kind.String(), args...)
+	var newArgs []interface{}
+	if name := workerNamePrefix(); name != "" {
+		newArgs = append(newArgs, name)
+	}
+	newArgs = append(newArgs, caller)
+	newArgs = append(newArgs, args...)
+	console.Call(kind.String(), newArgs...)
 	return 0
 }
 
 func writeLog(c consoleType, s string) {
-	console.Call(c.String(), s)
+	console.Call(c.String(), workerNamePrefix(), s)
+}
+
+func workerNamePrefix() string {
+	name := global.Get("workerName")
+	if name.Type() == js.TypeString {
+		return name.String() + ": "
+	}
+	return ""
 }

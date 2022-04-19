@@ -13,7 +13,7 @@ type DOM struct {
 }
 
 func ExecDOM(ctx context.Context, localJS *jsworker.Local, command string, args []string, workingDirectory string, env map[string]string) (*DOM, error) {
-	err := localJS.PostMessage(makeInitMessage(command, append([]string{command}, args...), workingDirectory, env), nil)
+	err := localJS.PostMessage(makeInitMessage("dom", command, append([]string{command}, args...), workingDirectory, env), nil)
 	if err != nil {
 		return nil, err
 	}
