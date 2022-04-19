@@ -17,7 +17,7 @@ var (
 func SetTimeout(fn func(args []js.Value), delay time.Duration, args ...js.Value) int {
 	intArgs := append([]interface{}{
 		jsfunc.SingleUse(func(_ js.Value, args []js.Value) interface{} {
-			fn(args)
+			go fn(args)
 			return nil
 		}),
 		delay.Milliseconds(),
@@ -30,7 +30,7 @@ func QueueMicrotask(fn func()) {
 	queueMicrotask := window.GetProperty("queueMicrotask")
 	if queueMicrotask.Truthy() {
 		queueMicrotask.Invoke(jsfunc.SingleUse(func(this js.Value, args []js.Value) interface{} {
-			fn()
+			go fn()
 			return nil
 		}))
 	} else {
