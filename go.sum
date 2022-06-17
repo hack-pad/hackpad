@@ -16,6 +16,8 @@ github.com/hack-pad/hackpadfs v0.1.1 h1:DhzS50ln5XAOxZ0Xlnb/o3P/+MWUqlcbGdOQ5m+F
 github.com/hack-pad/hackpadfs v0.1.1/go.mod h1:8bsINHOQhQUioUUiCzCyZZNLfEXjs0RwBIf3lTG+CEg=
 github.com/hack-pad/hackpadfs v0.1.2 h1:ZsHfvrNAMNNBVLMKprOiN2rLD37x+YGj3QPJrhUdRF4=
 github.com/hack-pad/hackpadfs v0.1.2/go.mod h1:8bsINHOQhQUioUUiCzCyZZNLfEXjs0RwBIf3lTG+CEg=
+github.com/hack-pad/hackpadfs v0.1.4 h1:vwLyuaVPFDqiy6YjLzvQ5fBTt0upzCaCkTok9aoKOdY=
+github.com/hack-pad/hackpadfs v0.1.4/go.mod h1:8bsINHOQhQUioUUiCzCyZZNLfEXjs0RwBIf3lTG+CEg=
 github.com/hack-pad/hush v0.0.0-20210730065049-bd589dbef3a3 h1:0WBvEONkD8zXBRe7+5+mp34L2Upmok0yPKvOqOzpksw=
 github.com/hack-pad/hush v0.0.0-20210730065049-bd589dbef3a3/go.mod h1:NqjEIfyA2YtlnEPlI/1K3tNuyXGByWFadPxPlGrDPms=
 github.com/hack-pad/hush v0.1.0 h1:lm/iUaRpVsKkpbN6U9wf45arVnCXzTqsMG1jyihIgkI=
