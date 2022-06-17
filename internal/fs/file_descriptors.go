@@ -345,11 +345,13 @@ func (f *FileDescriptors) Flock(fd FID, action LockAction) error {
 	return nil
 }
 
-func (f *FileDescriptors) RawFID(fid FID) (hackpadfs.File, error) {
-	if _, ok := f.files[fid]; !ok {
+func (f *FileDescriptors) OpenRawFID(pid common.PID, fid FID) (hackpadfs.File, error) {
+	fd, ok := f.files[fid]
+	if !ok {
 		return nil, interop.BadFileNumber(fid)
 	}
-	return f.files[fid].file, nil
+	fd.Open(pid)
+	return fd.file, nil
 }
 
 func (f *FileDescriptors) RawFIDs() []io.Reader {

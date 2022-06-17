@@ -28,7 +28,7 @@ func NewRemote(local *Local, pid process.PID, command string, argv []string, att
 
 	var openFiles []openFile
 	for _, f := range attr.Files {
-		file, err := local.process.Files().RawFID(f.FID)
+		file, err := local.process.Files().OpenRawFID(pid, f.FID)
 		if err != nil {
 			return nil, err
 		}
