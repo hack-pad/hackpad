@@ -75,7 +75,7 @@ func (p *portPipe) Read(b []byte) (n int, err error) {
 
 func (p *portPipe) Write(b []byte) (n int, err error) {
 	bl := idbblob.FromBlob(blob.NewBytes(b)).JSValue()
-	err = p.port.PostMessage(bl, []js.Value{bl})
+	err = p.port.PostMessage(bl, []js.Value{bl.Get("buffer")})
 	if err == nil {
 		n = len(b)
 	}

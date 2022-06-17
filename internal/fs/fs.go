@@ -61,6 +61,7 @@ func OverlayTarGzip(mountPath string, gzipReader io.ReadCloser, persist bool, sh
 		return err
 	}
 
+	originalMountPath := mountPath
 	mountPath = common.ResolvePath(".", mountPath)
 	if !persist {
 		underlyingFS, err := mem.NewFS()
@@ -78,7 +79,7 @@ func OverlayTarGzip(mountPath string, gzipReader io.ReadCloser, persist bool, sh
 
 	const tarfsDoneMarker = ".tarfs-complete"
 
-	underlyingFS, err := newPersistDB(mountPath, true, shouldCache)
+	underlyingFS, err := newPersistDB(originalMountPath, true, shouldCache)
 	if err != nil {
 		return err
 	}

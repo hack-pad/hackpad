@@ -2,12 +2,14 @@ package jsworker
 
 import (
 	"context"
-	"errors"
+	"runtime/debug"
 	"syscall/js"
 
 	"github.com/hack-pad/hackpad/internal/common"
 	"github.com/hack-pad/hackpad/internal/interop"
 	"github.com/hack-pad/hackpad/internal/jsfunc"
+	"github.com/hack-pad/hackpad/internal/log"
+	"github.com/pkg/errors"
 )
 
 type MessagePort struct {
@@ -35,7 +37,10 @@ func WrapMessagePort(v js.Value) (*MessagePort, error) {
 }
 
 func (p *MessagePort) PostMessage(message js.Value, transfers []js.Value) (err error) {
-	defer common.CatchException(&err)
+	defer common.CatchExceptionHandler(func(e error) {
+		err = e
+		log.Error(err, ": ", string(debug.Stack()))
+	})
 	args := append([]interface{}{message}, interop.SliceFromJSValues(transfers))
 	p.jsMessagePort.Call("postMessage", args...)
 	return nil

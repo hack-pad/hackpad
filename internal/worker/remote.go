@@ -199,7 +199,7 @@ func connectPortToFile(ctx context.Context, port *jsworker.MessagePort, file hac
 			log.Error(err)
 			return
 		}
-		log.Print("Received message! ", bl.Len())
+		log.Print("Received message! ", string(bl.Bytes()))
 		_, err = hackpadfs.WriteFile(file, bl.Bytes())
 		if err != nil {
 			log.Error(err)
