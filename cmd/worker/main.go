@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"os"
+	"runtime/debug"
 
 	"github.com/hack-pad/go-indexeddb/idb"
 	"github.com/hack-pad/hackpad/internal/common"
@@ -15,7 +16,8 @@ import (
 
 func main() {
 	defer common.CatchExceptionHandler(func(err error) {
-		log.Error("Worker panicked:", err)
+		log.Errorf("Worker panicked: %+v", err)
+		log.Error(string(debug.Stack()))
 		os.Exit(1)
 	})
 

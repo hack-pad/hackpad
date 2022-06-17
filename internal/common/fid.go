@@ -2,6 +2,7 @@ package common
 
 import (
 	"fmt"
+	"io"
 
 	"github.com/hack-pad/hackpadfs"
 )
@@ -20,4 +21,5 @@ type OpenFileAttr struct {
 	SeekOffset int64
 	Flags      int
 	Mode       hackpadfs.FileMode
+	RawDevice io.ReadWriteCloser
 }

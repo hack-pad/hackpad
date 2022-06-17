@@ -25,7 +25,7 @@ func NewRemote(name, url string) (_ *Remote, err error) {
 	val := jsWorker.New(url, map[string]interface{}{
 		"name": name,
 	})
-	port, err := wrapMessagePort(val)
+	port, err := WrapMessagePort(val)
 	return &Remote{
 		port:   port,
 		worker: val,

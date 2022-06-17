@@ -19,15 +19,15 @@ var jsMessageChannel = js.Global().Get("MessageChannel")
 func NewChannel() (port1, port2 *MessagePort, err error) {
 	defer common.CatchException(&err)
 	channel := jsMessageChannel.New()
-	port1, err = wrapMessagePort(channel.Get("port1"))
+	port1, err = WrapMessagePort(channel.Get("port1"))
 	if err != nil {
 		return
 	}
-	port2, err = wrapMessagePort(channel.Get("port2"))
+	port2, err = WrapMessagePort(channel.Get("port2"))
 	return
 }
 
-func wrapMessagePort(v js.Value) (*MessagePort, error) {
+func WrapMessagePort(v js.Value) (*MessagePort, error) {
 	if !v.Get("postMessage").Truthy() {
 		return nil, errors.New("invalid MessagePort value: postMessage is not a function")
 	}
@@ -36,7 +36,7 @@ func wrapMessagePort(v js.Value) (*MessagePort, error) {
 
 func (p *MessagePort) PostMessage(message js.Value, transfers []js.Value) (err error) {
 	defer common.CatchException(&err)
-	args := append([]interface{}{message}, interop.SliceFromJSValues(transfers)...)
+	args := append([]interface{}{message}, interop.SliceFromJSValues(transfers))
 	p.jsMessagePort.Call("postMessage", args...)
 	return nil
 }
@@ -81,4 +81,11 @@ func (p *MessagePort) Close() (err error) {
 	defer common.CatchException(&err)
 	p.jsMessagePort.Call("close")
 	return nil
+}
+
+func (p *MessagePort) JSValue() js.Value {
+	if p == nil {
+		return js.Null()
+	}
+	return p.jsMessagePort
 }

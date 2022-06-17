@@ -2,6 +2,7 @@ package worker
 
 import (
 	"context"
+	"io"
 	"syscall/js"
 
 	"github.com/hack-pad/hackpad/internal/common"
@@ -32,30 +33,30 @@ func NewLocal(ctx context.Context, localJS *jsworker.Local) (_ *Local, err error
 	if err != nil {
 		return nil, err
 	}
-
 	defer common.CatchException(&err)
+
+	global.Set("workerName", init.Get("workerName"))
+	log.Debug("Setting process details...")
 	local.process, err = process.New(
 		kernel.ReservePID(),
 		init.Get("command").String(),
 		interop.StringsFromJSValue(init.Get("argv")),
 		init.Get("workingDirectory").String(),
-		nil, // TODO open files
+		parseOpenFiles(init.Get("openFiles")),
 		interop.StringMapFromJSObject(init.Get("env")),
 	)
 	if err != nil {
 		return nil, err
 	}
+	log.Debug("Initializing process")
 	jsprocess.Init(local.process, local, local)
+	log.Debug("Initializing fs")
 	jsfs.Init(local.process)
-	global.Set("workerName", init.Get("workerName"))
-	global.Set("ready", true)
-	log.Debug("before ready post")
-	localJS.PostMessage(js.ValueOf("ready"), nil)
-	log.Debug("after ready post")
 	return local, nil
 }
 
 func (l *Local) awaitInit(ctx context.Context) (js.Value, error) {
+	log.Debug("NewLocal 1")
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 	l.processStartCtx = ctx
@@ -66,6 +67,7 @@ func (l *Local) awaitInit(ctx context.Context) (js.Value, error) {
 	}
 	initChan := make(chan initMessage, 1)
 	err := l.localJS.Listen(ctx, func(me jsworker.MessageEvent, err error) {
+		log.Print("awaitInit listener:", err)
 		if err != nil {
 			initChan <- initMessage{err: err}
 			return
@@ -86,14 +88,17 @@ func (l *Local) awaitInit(ctx context.Context) (js.Value, error) {
 	if err != nil {
 		return js.Value{}, err
 	}
+	log.Debug("NewLocal 2")
 	message := <-initChan
+	log.Debug("NewLocal 3")
 	return message.init, message.err
 }
 
 func (l *Local) Start() (err error) {
 	defer common.CatchException(&err)
 	startCtx, cancel := context.WithCancel(context.Background())
-	return l.localJS.Listen(startCtx, func(me jsworker.MessageEvent, err error) {
+	log.Print("Listening for start...")
+	err = l.localJS.Listen(startCtx, func(me jsworker.MessageEvent, err error) {
 		if err != nil {
 			log.Error(err)
 			cancel()
@@ -103,6 +108,7 @@ func (l *Local) Start() (err error) {
 			log.Error(err)
 			cancel()
 		})
+		log.Print("Local's Start() received message")
 		if me.Data.Type() != js.TypeObject {
 			return
 		}
@@ -120,6 +126,18 @@ func (l *Local) Start() (err error) {
 			return
 		}
 	})
+	if err != nil {
+		return err
+	}
+
+	global.Set("ready", true)
+	log.Debug("before ready post")
+	err = l.localJS.PostMessage(js.ValueOf("ready"), nil)
+	if err != nil {
+		return err
+	}
+	log.Debug("after ready post")
+	return nil
 }
 
 func (l *Local) Exit(exitCode int) error {
@@ -165,4 +183,26 @@ func makeExitMessage(exitCode int) js.Value {
 	return js.ValueOf(map[string]interface{}{
 		"exitCode": exitCode,
 	})
+}
+
+func parseOpenFiles(v js.Value) []common.OpenFileAttr {
+	openFileJSValues := interop.SliceFromJSValue(v)
+	var openFiles []common.OpenFileAttr
+	for _, o := range openFileJSValues {
+		openFile := readOpenFile(o)
+		var pipe io.ReadWriteCloser
+		if openFile.pipe != nil {
+			var err error
+			pipe, err = portToReadWriteCloser(openFile.pipe)
+			if err != nil {
+				panic(err)
+			}
+		}
+		openFiles = append(openFiles, common.OpenFileAttr{
+			FilePath:   openFile.filePath,
+			SeekOffset: openFile.seekOffset,
+			RawDevice:  pipe,
+		})
+	}
+	return openFiles
 }

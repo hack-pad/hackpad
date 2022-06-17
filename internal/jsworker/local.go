@@ -16,7 +16,7 @@ func init() {
 	if !jsSelf.Truthy() {
 		return
 	}
-	port, err := wrapMessagePort(jsSelf)
+	port, err := WrapMessagePort(jsSelf)
 	if err != nil {
 		panic(err)
 	}

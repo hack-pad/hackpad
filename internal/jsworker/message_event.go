@@ -14,7 +14,7 @@ type MessageEvent struct {
 
 func parseMessageEvent(v js.Value) (_ MessageEvent, err error) {
 	defer common.CatchException(&err)
-	target, err := wrapMessagePort(v.Get("target"))
+	target, err := WrapMessagePort(v.Get("target"))
 	return MessageEvent{
 		Data:   v.Get("data"),
 		Target: target,

@@ -14,6 +14,7 @@ import (
 	"github.com/hack-pad/hackpad/internal/common"
 	"github.com/hack-pad/hackpad/internal/interop"
 	"github.com/hack-pad/hackpad/internal/jserror"
+	"github.com/hack-pad/hackpad/internal/log"
 	"github.com/hack-pad/hackpadfs"
 	"github.com/pkg/errors"
 )
@@ -64,6 +65,7 @@ func NewFileDescriptors(parentPID common.PID, workingDirectory string, openFiles
 	var files []openFile
 	defer func() {
 		if returnedErr != nil {
+			returnedErr = errors.WithStack(returnedErr)
 			for _, f := range files {
 				f.file.Close()
 			}
@@ -92,14 +94,19 @@ func NewFileDescriptors(parentPID common.PID, workingDirectory string, openFiles
 		return nil, nil, errors.Errorf("Invalid number of inherited file descriptors, must be 0 or at least 3: %#v", openFiles)
 	default:
 		for _, attr := range openFiles {
-			file, err := getFile(attr.FilePath, attr.Flags, attr.Mode)
-			if err != nil {
-				return nil, nil, err
-			}
-			files = append(files, openFile{attr, file})
-			_, err = hackpadfs.SeekFile(file, attr.SeekOffset, io.SeekStart)
-			if err != nil {
-				return nil, nil, err
+			if attr.RawDevice == nil {
+				file, err := getFile(attr.FilePath, attr.Flags, attr.Mode)
+				if err != nil {
+					return nil, nil, err
+				}
+				_, err = hackpadfs.SeekFile(file, attr.SeekOffset, io.SeekStart)
+				if err != nil {
+					return nil, nil, err
+				}
+				files = append(files, openFile{attr, file})
+			} else {
+				file := newDeviceFile("", attr.RawDevice)
+				files = append(files, openFile{attr, file})
 			}
 		}
 	}
@@ -168,6 +175,7 @@ func getFile(absPath string, flags int, mode os.FileMode) (hackpadfs.File, error
 	case "dev/stderr":
 		return stderr, nil
 	}
+	log.Debugf("Opening: %q %v %v", absPath, flags, mode)
 	return hackpadfs.OpenFile(filesystem, absPath, flags, mode)
 }
 
@@ -337,7 +345,7 @@ func (f *FileDescriptors) Flock(fd FID, action LockAction) error {
 	return nil
 }
 
-func (f *FileDescriptors) RawFID(fid FID) (io.Reader, error) {
+func (f *FileDescriptors) RawFID(fid FID) (hackpadfs.File, error) {
 	if _, ok := f.files[fid]; !ok {
 		return nil, interop.BadFileNumber(fid)
 	}

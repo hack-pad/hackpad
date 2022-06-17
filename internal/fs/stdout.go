@@ -79,3 +79,22 @@ func (b *bufferedLogger) Close() error {
 	// TODO prevent writes and return os.ErrClosed
 	return nil
 }
+
+func (b *bufferedLogger) Stat() (hackpadfs.FileInfo, error) {
+	return namedFileInfo{b.name}, nil
+}
+
+type namedFileInfo struct {
+	name string
+}
+
+func newNamedFileInfo(name string) hackpadfs.FileInfo {
+	return namedFileInfo{name: name}
+}
+
+func (i namedFileInfo) Name() string             { return i.name }
+func (i namedFileInfo) Size() int64              { return 0 }
+func (i namedFileInfo) Mode() hackpadfs.FileMode { return 0 }
+func (i namedFileInfo) ModTime() time.Time       { return time.Time{} }
+func (i namedFileInfo) IsDir() bool              { return false }
+func (i namedFileInfo) Sys() interface{}         { return nil }

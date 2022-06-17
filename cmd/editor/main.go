@@ -61,6 +61,8 @@ func main() {
 		return
 	}
 
+	select {} // TODO: remove
+
 	if err := os.MkdirAll("playground", 0700); err != nil {
 		log.Error("Failed to make playground dir", err)
 		return

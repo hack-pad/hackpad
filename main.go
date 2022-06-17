@@ -69,6 +69,7 @@ func main() {
 	if err := dom.Start(); err != nil {
 		panic(err)
 	}
+	log.Print("DOM started")
 
 	select {}
 }
