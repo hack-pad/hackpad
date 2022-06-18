@@ -23,8 +23,6 @@ func main() {
 
 	log.SetLevel(log.LevelDebug)
 	bootCtx := context.Background()
-	//bootCtx, bootCancel := context.WithTimeout(context.Background(), 30*time.Second)
-	//defer bootCancel()
 	log.Debug("booting worker")
 	local, err := worker.NewLocal(bootCtx, jsworker.GetLocal())
 	if err != nil {
