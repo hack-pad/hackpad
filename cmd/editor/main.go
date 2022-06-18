@@ -61,7 +61,7 @@ func main() {
 		return
 	}
 
-	select {} // TODO: remove
+	select {} // TODO: remove when go version output appears on task console
 
 	if err := os.MkdirAll("playground", 0700); err != nil {
 		log.Error("Failed to make playground dir", err)

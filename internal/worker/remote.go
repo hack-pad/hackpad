@@ -47,12 +47,12 @@ func NewRemote(local *Local, pid process.PID, command string, argv []string, att
 				return nil, err
 			}
 			openF.pipe = port1
-			log.Print("Connecting port to file...")
-			err = connectPortToFile(closeCtx, port2, file)
+			log.Print("Binding port to file...")
+			err = bindPortToFile(closeCtx, port2, file)
 			if err != nil {
 				return nil, err
 			}
-			log.Print("Connected port to file.")
+			log.Print("Bound port to file.")
 		}
 		openFiles = append(openFiles, openF)
 	}
@@ -188,8 +188,8 @@ func (r *Remote) Wait() (exitCode int, err error) {
 	return *r.closeExitCode, r.closeErr
 }
 
-func connectPortToFile(ctx context.Context, port *jsworker.MessagePort, file hackpadfs.File) error {
-	return port.Listen(ctx, func(me jsworker.MessageEvent, err error) {
+func bindPortToFile(ctx context.Context, port *jsworker.MessagePort, file hackpadfs.File) error {
+	err := port.Listen(ctx, func(me jsworker.MessageEvent, err error) {
 		if err != nil {
 			log.Error(err)
 			return
@@ -205,5 +205,15 @@ func connectPortToFile(ctx context.Context, port *jsworker.MessagePort, file hac
 			log.Error(err)
 			return
 		}
+		log.Print("Successfully wrote message")
 	})
+	if err != nil {
+		return err
+	}
+
+	go func() {
+		<-ctx.Done()
+		file.Close()
+	}()
+	return nil
 }
