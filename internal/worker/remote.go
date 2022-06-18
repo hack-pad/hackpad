@@ -26,6 +26,11 @@ func NewRemote(local *Local, pid process.PID, command string, argv []string, att
 	ctx := context.Background()
 	closeCtx, cancel := context.WithCancel(ctx)
 
+	if attr.Dir == "" {
+		// collect default current working directory, remote workers won't inherit it
+		attr.Dir = local.process.WorkingDirectory()
+	}
+
 	var openFiles []openFile
 	for _, f := range attr.Files {
 		file, err := local.process.Files().OpenRawFID(pid, f.FID)
@@ -199,13 +204,11 @@ func bindPortToFile(ctx context.Context, port *jsworker.MessagePort, file hackpa
 			log.Error(err)
 			return
 		}
-		log.Print("Received message! ", string(bl.Bytes()))
 		_, err = hackpadfs.WriteFile(file, bl.Bytes())
 		if err != nil {
 			log.Error(err)
 			return
 		}
-		log.Print("Successfully wrote message")
 	})
 	if err != nil {
 		return err
