@@ -26,9 +26,12 @@ func NewRemote(local *Local, pid process.PID, command string, argv []string, att
 	ctx := context.Background()
 	closeCtx, cancel := context.WithCancel(ctx)
 
+	// collect current process details and use as defaults, remote workers won't inherit them
 	if attr.Dir == "" {
-		// collect default current working directory, remote workers won't inherit it
 		attr.Dir = local.process.WorkingDirectory()
+	}
+	if len(attr.Env) == 0 {
+		attr.Env = local.process.Env()
 	}
 
 	var openFiles []openFile

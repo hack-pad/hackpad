@@ -164,3 +164,11 @@ func Dump() interface{} {
 	}
 	return s.String()
 }
+
+func (p *Process) Env() map[string]string {
+	envCopy := make(map[string]string, len(p.env))
+	for k, v := range p.env {
+		envCopy[k] = v
+	}
+	return envCopy
+}
