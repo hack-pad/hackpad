@@ -21,7 +21,6 @@ func main() {
 		os.Exit(1)
 	})
 
-	log.SetLevel(log.LevelDebug)
 	bootCtx := context.Background()
 	log.Debug("booting worker")
 	local, err := worker.NewLocal(bootCtx, jsworker.GetLocal())
