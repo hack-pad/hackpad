@@ -1,6 +1,7 @@
 package fs
 
 import (
+	"context"
 	"io"
 	"os"
 	"path"
@@ -29,17 +30,23 @@ type FileDescriptors struct {
 	files            map[FID]*fileDescriptor
 	mu               sync.Mutex
 	workingDirectory *workingDirectory
+	locks            *fileLocker
 }
 
 func NewStdFileDescriptors(parentPID common.PID, workingDirectory string) (*FileDescriptors, error) {
+	locker, err := newFileLocker(context.Background())
+	if err != nil {
+		return nil, err
+	}
 	f := &FileDescriptors{
 		parentPID:        parentPID,
 		previousFID:      0,
 		files:            make(map[FID]*fileDescriptor),
 		workingDirectory: newWorkingDirectory(workingDirectory),
+		locks:            locker,
 	}
 	// order matters
-	_, err := f.Open("/dev/stdin", syscall.O_RDONLY, 0)
+	_, err = f.Open("/dev/stdin", syscall.O_RDONLY, 0)
 	if err != nil {
 		return nil, err
 	}
@@ -52,11 +59,16 @@ func NewStdFileDescriptors(parentPID common.PID, workingDirectory string) (*File
 }
 
 func NewFileDescriptors(parentPID common.PID, workingDirectory string, openFiles []common.OpenFileAttr) (_ *FileDescriptors, _ func(wd string) error, returnedErr error) {
+	locker, err := newFileLocker(context.Background())
+	if err != nil {
+		return nil, nil, err
+	}
 	f := &FileDescriptors{
 		parentPID:        parentPID,
 		previousFID:      0,
 		files:            make(map[FID]*fileDescriptor),
 		workingDirectory: newWorkingDirectory(workingDirectory),
+		locks:            locker,
 	}
 	type openFile struct {
 		attr common.OpenFileAttr
@@ -314,35 +326,20 @@ const (
 	Unlock
 )
 
-var (
-	processFileLocks = make(map[string]*sync.RWMutex)
-	newFileLockMu    sync.Mutex
-)
-
 func (f *FileDescriptors) Flock(fd FID, action LockAction) error {
 	fileDescriptor := f.files[fd]
 	if fileDescriptor == nil {
 		return interop.BadFileNumber(fd)
 	}
 	absPath := fileDescriptor.FileName()
-	if _, ok := processFileLocks[absPath]; !ok {
-		newFileLockMu.Lock()
-		if _, ok := processFileLocks[absPath]; !ok {
-			processFileLocks[absPath] = new(sync.RWMutex)
-		}
-		newFileLockMu.Unlock()
-	}
-	lock := processFileLocks[absPath]
 	switch action {
 	case LockShared, LockExclusive:
-		// TODO support shared locks
-		lock.Lock()
+		return f.locks.Lock(context.Background(), absPath, action == LockShared)
 	case Unlock:
-		lock.Unlock()
+		return f.locks.Unlock(context.Background(), absPath)
 	default:
 		return interop.ErrNotImplemented
 	}
-	return nil
 }
 
 func (f *FileDescriptors) OpenRawFID(pid common.PID, fid FID) (hackpadfs.File, error) {
