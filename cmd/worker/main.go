@@ -51,28 +51,29 @@ func main() {
 
 func setUpFS() error {
 	const dirPerm = 0700
-	if err := os.MkdirAll("/bin", dirPerm); err != nil {
+	mkdirMount := func(mountPath string, durability idb.TransactionDurability) error {
+		if err := os.MkdirAll(mountPath, dirPerm); err != nil {
+			return err
+		}
+		if err := overlayIndexedDB(mountPath, durability); err != nil {
+			return err
+		}
+		return nil
+	}
+
+	if err := mkdirMount("/bin", idb.DurabilityRelaxed); err != nil {
 		return err
 	}
-	if err := overlayIndexedDB("/bin", idb.DurabilityRelaxed); err != nil {
+	if err := mkdirMount("/home/me", idb.DurabilityDefault); err != nil {
 		return err
 	}
-	if err := os.MkdirAll("/home/me", dirPerm); err != nil {
+	if err := mkdirMount("/home/me/.cache", idb.DurabilityRelaxed); err != nil {
 		return err
 	}
-	if err := overlayIndexedDB("/home/me", idb.DurabilityDefault); err != nil {
+	if err := mkdirMount("/tmp", idb.DurabilityRelaxed); err != nil {
 		return err
 	}
-	if err := os.MkdirAll("/home/me/.cache", dirPerm); err != nil {
-		return err
-	}
-	if err := overlayIndexedDB("/home/me/.cache", idb.DurabilityRelaxed); err != nil {
-		return err
-	}
-	if err := os.MkdirAll("/usr/local/go", dirPerm); err != nil {
-		return err
-	}
-	if err := overlayIndexedDB("/usr/local/go", idb.DurabilityRelaxed); err != nil {
+	if err := mkdirMount("/usr/local/go", idb.DurabilityRelaxed); err != nil {
 		return err
 	}
 	return nil
