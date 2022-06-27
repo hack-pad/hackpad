@@ -37,13 +37,20 @@ func NewLocal(ctx context.Context, localJS *jsworker.Local) (_ *Local, err error
 
 	global.Set("workerName", init.Get("workerName"))
 	log.Debug("Setting process details...")
+	var (
+		command          = init.Get("command")
+		argv             = init.Get("argv")
+		workingDirectory = init.Get("workingDirectory")
+		openFiles        = init.Get("openFiles")
+		env              = init.Get("env")
+	)
 	local.process, err = process.New(
 		kernel.ReservePID(),
-		init.Get("command").String(),
-		interop.StringsFromJSValue(init.Get("argv")),
-		init.Get("workingDirectory").String(),
-		parseOpenFiles(init.Get("openFiles")),
-		interop.StringMapFromJSObject(init.Get("env")),
+		command.String(),
+		interop.StringsFromJSValue(argv),
+		workingDirectory.String(),
+		parseOpenFiles(openFiles),
+		interop.StringMapFromJSObject(env),
 	)
 	if err != nil {
 		return nil, err
@@ -52,6 +59,12 @@ func NewLocal(ctx context.Context, localJS *jsworker.Local) (_ *Local, err error
 	jsprocess.Init(local.process, local, local)
 	log.Debug("Initializing fs")
 	jsfs.Init(local.process)
+	global.Set("process", map[string]interface{}{
+		"command":          command,
+		"argv":             argv,
+		"workingDirectory": workingDirectory,
+		"env":              env,
+	})
 	return local, nil
 }
 
