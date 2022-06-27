@@ -1,6 +1,7 @@
 package fs
 
 import (
+	"context"
 	"io"
 	"os"
 	"path"
@@ -13,12 +14,14 @@ import (
 
 	"github.com/hack-pad/hackpad/internal/common"
 	"github.com/hack-pad/hackpad/internal/interop"
+	"github.com/hack-pad/hackpad/internal/jserror"
+	"github.com/hack-pad/hackpad/internal/log"
 	"github.com/hack-pad/hackpadfs"
 	"github.com/pkg/errors"
 )
 
 var (
-	ErrNotDir = interop.NewError("not a directory", "ENOTDIR")
+	ErrNotDir = jserror.New("not a directory", "ENOTDIR")
 )
 
 type FileDescriptors struct {
@@ -27,17 +30,23 @@ type FileDescriptors struct {
 	files            map[FID]*fileDescriptor
 	mu               sync.Mutex
 	workingDirectory *workingDirectory
+	locks            *fileLocker
 }
 
 func NewStdFileDescriptors(parentPID common.PID, workingDirectory string) (*FileDescriptors, error) {
+	locker, err := newFileLocker(context.Background())
+	if err != nil {
+		return nil, err
+	}
 	f := &FileDescriptors{
 		parentPID:        parentPID,
 		previousFID:      0,
 		files:            make(map[FID]*fileDescriptor),
 		workingDirectory: newWorkingDirectory(workingDirectory),
+		locks:            locker,
 	}
 	// order matters
-	_, err := f.Open("/dev/stdin", syscall.O_RDONLY, 0)
+	_, err = f.Open("/dev/stdin", syscall.O_RDONLY, 0)
 	if err != nil {
 		return nil, err
 	}
@@ -49,35 +58,74 @@ func NewStdFileDescriptors(parentPID common.PID, workingDirectory string) (*File
 	return f, err
 }
 
-func NewFileDescriptors(parentPID common.PID, workingDirectory string, parentFiles *FileDescriptors, inheritFDs []Attr) (*FileDescriptors, func(wd string) error, error) {
+func NewFileDescriptors(parentPID common.PID, workingDirectory string, openFiles []common.OpenFileAttr) (_ *FileDescriptors, _ func(wd string) error, returnedErr error) {
+	locker, err := newFileLocker(context.Background())
+	if err != nil {
+		return nil, nil, err
+	}
 	f := &FileDescriptors{
 		parentPID:        parentPID,
 		previousFID:      0,
 		files:            make(map[FID]*fileDescriptor),
 		workingDirectory: newWorkingDirectory(workingDirectory),
+		locks:            locker,
 	}
-	if len(inheritFDs) == 0 {
-		inheritFDs = []Attr{{FID: 0}, {FID: 1}, {FID: 2}}
+	type openFile struct {
+		attr common.OpenFileAttr
+		file hackpadfs.File
 	}
-	if len(inheritFDs) < 3 {
-		return nil, nil, errors.Errorf("Invalid number of inherited file descriptors, must be 0 or at least 3: %#v", inheritFDs)
-	}
-	for _, attr := range inheritFDs {
-		var inheritFD FID
-		switch {
-		case attr.Ignore:
-			return nil, nil, errors.New("Ignored file descriptors are unsupported") // TODO be sure to align FDs properly when skipping iterations
-		case attr.Pipe:
-			return nil, nil, errors.New("Pipe file descriptors are unsupported") // TODO align FDs like Ignore, but child FIDs on stdio property must be different than the real FIDs (see node docs)
-		default:
-			inheritFD = attr.FID
+	var files []openFile
+	defer func() {
+		if returnedErr != nil {
+			returnedErr = errors.WithStack(returnedErr)
+			for _, f := range files {
+				f.file.Close()
+			}
 		}
-		parentFD := parentFiles.files[inheritFD]
-		if parentFD == nil {
-			return nil, nil, errors.Errorf("Invalid parent FID %d", attr.FID)
+	}()
+	switch {
+	case len(openFiles) == 0:
+		stdin, err := getFile("dev/stdin", 0, 0)
+		if err != nil {
+			return nil, nil, err
 		}
+		stdout, err := getFile("dev/stdout", 0, 0)
+		if err != nil {
+			return nil, nil, err
+		}
+		stderr, err := getFile("dev/stderr", 0, 0)
+		if err != nil {
+			return nil, nil, err
+		}
+		files = append(files,
+			openFile{common.OpenFileAttr{FilePath: "/dev/stdin"}, stdin},
+			openFile{common.OpenFileAttr{FilePath: "/dev/stdout"}, stdout},
+			openFile{common.OpenFileAttr{FilePath: "/dev/stderr"}, stderr},
+		)
+	case len(openFiles) < 3:
+		return nil, nil, errors.Errorf("Invalid number of inherited file descriptors, must be 0 or at least 3: %#v", openFiles)
+	default:
+		for _, attr := range openFiles {
+			if attr.RawDevice == nil {
+				file, err := getFile(attr.FilePath, attr.Flags, attr.Mode)
+				if err != nil {
+					return nil, nil, err
+				}
+				_, err = hackpadfs.SeekFile(file, attr.SeekOffset, io.SeekStart)
+				if err != nil {
+					return nil, nil, err
+				}
+				files = append(files, openFile{attr, file})
+			} else {
+				file := newDeviceFile("", attr.RawDevice)
+				files = append(files, openFile{attr, file})
+			}
+		}
+	}
+
+	for _, file := range files {
 		fid := f.newFID()
-		fd := parentFD.Dup(fid)
+		fd := newIrregularFileDescriptor(fid, path.Base(file.attr.FilePath), file.file, file.attr.Mode)
 		f.addFileDescriptor(fd)
 		fd.Open(parentPID)
 	}
@@ -139,6 +187,7 @@ func getFile(absPath string, flags int, mode os.FileMode) (hackpadfs.File, error
 	case "dev/stderr":
 		return stderr, nil
 	}
+	log.Debugf("Opening: %q %v %v", absPath, flags, mode)
 	return hackpadfs.OpenFile(filesystem, absPath, flags, mode)
 }
 
@@ -277,42 +326,29 @@ const (
 	Unlock
 )
 
-var (
-	processFileLocks = make(map[string]*sync.RWMutex)
-	newFileLockMu    sync.Mutex
-)
-
 func (f *FileDescriptors) Flock(fd FID, action LockAction) error {
 	fileDescriptor := f.files[fd]
 	if fileDescriptor == nil {
 		return interop.BadFileNumber(fd)
 	}
 	absPath := fileDescriptor.FileName()
-	if _, ok := processFileLocks[absPath]; !ok {
-		newFileLockMu.Lock()
-		if _, ok := processFileLocks[absPath]; !ok {
-			processFileLocks[absPath] = new(sync.RWMutex)
-		}
-		newFileLockMu.Unlock()
-	}
-	lock := processFileLocks[absPath]
 	switch action {
 	case LockShared, LockExclusive:
-		// TODO support shared locks
-		lock.Lock()
+		return f.locks.Lock(context.Background(), absPath, action == LockShared)
 	case Unlock:
-		lock.Unlock()
+		return f.locks.Unlock(context.Background(), absPath)
 	default:
 		return interop.ErrNotImplemented
 	}
-	return nil
 }
 
-func (f *FileDescriptors) RawFID(fid FID) (io.Reader, error) {
-	if _, ok := f.files[fid]; !ok {
+func (f *FileDescriptors) OpenRawFID(pid common.PID, fid FID) (hackpadfs.File, error) {
+	fd, ok := f.files[fid]
+	if !ok {
 		return nil, interop.BadFileNumber(fid)
 	}
-	return f.files[fid].file, nil
+	fd.Open(pid)
+	return fd.file, nil
 }
 
 func (f *FileDescriptors) RawFIDs() []io.Reader {

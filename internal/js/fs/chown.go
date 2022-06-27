@@ -8,12 +8,12 @@ import (
 	"github.com/pkg/errors"
 )
 
-func chown(args []js.Value) ([]interface{}, error) {
-	_, err := chownSync(args)
+func (s fileShim) chown(args []js.Value) ([]interface{}, error) {
+	_, err := s.chownSync(args)
 	return nil, err
 }
 
-func chownSync(args []js.Value) (interface{}, error) {
+func (s fileShim) chownSync(args []js.Value) (interface{}, error) {
 	if len(args) != 3 {
 		return nil, errors.Errorf("Invalid number of args, expected 3: %v", args)
 	}
@@ -21,10 +21,10 @@ func chownSync(args []js.Value) (interface{}, error) {
 	path := args[0].String()
 	uid := args[1].Int()
 	gid := args[2].Int()
-	return nil, Chown(path, uid, gid)
+	return nil, s.Chown(path, uid, gid)
 }
 
-func Chown(path string, uid, gid int) error {
+func (s fileShim) Chown(path string, uid, gid int) error {
 	// TODO no-op, consider adding user and group ID support to hackpadfs
 	return nil
 }

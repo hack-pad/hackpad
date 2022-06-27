@@ -7,22 +7,20 @@ import (
 	"syscall"
 	"syscall/js"
 
-	"github.com/hack-pad/hackpad/internal/process"
 	"github.com/pkg/errors"
 )
 
-func stat(args []js.Value) ([]interface{}, error) {
-	info, err := statSync(args)
+func (s fileShim) stat(args []js.Value) ([]interface{}, error) {
+	info, err := s.statSync(args)
 	return []interface{}{info}, err
 }
 
-func statSync(args []js.Value) (interface{}, error) {
+func (s fileShim) statSync(args []js.Value) (interface{}, error) {
 	if len(args) != 1 {
 		return nil, errors.Errorf("Invalid number of args, expected 1: %v", args)
 	}
 	path := args[0].String()
-	p := process.Current()
-	info, err := p.Files().Stat(path)
+	info, err := s.process.Files().Stat(path)
 	return jsStat(info), err
 }
 

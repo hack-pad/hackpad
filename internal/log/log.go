@@ -1,6 +1,8 @@
 package log
 
-import "fmt"
+import (
+	"fmt"
+)
 
 type consoleType int
 
@@ -51,51 +53,57 @@ func parseLevel(level string) consoleType {
 }
 
 func Debugf(format string, args ...interface{}) int {
-	return logf(LevelDebug, format, args...)
+	return logf(LevelDebug, 1, format, args...)
 }
 
 func Printf(format string, args ...interface{}) int {
-	return logf(LevelLog, format, args...)
+	return logf(LevelLog, 1, format, args...)
 }
 
 func Warnf(format string, args ...interface{}) int {
-	return logf(LevelWarn, format, args...)
+	return logf(LevelWarn, 1, format, args...)
 }
 
 func Errorf(format string, args ...interface{}) int {
-	return logf(LevelError, format, args...)
+	return logf(LevelError, 1, format, args...)
 }
 
-func logf(kind consoleType, format string, args ...interface{}) int {
+func logf(kind consoleType, skip int, format string, args ...interface{}) int {
 	if kind < logLevel {
 		return 0
 	}
 	s := fmt.Sprintf(format, args...)
+	if caller := getCaller(skip + 1); caller != "" {
+		s = caller + " - " + s
+	}
 	writeLog(kind, s)
 	return len(s)
 }
 
 func Debug(args ...interface{}) int {
-	return log(LevelDebug, args...)
+	return log(LevelDebug, 1, args...)
 }
 
 func Print(args ...interface{}) int {
-	return log(LevelLog, args...)
+	return log(LevelLog, 1, args...)
 }
 
 func Warn(args ...interface{}) int {
-	return log(LevelWarn, args...)
+	return log(LevelWarn, 1, args...)
 }
 
 func Error(args ...interface{}) int {
-	return log(LevelError, args...)
+	return log(LevelError, 1, args...)
 }
 
-func log(kind consoleType, args ...interface{}) int {
+func log(kind consoleType, skip int, args ...interface{}) int {
 	if kind < logLevel {
 		return 0
 	}
 	s := fmt.Sprint(args...)
+	if caller := getCaller(skip + 1); caller != "" {
+		s = caller + " - " + s
+	}
 	writeLog(kind, s)
 	return len(s)
 }

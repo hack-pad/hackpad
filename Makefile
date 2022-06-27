@@ -1,11 +1,13 @@
 SHELL := /usr/bin/env bash
-GO_VERSION = 1.16.6
+GO_VERSION = 1.16
 GOROOT =
 PATH := ${PWD}/cache/go/bin:${PWD}/cache/go/misc/wasm:${PATH}
 GOOS = js
 GOARCH = wasm
 export
 LINT_VERSION=1.27.0
+
+BUILD_FLAGS = -trimpath
 
 .PHONY: serve
 serve:
@@ -71,7 +73,7 @@ cache/go${GO_VERSION}: cache
 		git clone \
 			--depth 1 \
 			--single-branch \
-			--branch hackpad-go${GO_VERSION} \
+			--branch hackpad/release-branch.go${GO_VERSION} \
 			https://github.com/hack-pad/go.git \
 			"$$TMP"; \
 		pushd "$$TMP/src"; \
@@ -91,10 +93,10 @@ cache/go${GO_VERSION}: cache
 	touch cache/go.mod  # Makes it so linters will ignore this dir
 
 server/public/wasm/%.wasm: server/public/wasm go
-	go build -o $@ ./cmd/$*
+	go build ${BUILD_FLAGS} -o $@ ./cmd/$*
 
 server/public/wasm/main.wasm: server/public/wasm go
-	go build -o server/public/wasm/main.wasm .
+	go build ${BUILD_FLAGS} -o server/public/wasm/main.wasm .
 
 server/public/wasm/wasm_exec.js: go
 	cp cache/go/misc/wasm/wasm_exec.js server/public/wasm/wasm_exec.js

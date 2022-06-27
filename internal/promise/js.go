@@ -6,7 +6,6 @@ import (
 	"runtime/debug"
 	"syscall/js"
 
-	"github.com/hack-pad/hackpad/internal/interop"
 	"github.com/hack-pad/hackpad/internal/log"
 )
 
@@ -23,7 +22,7 @@ func From(promiseValue js.Value) JS {
 func New() (resolve, reject Resolver, promise JS) {
 	resolvers := make(chan Resolver, 2)
 	promise = From(
-		jsPromise.New(interop.SingleUseFunc(func(this js.Value, args []js.Value) interface{} {
+		jsPromise.New(singleUseFunc(func(this js.Value, args []js.Value) interface{} {
 			resolve, reject := args[0], args[1]
 			resolvers <- func(result interface{}) { resolve.Invoke(result) }
 			resolvers <- func(result interface{}) { reject.Invoke(result) }
@@ -34,13 +33,22 @@ func New() (resolve, reject Resolver, promise JS) {
 	return
 }
 
+func singleUseFunc(fn func(this js.Value, args []js.Value) interface{}) js.Func {
+	var wrapperFn js.Func
+	wrapperFn = js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+		wrapperFn.Release()
+		return fn(this, args)
+	})
+	return wrapperFn
+}
+
 func (p JS) Then(fn func(value interface{}) interface{}) Promise {
 	return p.do("then", fn)
 }
 
 func (p JS) do(methodName string, fn func(value interface{}) interface{}) Promise {
 	return JS{
-		value: p.value.Call(methodName, interop.SingleUseFunc(func(this js.Value, args []js.Value) interface{} {
+		value: p.value.Call(methodName, singleUseFunc(func(this js.Value, args []js.Value) interface{} {
 			var value js.Value
 			if len(args) > 0 {
 				value = args[0]

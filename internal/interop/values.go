@@ -65,3 +65,11 @@ func StringMap(m map[string]string) js.Value {
 	}
 	return js.ValueOf(jsValue)
 }
+
+func StringMapFromJSObject(v js.Value) map[string]string {
+	m := make(map[string]string)
+	for key, value := range Entries(v) {
+		m[key] = value.String()
+	}
+	return m
+}

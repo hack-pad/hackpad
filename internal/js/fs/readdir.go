@@ -5,22 +5,20 @@ package fs
 import (
 	"syscall/js"
 
-	"github.com/hack-pad/hackpad/internal/process"
 	"github.com/pkg/errors"
 )
 
-func readdir(args []js.Value) ([]interface{}, error) {
-	fileNames, err := readdirSync(args)
+func (s fileShim) readdir(args []js.Value) ([]interface{}, error) {
+	fileNames, err := s.readdirSync(args)
 	return []interface{}{fileNames}, err
 }
 
-func readdirSync(args []js.Value) (interface{}, error) {
+func (s fileShim) readdirSync(args []js.Value) (interface{}, error) {
 	if len(args) != 1 {
 		return nil, errors.Errorf("Invalid number of args, expected 1: %v", args)
 	}
 	path := args[0].String()
-	p := process.Current()
-	dir, err := p.Files().ReadDir(path)
+	dir, err := s.process.Files().ReadDir(path)
 	if err != nil {
 		return nil, err
 	}

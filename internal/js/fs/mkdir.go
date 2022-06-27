@@ -6,16 +6,15 @@ import (
 	"os"
 	"syscall/js"
 
-	"github.com/hack-pad/hackpad/internal/process"
 	"github.com/pkg/errors"
 )
 
-func mkdir(args []js.Value) ([]interface{}, error) {
-	_, err := mkdirSync(args)
+func (s fileShim) mkdir(args []js.Value) ([]interface{}, error) {
+	_, err := s.mkdirSync(args)
 	return nil, err
 }
 
-func mkdirSync(args []js.Value) (interface{}, error) {
+func (s fileShim) mkdirSync(args []js.Value) (interface{}, error) {
 	if len(args) != 2 {
 		return nil, errors.Errorf("Invalid number of args, expected 2: %v", args)
 	}
@@ -35,9 +34,8 @@ func mkdirSync(args []js.Value) (interface{}, error) {
 		recursive = true
 	}
 
-	p := process.Current()
 	if recursive {
-		return nil, p.Files().MkdirAll(path, mode)
+		return nil, s.process.Files().MkdirAll(path, mode)
 	}
-	return nil, p.Files().Mkdir(path, mode)
+	return nil, s.process.Files().Mkdir(path, mode)
 }

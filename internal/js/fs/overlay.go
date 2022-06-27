@@ -20,27 +20,21 @@ import (
 	"github.com/hack-pad/hackpad/internal/common"
 	"github.com/hack-pad/hackpad/internal/fs"
 	"github.com/hack-pad/hackpad/internal/interop"
+	"github.com/hack-pad/hackpad/internal/jserror"
 	"github.com/hack-pad/hackpad/internal/log"
-	"github.com/hack-pad/hackpad/internal/process"
-	"github.com/hack-pad/hackpad/internal/promise"
 	"github.com/johnstarich/go/datasize"
 )
 
-func overlayIndexedDB(this js.Value, args []js.Value) interface{} {
-	resolve, reject, prom := promise.New()
-	go func() {
-		err := OverlayIndexedDB(args)
-		if err != nil {
-			reject(interop.WrapAsJSError(err, "Failed overlaying IndexedDB FS"))
-		} else {
-			log.Debug("Successfully overlayed IndexedDB FS")
-			resolve(nil)
-		}
-	}()
-	return prom
+func (s fileShim) overlayIndexedDB(this js.Value, args []js.Value) (js.Wrapper, error) {
+	err := s.OverlayIndexedDB(args)
+	if err != nil {
+		return nil, jserror.Wrap(err, "Failed overlaying IndexedDB FS")
+	}
+	log.Debug("Successfully overlayed IndexedDB FS")
+	return nil, nil
 }
 
-func OverlayIndexedDB(args []js.Value) (err error) {
+func (s fileShim) OverlayIndexedDB(args []js.Value) (err error) {
 	if len(args) == 0 {
 		return errors.New("overlayIndexedDB: mount path is required")
 	}
@@ -64,22 +58,16 @@ func OverlayIndexedDB(args []js.Value) (err error) {
 	return fs.Overlay(mountPath, idbFS)
 }
 
-func overlayTarGzip(this js.Value, args []js.Value) interface{} {
-	resolve, reject, prom := promise.New()
-	log.Debug("Backgrounding overlay request")
-	go func() {
-		err := OverlayTarGzip(args)
-		if err != nil {
-			reject(interop.WrapAsJSError(err, "Failed overlaying .tar.gz FS"))
-		} else {
-			log.Debug("Successfully overlayed .tar.gz FS")
-			resolve(nil)
-		}
-	}()
-	return prom
+func (s fileShim) overlayTarGzip(this js.Value, args []js.Value) (js.Wrapper, error) {
+	err := s.OverlayTarGzip(args)
+	if err != nil {
+		return nil, jserror.Wrap(err, "Failed overlaying .tar.gz FS")
+	}
+	log.Debug("Successfully overlayed .tar.gz FS")
+	return nil, nil
 }
 
-func OverlayTarGzip(args []js.Value) error {
+func (s fileShim) OverlayTarGzip(args []js.Value) error {
 	if len(args) < 2 {
 		return errors.New("overlayTarGzip: mount path and .tar.gz URL path is required")
 	}
@@ -113,7 +101,7 @@ func OverlayTarGzip(args []js.Value) error {
 	if options["skipCacheDirs"].Type() == js.TypeObject {
 		skipDirs := make(map[string]bool)
 		for _, d := range interop.StringsFromJSValue(options["skipCacheDirs"]) {
-			skipDirs[common.ResolvePath(process.Current().WorkingDirectory(), d)] = true
+			skipDirs[common.ResolvePath(s.process.WorkingDirectory(), d)] = true
 		}
 		maxFileBytes := datasize.Kibibytes(100).Bytes()
 		shouldCache = func(name string, info hackpadfs.FileInfo) bool {

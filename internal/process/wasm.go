@@ -5,9 +5,11 @@ package process
 import (
 	"os"
 	"runtime"
+	"strings"
 	"syscall/js"
 
 	"github.com/hack-pad/hackpad/internal/interop"
+	"github.com/hack-pad/hackpad/internal/jsfunc"
 	"github.com/hack-pad/hackpad/internal/log"
 	"github.com/hack-pad/hackpad/internal/promise"
 )
@@ -16,11 +18,11 @@ var (
 	jsObject = js.Global().Get("Object")
 )
 
-func (p *process) newWasmInstance(path string, importObject js.Value) (js.Value, error) {
+func (p *Process) newWasmInstance(path string, importObject js.Value) (js.Value, error) {
 	return p.Files().WasmInstance(path, importObject)
 }
 
-func (p *process) run(path string) {
+func (p *Process) run(path string) {
 	defer func() {
 		go runtime.GC()
 	}()
@@ -36,20 +38,18 @@ func (p *process) run(path string) {
 	p.handleErr(err)
 }
 
-func (p *process) startWasmPromise(path string, exitChan chan<- int) (promise.Promise, error) {
+func (p *Process) startWasmPromise(path string, exitChan chan<- int) (promise.Promise, error) {
 	p.state = stateCompiling
 	goInstance := jsGo.New()
 	goInstance.Set("argv", interop.SliceFromStrings(p.args))
-	if p.attr.Env == nil {
-		p.attr.Env = splitEnvPairs(os.Environ())
+	if p.env == nil {
+		p.env = splitEnvPairs(os.Environ())
 	}
-	goInstance.Set("env", interop.StringMap(p.attr.Env))
-	var resumeFuncPtr *js.Func
-	goInstance.Set("exit", interop.SingleUseFunc(func(this js.Value, args []js.Value) interface{} {
+	goInstance.Set("env", interop.StringMap(p.env))
+	goInstance.Set("exit", jsfunc.SingleUse(func(this js.Value, args []js.Value) interface{} {
 		defer func() {
-			if resumeFuncPtr != nil {
-				resumeFuncPtr.Release()
-			}
+			// TODO exit hook for worker
+
 			// TODO free the whole goInstance to fix garbage issues entirely. Freeing individual properties appears to work for now, but is ultimately a bad long-term solution because memory still accumulates.
 			goInstance.Set("mem", js.Null())
 			goInstance.Set("importObject", js.Null())
@@ -72,40 +72,20 @@ func (p *process) startWasmPromise(path string, exitChan chan<- int) (promise.Pr
 		return nil, err
 	}
 
-	exports := instance.Get("exports")
+	p.state = stateRunning
+	return promise.From(goInstance.Call("run", instance)), nil
+}
 
-	resumeFunc := js.FuncOf(func(this js.Value, args []js.Value) interface{} {
-		defer interop.PanicLogger()
-		prev := switchContext(p.pid)
-		ret := exports.Call("resume", interop.SliceFromJSValues(args)...)
-		switchContext(prev)
-		return ret
-	})
-	resumeFuncPtr = &resumeFunc
-	wrapperExports := map[string]interface{}{
-		"run": interop.SingleUseFunc(func(this js.Value, args []js.Value) interface{} {
-			defer interop.PanicLogger()
-			prev := switchContext(p.pid)
-			ret := exports.Call("run", interop.SliceFromJSValues(args)...)
-			switchContext(prev)
-			return ret
-		}),
-		"resume": resumeFunc,
-	}
-	for export, value := range interop.Entries(exports) {
-		_, overridden := wrapperExports[export]
-		if !overridden {
-			wrapperExports[export] = value
+func splitEnvPairs(pairs []string) map[string]string {
+	env := make(map[string]string)
+	for _, pair := range pairs {
+		equalIndex := strings.IndexRune(pair, '=')
+		if equalIndex == -1 {
+			env[pair] = ""
+		} else {
+			key, value := pair[:equalIndex], pair[equalIndex+1:]
+			env[key] = value
 		}
 	}
-	wrapperInstance := jsObject.Call("defineProperty",
-		jsObject.Call("create", instance),
-		"exports", map[string]interface{}{ // Instance.exports is read-only, so create a shim
-			"value":    wrapperExports,
-			"writable": false,
-		},
-	)
-
-	p.state = stateRunning
-	return promise.From(goInstance.Call("run", wrapperInstance)), nil
+	return env
 }

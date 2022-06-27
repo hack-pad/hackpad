@@ -6,20 +6,19 @@ import (
 	"syscall/js"
 
 	"github.com/hack-pad/hackpad/internal/fs"
-	"github.com/hack-pad/hackpad/internal/process"
 	"github.com/hack-pad/hackpadfs/indexeddb/idbblob"
 	"github.com/pkg/errors"
 )
 
-func writeSync(args []js.Value) (interface{}, error) {
-	ret, err := write(args)
+func (s fileShim) writeSync(args []js.Value) (interface{}, error) {
+	ret, err := s.write(args)
 	if len(ret) > 1 {
 		return ret[0], err
 	}
 	return ret, err
 }
 
-func write(args []js.Value) ([]interface{}, error) {
+func (s fileShim) write(args []js.Value) ([]interface{}, error) {
 	// args: fd, buffer, offset, length, position
 	if len(args) < 2 {
 		return nil, errors.Errorf("missing required args, expected fd and buffer: %+v", args)
@@ -43,7 +42,6 @@ func write(args []js.Value) ([]interface{}, error) {
 		*position = int64(args[4].Int())
 	}
 
-	p := process.Current()
-	n, err := p.Files().Write(fd, buffer, offset, length, position)
+	n, err := s.process.Files().Write(fd, buffer, offset, length, position)
 	return []interface{}{n, buffer}, err
 }

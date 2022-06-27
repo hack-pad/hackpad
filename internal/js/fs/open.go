@@ -6,16 +6,15 @@ import (
 	"os"
 	"syscall/js"
 
-	"github.com/hack-pad/hackpad/internal/process"
 	"github.com/pkg/errors"
 )
 
-func open(args []js.Value) ([]interface{}, error) {
-	fd, err := openSync(args)
+func (s fileShim) open(args []js.Value) ([]interface{}, error) {
+	fd, err := s.openSync(args)
 	return []interface{}{fd}, err
 }
 
-func openSync(args []js.Value) (interface{}, error) {
+func (s fileShim) openSync(args []js.Value) (interface{}, error) {
 	if len(args) == 0 {
 		return nil, errors.Errorf("Expected path, received: %v", args)
 	}
@@ -29,7 +28,6 @@ func openSync(args []js.Value) (interface{}, error) {
 		mode = os.FileMode(args[2].Int())
 	}
 
-	p := process.Current()
-	fd, err := p.Files().Open(path, flags, mode)
+	fd, err := s.process.Files().Open(path, flags, mode)
 	return fd, err
 }

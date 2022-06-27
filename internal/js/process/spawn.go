@@ -11,7 +11,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-func spawn(args []js.Value) (interface{}, error) {
+func (s processShim) spawn(args []js.Value) (interface{}, error) {
 	if len(args) == 0 {
 		return nil, errors.Errorf("Invalid number of args, expected command name: %v", args)
 	}
@@ -32,15 +32,18 @@ func spawn(args []js.Value) (interface{}, error) {
 	if len(args) >= 3 {
 		argv[0], procAttr = parseProcAttr(command, args[2])
 	}
-	return Spawn(command, argv, procAttr)
+	return s.Spawn(command, argv, procAttr)
 }
 
-func Spawn(command string, args []string, attr *process.ProcAttr) (process.Process, error) {
-	p, err := process.New(command, args, attr)
+func (s processShim) Spawn(command string, argv []string, attr *process.ProcAttr) (map[string]interface{}, error) {
+	pider, err := s.spawner.Spawn(command, argv, attr)
 	if err != nil {
-		return p, err
+		return nil, err
 	}
-	return p, p.Start()
+	return map[string]interface{}{
+		"pid":  pider.PID(),
+		"ppid": s.process.PID(),
+	}, nil
 }
 
 func parseProcAttr(defaultCommand string, value js.Value) (argv0 string, attr *process.ProcAttr) {

@@ -1,10 +1,12 @@
 // +build js
 
-package interop
+package jsfunc
 
 import "syscall/js"
 
-func SingleUseFunc(fn func(this js.Value, args []js.Value) interface{}) js.Func {
+type Func = func(this js.Value, args []js.Value) interface{}
+
+func SingleUse(fn Func) js.Func {
 	var wrapperFn js.Func
 	wrapperFn = js.FuncOf(func(this js.Value, args []js.Value) interface{} {
 		wrapperFn.Release()

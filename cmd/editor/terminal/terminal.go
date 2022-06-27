@@ -10,6 +10,7 @@ import (
 	"github.com/hack-pad/hackpad/cmd/editor/dom"
 	"github.com/hack-pad/hackpad/cmd/editor/ide"
 	"github.com/hack-pad/hackpad/internal/common"
+	"github.com/hack-pad/hackpad/internal/jsfunc"
 	"github.com/hack-pad/hackpad/internal/log"
 	"github.com/hack-pad/hackpadfs/indexeddb/idbblob"
 	"github.com/hack-pad/hackpadfs/keyvalue/blob"
@@ -74,7 +75,7 @@ func (t *terminal) start(rawName, name string, args ...string) error {
 		return err
 	}
 
-	f := js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+	f := jsfunc.NonBlocking(func(this js.Value, args []js.Value) interface{} {
 		chunk := []byte(args[0].String())
 		_, err := stdin.Write(chunk)
 		if err == io.EOF {

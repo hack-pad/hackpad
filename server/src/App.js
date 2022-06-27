@@ -6,13 +6,12 @@ import "@fontsource/roboto";
 import '@fortawesome/fontawesome-free/css/all.css';
 import Compat from './Compat';
 import Loading from './Loading';
-import { install, run, observeGoDownloadProgress } from './Hackpad';
+import { observeGoDownloadProgress } from './Hackpad';
 import { newEditor } from './Editor';
 import { newTerminal } from './Terminal';
 
 function App() {
   const [percentage, setPercentage] = React.useState(0);
-  const [loading, setLoading] = React.useState(true);
   React.useEffect(() => {
     observeGoDownloadProgress(setPercentage)
 
@@ -20,19 +19,11 @@ function App() {
       newTerminal,
       newEditor,
     }
-    Promise.all([ install('editor'), install('sh') ])
-      .then(() => {
-        run('editor', '--editor=editor')
-        setLoading(false)
-      })
-  }, [setLoading, setPercentage])
+  }, [setPercentage])
 
   return (
     <>
-      { loading ? <>
-        <Compat />
-        <Loading percentage={percentage} />
-      </> : null }
+      <Compat />
       <div id="app">
         <div id="editor"></div>
       </div>

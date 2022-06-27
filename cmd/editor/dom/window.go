@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/hack-pad/hackpad/internal/interop"
+	"github.com/hack-pad/hackpad/internal/jsfunc"
 )
 
 var (
@@ -15,8 +16,8 @@ var (
 
 func SetTimeout(fn func(args []js.Value), delay time.Duration, args ...js.Value) int {
 	intArgs := append([]interface{}{
-		interop.SingleUseFunc(func(_ js.Value, args []js.Value) interface{} {
-			fn(args)
+		jsfunc.SingleUse(func(_ js.Value, args []js.Value) interface{} {
+			go fn(args)
 			return nil
 		}),
 		delay.Milliseconds(),
@@ -28,8 +29,8 @@ func SetTimeout(fn func(args []js.Value), delay time.Duration, args ...js.Value)
 func QueueMicrotask(fn func()) {
 	queueMicrotask := window.GetProperty("queueMicrotask")
 	if queueMicrotask.Truthy() {
-		queueMicrotask.Invoke(interop.SingleUseFunc(func(this js.Value, args []js.Value) interface{} {
-			fn()
+		queueMicrotask.Invoke(jsfunc.SingleUse(func(this js.Value, args []js.Value) interface{} {
+			go fn()
 			return nil
 		}))
 	} else {

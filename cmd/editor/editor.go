@@ -1,3 +1,4 @@
+//go:build js
 // +build js
 
 package main
@@ -9,6 +10,7 @@ import (
 
 	"github.com/hack-pad/hackpad/cmd/editor/dom"
 	"github.com/hack-pad/hackpad/cmd/editor/ide"
+	"github.com/hack-pad/hackpad/internal/jsfunc"
 	"github.com/hack-pad/hackpad/internal/log"
 )
 
@@ -25,7 +27,7 @@ func (e editorJSFunc) New(elem *dom.Element) ide.Editor {
 	editor := &jsEditor{
 		titleChan: make(chan string, 1),
 	}
-	editor.elem = js.Value(e).Invoke(elem, js.FuncOf(editor.onEdit))
+	editor.elem = js.Value(e).Invoke(elem, jsfunc.NonBlocking(editor.onEdit))
 	return editor
 }
 
@@ -36,18 +38,16 @@ type jsEditor struct {
 }
 
 func (j *jsEditor) onEdit(js.Value, []js.Value) interface{} {
-	go func() {
-		contents := j.elem.Call("getContents").String()
-		perm := os.FileMode(0700)
-		info, err := os.Stat(j.filePath)
-		if err == nil {
-			perm = info.Mode()
-		}
-		err = ioutil.WriteFile(j.filePath, []byte(contents), perm)
-		if err != nil {
-			log.Error("Failed to write file contents: ", err)
-		}
-	}()
+	contents := j.elem.Call("getContents").String()
+	perm := os.FileMode(0700)
+	info, err := os.Stat(j.filePath)
+	if err == nil {
+		perm = info.Mode()
+	}
+	err = ioutil.WriteFile(j.filePath, []byte(contents), perm)
+	if err != nil {
+		log.Error("Failed to write file contents: ", err)
+	}
 	return nil
 }
 
