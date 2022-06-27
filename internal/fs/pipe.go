@@ -88,16 +88,30 @@ func (p *pipeChan) Sync() error {
 }
 
 func (p *pipeChan) Read(buf []byte) (n int, err error) {
-	for n < len(buf) {
-		// Read should always block if the pipe is not closed
-		b, ok := <-p.buf
-		if !ok {
-			err = io.EOF
-			return
-		}
-		buf[n] = b
-		n++
+	// Read should always block if the pipe is not closed
+	b, ok := <-p.buf
+	if !ok {
+		err = io.EOF
+		return
 	}
+	buf[n] = b
+	n++
+
+	for n < len(buf) {
+		// attempt to read anything else if we still have room
+		select {
+		case b, ok := <-p.buf:
+			if !ok {
+				err = io.EOF
+				return
+			}
+			buf[n] = b
+			n++
+		default:
+			goto doneReading
+		}
+	}
+doneReading:
 	if n == 0 {
 		err = io.EOF
 	}
