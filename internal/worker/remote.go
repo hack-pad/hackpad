@@ -12,6 +12,7 @@ import (
 	"github.com/hack-pad/hackpad/internal/process"
 	"github.com/hack-pad/hackpadfs"
 	"github.com/hack-pad/hackpadfs/indexeddb/idbblob"
+	"github.com/hack-pad/hackpadfs/keyvalue/blob"
 )
 
 type Remote struct {
@@ -213,10 +214,30 @@ func bindPortToFile(ctx context.Context, port *jsworker.MessagePort, file hackpa
 	if err != nil {
 		return err
 	}
-
 	go func() {
 		<-ctx.Done()
 		file.Close()
+	}()
+	go func() {
+		const maxReadSize = 1 << 10
+		buf := make([]byte, maxReadSize)
+		for {
+			n, err := file.Read(buf)
+			if err != nil {
+				if err.Error() != "operation not supported" {
+					log.Error(err)
+				}
+				return
+			}
+			if n > 0 {
+				bl := idbblob.FromBlob(blob.NewBytes(buf[:n])).JSValue()
+				err := port.PostMessage(bl, []js.Value{bl.Get("buffer")})
+				if err != nil {
+					log.Error(err)
+					return
+				}
+			}
+		}
 	}()
 	return nil
 }
