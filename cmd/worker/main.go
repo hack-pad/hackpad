@@ -44,7 +44,7 @@ func main() {
 		log.Error("Failed to wait for PID ", pid, ":", err)
 		exitCode = 1
 	}
-	log.Warn("worker stopped for PID ", pid, "; exit code = ", exitCode)
+	log.Debug("worker stopped for PID ", pid, "; exit code = ", exitCode)
 	local.Exit(exitCode)
 	os.Exit(exitCode)
 }

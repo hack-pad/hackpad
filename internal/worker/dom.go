@@ -5,7 +5,6 @@ import (
 	"syscall/js"
 
 	"github.com/hack-pad/hackpad/internal/jsworker"
-	"github.com/hack-pad/hackpad/internal/log"
 )
 
 type DOM struct {
@@ -25,16 +24,13 @@ func ExecDOM(ctx context.Context, localJS *jsworker.Local, command string, args 
 	if err != nil {
 		return nil, err
 	}
-	log.Print("NewLocal start")
 	local, err := NewLocal(ctx, localJS)
 	if err != nil {
 		return nil, err
 	}
-	log.Print("local start")
 	if err := local.Start(); err != nil {
 		return nil, err
 	}
-	log.Print("local ready")
 	return &DOM{
 		local: local,
 		port:  localJS,

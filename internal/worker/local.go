@@ -67,7 +67,6 @@ func (l *Local) awaitInit(ctx context.Context) (js.Value, error) {
 	}
 	initChan := make(chan initMessage, 1)
 	err := l.localJS.Listen(ctx, func(me jsworker.MessageEvent, err error) {
-		log.Print("awaitInit listener:", err)
 		if err != nil {
 			initChan <- initMessage{err: err}
 			return
@@ -97,7 +96,6 @@ func (l *Local) awaitInit(ctx context.Context) (js.Value, error) {
 func (l *Local) Start() (err error) {
 	defer common.CatchException(&err)
 	startCtx, cancel := context.WithCancel(context.Background())
-	log.Print("Listening for start...")
 	err = l.localJS.Listen(startCtx, func(me jsworker.MessageEvent, err error) {
 		if err != nil {
 			log.Error(err)
@@ -108,7 +106,6 @@ func (l *Local) Start() (err error) {
 			log.Error(err)
 			cancel()
 		})
-		log.Print("Local's Start() received message")
 		if me.Data.Type() != js.TypeObject {
 			return
 		}
@@ -119,7 +116,6 @@ func (l *Local) Start() (err error) {
 		}
 		cancel()
 
-		log.Print("Starting process: ", l.process.PID())
 		err = l.process.Start()
 		if err != nil {
 			log.Error(err)
@@ -150,7 +146,7 @@ func (l *Local) Exit(exitCode int) error {
 
 func (l *Local) Spawn(command string, argv []string, attr *process.ProcAttr) (jsprocess.PIDer, error) {
 	pid := kernel.ReservePID()
-	log.Print("Spawning pid ", pid, " for command: ", command, argv)
+	log.Debug("Spawning pid ", pid, " for command: ", command, argv)
 	remote, err := NewRemote(l, pid, command, argv, attr)
 	if err != nil {
 		return nil, err
@@ -160,7 +156,7 @@ func (l *Local) Spawn(command string, argv []string, attr *process.ProcAttr) (js
 }
 
 func (l *Local) Wait(pid common.PID) (exitCode int, err error) {
-	log.Print("Waiting on pid ", pid)
+	log.Debug("Waiting on pid ", pid)
 	if pid == l.process.PID() {
 		return l.process.Wait()
 	}

@@ -49,18 +49,15 @@ func NewRemote(local *Local, pid process.PID, command string, argv []string, att
 			seekOffset: 0, // TODO expose seek offset in file descriptor
 		}
 		if info.Mode()&hackpadfs.ModeNamedPipe != 0 {
-			log.Print("Found pipe, creating MessageChannel...")
 			port1, port2, err := jsworker.NewChannel()
 			if err != nil {
 				return nil, err
 			}
 			openF.pipe = port1
-			log.Print("Binding port to file...")
 			err = bindPortToFile(closeCtx, port2, file)
 			if err != nil {
 				return nil, err
 			}
-			log.Print("Bound port to file.")
 		}
 		openFiles = append(openFiles, openF)
 	}
@@ -90,7 +87,7 @@ func NewRemote(local *Local, pid process.PID, command string, argv []string, att
 			exitCode := jsExitCode.Int()
 			remote.closeExitCode = &exitCode
 			cancel()
-			log.Warn("Remote exited with code:", exitCode)
+			log.Debug("Remote exited with code:", exitCode)
 		}
 	})
 	if err != nil {
@@ -98,31 +95,31 @@ func NewRemote(local *Local, pid process.PID, command string, argv []string, att
 	}
 
 	go func() {
-		log.Print("Worker ", workerName, " awaiting pending_init...")
+		log.Debug("Worker ", workerName, " awaiting pending_init...")
 		err := awaitMessage(ctx, port, "pending_init")
 		if err != nil {
 			log.Error("Failed awaiting pending_init:", workerName, err)
 			return
 		}
-		log.Print("Worker ", workerName, " waiting to init. Sending init...")
+		log.Debug("Worker ", workerName, " waiting to init. Sending init...")
 		msg, transfers := makeInitMessage(workerName, command, argv, attr.Dir, attr.Env, openFiles)
 		err = port.PostMessage(msg, transfers)
 		if err != nil {
 			log.Error("Failed sending init to worker: ", workerName, " ", err)
 			return
 		}
-		log.Print("Sent init message to worker ", workerName, ". Awaiting ready...")
+		log.Debug("Sent init message to worker ", workerName, ". Awaiting ready...")
 		if err := awaitMessage(ctx, remote.port, "ready"); err != nil {
 			log.Error("Failed awaiting ready:", workerName, err)
 			return
 		}
-		log.Print("Worker ", workerName, " is ready. Sending start message.")
+		log.Debug("Worker ", workerName, " is ready. Sending start message.")
 		err = remote.port.PostMessage(makeStartMessage(), nil)
 		if err != nil {
 			log.Error("Failed sending start to worker: ", workerName, " ", err)
 			return
 		}
-		log.Print("Sent start message.")
+		log.Debug("Sent start message.")
 	}()
 
 	return remote, nil
