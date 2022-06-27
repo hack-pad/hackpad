@@ -78,7 +78,7 @@ func (c *console) runLoopIter() {
 	defer cancel(commandErr)
 	elapsed := time.Since(startTime)
 	if commandErr != nil {
-		_, _ = c.stderr.Write([]byte(commandErr.Error()))
+		_, _ = c.stderr.Write([]byte(commandErr.Error() + "\n"))
 	}
 
 	exitCode := 0
