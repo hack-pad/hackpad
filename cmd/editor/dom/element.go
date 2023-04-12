@@ -112,14 +112,20 @@ func (e *Element) QuerySelectorAll(query string) []*Element {
 	return sliceFromArray(e.elem.Call("querySelectorAll", query))
 }
 
-func (e *Element) AddEventListener(name string, listener EventListener) {
-	e.elem.Call("addEventListener", name, js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+func (e *Element) RemoveEventListener(name string, listener js.Func) {
+	e.elem.Call("removeEventListener", name, listener)
+}
+
+func (e *Element) AddEventListener(name string, listener EventListener) js.Func {
+	listenerFunc := js.FuncOf(func(_ js.Value, args []js.Value) interface{} {
 		defer common.CatchExceptionHandler(func(err error) {
 			log.Error("recovered from panic: ", err, "\n", string(debug.Stack()))
 		})
 		listener(args[0])
 		return nil
-	}))
+	})
+	e.elem.Call("addEventListener", name, listenerFunc)
+	return listenerFunc
 }
 
 func (e *Element) Focus() {

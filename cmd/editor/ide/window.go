@@ -184,11 +184,12 @@ func (w *window) makeDefaultEditor(id int, title, contents *dom.Element) Tabber 
 
 	title.SetInnerHTML(`<input type="text" class="editor-file-picker" placeholder="file_name.go" spellcheck=false />`)
 	inputElem := title.QuerySelector("input")
-	dom.QueueMicrotask(func() {
-		inputElem.Focus() // run focus on next run loop so opening a file immediately doesn't trigger onblur
-	})
+	inputElem.Focus()
 
-	keydownFn := func(event js.Value) {
+	blurListener := inputElem.AddEventListener("blur", func(js.Value) {
+		w.editorsPane.closeTabID(id)
+	})
+	title.AddEventListener("keydown", func(event js.Value) {
 		if event.Get("key").String() != "Enter" {
 			return
 		}
@@ -200,19 +201,15 @@ func (w *window) makeDefaultEditor(id int, title, contents *dom.Element) Tabber 
 		if fileName == "" {
 			return
 		}
-		title.SetInnerText("New file")
-		err := editor.OpenFile(fileName)
-		if err != nil {
-			log.Error(err)
-		}
-		w.editorsPane.focusID(id)
-	}
-	title.AddEventListener("keydown", keydownFn)
-	inputElem.AddEventListener("blur", func(event js.Value) {
-		titleText := title.InnerText()
-		if titleText != "New file" {
-			w.editorsPane.closeTabID(id)
-		}
+		inputElem.RemoveEventListener("blur", blurListener)
+		title.SetInnerText("New file") // setting inner text triggers onblur because the input HTML is about to be removed
+		go func() {
+			err := editor.OpenFile(fileName)
+			if err != nil {
+				log.Error(err)
+			}
+			w.editorsPane.focusID(id)
+		}()
 	})
 	return editor
 }
