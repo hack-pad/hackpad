@@ -10,13 +10,13 @@ import (
 	"github.com/pkg/errors"
 )
 
-func WrapAsJSError(err error, message string) error {
+func WrapAsJSError(err error, message string) js.Value {
 	return wrapAsJSError(err, message)
 }
 
-func wrapAsJSError(err error, message string, args ...js.Value) error {
+func wrapAsJSError(err error, message string, args ...js.Value) js.Value {
 	if err == nil {
-		return nil
+		return js.Null()
 	}
 
 	errMessage := errors.Wrap(err, message).Error()
@@ -24,9 +24,8 @@ func wrapAsJSError(err error, message string, args ...js.Value) error {
 		errMessage += fmt.Sprintf("\n%v", arg)
 	}
 
-	val := js.ValueOf(map[string]interface{}{
+	return js.ValueOf(map[string]interface{}{
 		"message": js.ValueOf(errMessage),
 		"code":    js.ValueOf(mapToErrNo(err, errMessage)),
 	})
-	return js.Error{Value: val}
 }

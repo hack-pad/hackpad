@@ -17,15 +17,15 @@ const (
 )
 
 // runGoProcess optimizes runProcess by skipping the wait time for listing PATH directories on startup
-func (w *window) runGoProcess(console TaskConsole, args ...string) promise.Promise {
+func (w *window) runGoProcess(console TaskConsole, args ...string) promise.JS {
 	return w.runRawProcess(console, goBinaryPath, "go", args...)
 }
 
-func (w *window) runProcess(console TaskConsole, name string, args ...string) promise.Promise {
+func (w *window) runProcess(console TaskConsole, name string, args ...string) promise.JS {
 	return w.runRawProcess(console, name, name, args...)
 }
 
-func (w *window) runRawProcess(console TaskConsole, fullPath, name string, args ...string) promise.Promise {
+func (w *window) runRawProcess(console TaskConsole, fullPath, name string, args ...string) promise.JS {
 	resolve, reject, prom := promise.New()
 	go func() {
 		var success bool
@@ -70,6 +70,6 @@ func (w *window) startProcess(console TaskConsole, rawPath, name string, args ..
 
 func (w *window) runPlayground(console TaskConsole) {
 	w.runGoProcess(console, "build", "-v", ".").Then(func(_ interface{}) interface{} {
-		return w.runProcess(console, "./playground")
+		return w.runProcess(console, "./playground").JSValue()
 	})
 }

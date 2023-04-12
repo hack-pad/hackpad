@@ -36,12 +36,16 @@ func spawn(args []js.Value) (interface{}, error) {
 	return Spawn(command, argv, procAttr)
 }
 
-func Spawn(command string, args []string, attr *process.ProcAttr) (process.Process, error) {
+type jsWrapper interface {
+	JSValue() js.Value
+}
+
+func Spawn(command string, args []string, attr *process.ProcAttr) (js.Value, error) {
 	p, err := process.New(command, args, attr)
 	if err != nil {
-		return p, err
+		return js.Value{}, err
 	}
-	return p, p.Start()
+	return p.(jsWrapper).JSValue(), p.Start()
 }
 
 func parseProcAttr(defaultCommand string, value js.Value) (argv0 string, attr *process.ProcAttr) {

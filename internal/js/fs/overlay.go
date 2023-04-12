@@ -38,7 +38,7 @@ func overlayIndexedDB(this js.Value, args []js.Value) interface{} {
 			resolve(nil)
 		}
 	}()
-	return prom
+	return prom.JSValue()
 }
 
 func OverlayIndexedDB(args []js.Value) (err error) {
@@ -77,7 +77,7 @@ func overlayTarGzip(this js.Value, args []js.Value) interface{} {
 			resolve(nil)
 		}
 	}()
-	return prom
+	return prom.JSValue()
 }
 
 func OverlayTarGzip(args []js.Value) error {

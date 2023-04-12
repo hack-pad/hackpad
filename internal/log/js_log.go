@@ -4,13 +4,15 @@
 package log
 
 import (
+	"fmt"
 	"syscall/js"
 
 	"github.com/hack-pad/hackpad/internal/global"
+	"github.com/hack-pad/safejs"
 )
 
 var (
-	console = js.Global().Get("console")
+	console = safejs.MustGetGlobal("console")
 )
 
 const logLevelKey = "logLevel"
@@ -54,7 +56,15 @@ func logJSValues(kind consoleType, args ...interface{}) int {
 	if kind < logLevel {
 		return 0
 	}
-	console.Call(kind.String(), args...)
+	var jsArgs []interface{}
+	for _, arg := range args {
+		jsArg, err := safejs.ValueOf(arg)
+		if err != nil {
+			jsArg = safejs.Safe(js.ValueOf(fmt.Sprintf("LOGERR(%s: %T %+v)", err, arg, arg)))
+		}
+		jsArgs = append(jsArgs, jsArg)
+	}
+	console.Call(kind.String(), jsArgs...)
 	return 0
 }
 

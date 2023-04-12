@@ -21,5 +21,5 @@ func pipeSync(args []js.Value) (interface{}, error) {
 	}
 	p := process.Current()
 	fds := p.Files().Pipe()
-	return []interface{}{fds[0], fds[1]}, nil
+	return []interface{}{fds[0].JSValue(), fds[1].JSValue()}, nil
 }
