@@ -36,13 +36,13 @@ var (
 	})
 )
 
-func jsStat(info os.FileInfo) interface{} {
+func jsStat(info os.FileInfo) js.Value {
 	if info == nil {
-		return nil
+		return js.Null()
 	}
 	const blockSize = 4096 // TODO find useful value for blksize
 	modTime := info.ModTime().UnixNano() / 1e6
-	return map[string]interface{}{
+	return js.ValueOf(map[string]interface{}{
 		"dev":     0,
 		"ino":     0,
 		"mode":    jsMode(info.Mode()),
@@ -64,7 +64,7 @@ func jsStat(info os.FileInfo) interface{} {
 		"isFile":            jsBoolFunc(info.Mode().IsRegular()),
 		"isSocket":          funcFalse,
 		"isSymbolicLink":    jsBoolFunc(info.Mode()&os.ModeSymlink == os.ModeSymlink),
-	}
+	})
 }
 
 var modeBitTranslation = map[os.FileMode]uint32{

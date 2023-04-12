@@ -23,10 +23,10 @@ func waitSync(args []js.Value) (interface{}, error) {
 	pid := process.PID(args[0].Int())
 	waitStatus := new(syscall.WaitStatus)
 	wpid, err := Wait(pid, waitStatus, 0, nil)
-	return map[string]interface{}{
-		"pid":      wpid,
+	return js.ValueOf(map[string]interface{}{
+		"pid":      wpid.JSValue(),
 		"exitCode": waitStatus.ExitStatus(),
-	}, err
+	}), err
 }
 
 func Wait(pid process.PID, wstatus *syscall.WaitStatus, options int, rusage *syscall.Rusage) (wpid process.PID, err error) {

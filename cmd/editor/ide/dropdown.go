@@ -34,7 +34,7 @@ func newDropdown(attachTo, content *dom.Element) *dropdown {
 		attached: attachTo,
 	}
 	dom.GetDocument().AddEventListener("click", func(event js.Value) {
-		if !event.Call("composedPath").Call("includes", drop).Bool() {
+		if !event.Call("composedPath").Call("includes", drop.JSValue()).Bool() {
 			drop.Close()
 		}
 	})

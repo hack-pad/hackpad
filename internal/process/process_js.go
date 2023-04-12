@@ -15,8 +15,8 @@ var (
 
 func (p *process) JSValue() js.Value {
 	return js.ValueOf(map[string]interface{}{
-		"pid":   p.pid,
-		"ppid":  p.parentPID,
+		"pid":   p.pid.JSValue(),
+		"ppid":  p.parentPID.JSValue(),
 		"error": interop.WrapAsJSError(p.err, "spawn"),
 	})
 }

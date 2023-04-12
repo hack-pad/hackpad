@@ -14,19 +14,20 @@ import (
 )
 
 // editorJSFunc is a JS function that opens on a JS element and returns a JS object with the following spec:
-// {
-//   getContents() string
-//   setContents(string)
-//   getCursorIndex() int
-//   setCursorIndex(int)
-// }
+//
+//	{
+//	  getContents() string
+//	  setContents(string)
+//	  getCursorIndex() int
+//	  setCursorIndex(int)
+//	}
 type editorJSFunc js.Value
 
 func (e editorJSFunc) New(elem *dom.Element) ide.Editor {
 	editor := &jsEditor{
 		titleChan: make(chan string, 1),
 	}
-	editor.elem = js.Value(e).Invoke(elem, js.FuncOf(editor.onEdit))
+	editor.elem = js.Value(e).Invoke(elem.JSValue(), js.FuncOf(editor.onEdit))
 	return editor
 }
 

@@ -119,9 +119,9 @@ func destroyMount(this js.Value, args []js.Value) interface{} {
 	resolve, reject, prom := promise.New()
 	mountPath := args[0].String()
 	go func() {
-		err := interop.WrapAsJSError(fs.DestroyMount(mountPath), "destroyMount")
-		if err != nil {
-			reject(err)
+		jsErr := interop.WrapAsJSError(fs.DestroyMount(mountPath), "destroyMount")
+		if jsErr.Type() != js.TypeNull {
+			reject(jsErr)
 		} else {
 			resolve(nil)
 		}

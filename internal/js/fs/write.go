@@ -46,5 +46,5 @@ func write(args []js.Value) ([]interface{}, error) {
 
 	p := process.Current()
 	n, err := p.Files().Write(fd, buffer, offset, length, position)
-	return []interface{}{n, buffer}, err
+	return []interface{}{n, buffer.JSValue()}, err
 }

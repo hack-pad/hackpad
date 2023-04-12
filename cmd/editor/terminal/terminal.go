@@ -36,7 +36,7 @@ type terminal struct {
 
 func (b *terminalBuilder) New(elem *dom.Element, rawName, name string, args ...string) (ide.Console, error) {
 	term := &terminal{
-		xterm:     b.newXTermFunc.Invoke(elem),
+		xterm:     b.newXTermFunc.Invoke(elem.JSValue()),
 		titleChan: make(chan string, 1),
 	}
 	go func() {
@@ -113,7 +113,7 @@ func (t *terminal) Close() error {
 	}
 	t.closed = true
 	const colorRed = "\033[1;31m"
-	t.xterm.Call("write", idbblob.FromBlob(blob.NewBytes([]byte("\n\r"+colorRed+"[exited]\n\r"))))
+	t.xterm.Call("write", idbblob.FromBlob(blob.NewBytes([]byte("\n\r"+colorRed+"[exited]\n\r"))).JSValue())
 	var err error
 	for _, closer := range t.closables {
 		cErr := closer()
@@ -131,7 +131,7 @@ func (t *terminal) readOutputPipes(r io.Reader) {
 		_, err := r.Read(buf)
 		switch err {
 		case nil:
-			t.xterm.Call("write", idbblob.FromBlob(blob.NewBytes(buf)))
+			t.xterm.Call("write", idbblob.FromBlob(blob.NewBytes(buf)).JSValue())
 		case io.EOF:
 			t.Close()
 			return
