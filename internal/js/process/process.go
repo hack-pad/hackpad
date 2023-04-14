@@ -36,7 +36,7 @@ func Init() {
 	globals.Set("child_process", map[string]interface{}{})
 	childProcess := globals.Get("child_process")
 	interop.SetFunc(childProcess, "spawn", spawn)
-	//interop.SetFunc(childProcess, "spawnSync", spawnSync) // TODO is there any way to run spawnSync so we don't hit deadlock?
+	// interop.SetFunc(childProcess, "spawnSync", spawnSync) // TODO is there any way to run spawnSync so we don't hit deadlock?
 	interop.SetFunc(childProcess, "wait", wait)
 	interop.SetFunc(childProcess, "waitSync", waitSync)
 }
