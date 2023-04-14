@@ -5,7 +5,7 @@ PATH := ${PWD}/cache/go/bin:${PWD}/cache/go/misc/wasm:${PATH}
 GOOS = js
 GOARCH = wasm
 export
-LINT_VERSION=1.27.0
+LINT_VERSION=1.52.2
 
 .PHONY: serve
 serve:
