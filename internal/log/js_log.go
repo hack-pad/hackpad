@@ -64,10 +64,10 @@ func logJSValues(kind consoleType, args ...interface{}) int {
 		}
 		jsArgs = append(jsArgs, jsArg)
 	}
-	console.Call(kind.String(), jsArgs...)
+	_, _ = console.Call(kind.String(), jsArgs...)
 	return 0
 }
 
 func writeLog(c consoleType, s string) {
-	console.Call(c.String(), s)
+	_, _ = console.Call(c.String(), s)
 }

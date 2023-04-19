@@ -38,8 +38,6 @@ func newPipe(newFID func() FID) (r, w *fileDescriptor) {
 }
 
 type pipeChan struct {
-	unimplementedFile
-
 	buf            chan byte
 	done           chan struct{}
 	reader, writer FID

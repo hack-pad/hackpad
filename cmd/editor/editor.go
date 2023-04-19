@@ -4,7 +4,6 @@
 package main
 
 import (
-	"io/ioutil"
 	"os"
 	"syscall/js"
 
@@ -45,7 +44,7 @@ func (j *jsEditor) onEdit(js.Value, []js.Value) interface{} {
 		if err == nil {
 			perm = info.Mode()
 		}
-		err = ioutil.WriteFile(j.filePath, []byte(contents), perm)
+		err = os.WriteFile(j.filePath, []byte(contents), perm)
 		if err != nil {
 			log.Error("Failed to write file contents: ", err)
 		}
@@ -64,7 +63,7 @@ func (j *jsEditor) CurrentFile() string {
 }
 
 func (j *jsEditor) ReloadFile() error {
-	contents, err := ioutil.ReadFile(j.filePath)
+	contents, err := os.ReadFile(j.filePath)
 	if err != nil {
 		return err
 	}
