@@ -61,10 +61,10 @@ func handleKeydown(event js.Value) {
 	if code == KeyEnter {
 		// TODO restore cmd+enter triggering run button
 		// if metaKey {
-		//preventDefault()
-		//runPlayground()
-		//return
-		//}
+		//     preventDefault()
+		//     runPlayground()
+		//     return
+		// }
 
 		lastNewLine := strings.LastIndexByte(slice(text, 0, selectionStart), '\n')
 		if lastNewLine != -1 {

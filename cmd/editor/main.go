@@ -5,7 +5,6 @@ package main
 
 import (
 	"flag"
-	"io/ioutil"
 	"os"
 	"syscall/js"
 
@@ -86,7 +85,7 @@ func main() {
 	fmt.Println("Hello from Wasm!", datasize.Gigabytes(4))
 }
 `
-		err := ioutil.WriteFile("main.go", []byte(mainGoContents), 0600)
+		err := os.WriteFile("main.go", []byte(mainGoContents), 0600)
 		if err != nil {
 			log.Error("Failed to write to main.go: ", err)
 			return

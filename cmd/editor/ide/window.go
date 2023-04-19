@@ -6,7 +6,7 @@ package ide
 import (
 	_ "embed"
 	"go/format"
-	"io/ioutil"
+	"os"
 	"strings"
 	"syscall/js"
 
@@ -100,7 +100,7 @@ func New(elem *dom.Element, editorBuilder EditorBuilder, consoleBuilder ConsoleB
 		}
 
 		go func() {
-			src, err := ioutil.ReadFile(path)
+			src, err := os.ReadFile(path)
 			if err != nil {
 				log.Errorf("Failed to read Go file %q: %v", path, err)
 				return
@@ -110,7 +110,7 @@ func New(elem *dom.Element, editorBuilder EditorBuilder, consoleBuilder ConsoleB
 				log.Errorf("Failed to format Go file %q: %v", path, err)
 				return
 			}
-			err = ioutil.WriteFile(path, out, 0)
+			err = os.WriteFile(path, out, 0)
 			if err != nil {
 				log.Errorf("Failed to write Go file %q: %v", path, err)
 				return

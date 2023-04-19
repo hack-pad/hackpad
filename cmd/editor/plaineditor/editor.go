@@ -4,7 +4,7 @@
 package plaineditor
 
 import (
-	"io/ioutil"
+	"os"
 	"syscall/js"
 
 	"github.com/hack-pad/hackpad/cmd/editor/dom"
@@ -51,7 +51,7 @@ func (e *textAreaEditor) CurrentFile() string {
 }
 
 func (e *textAreaEditor) ReloadFile() error {
-	contents, err := ioutil.ReadFile(e.filePath)
+	contents, err := os.ReadFile(e.filePath)
 	if err != nil {
 		return err
 	}
@@ -60,7 +60,7 @@ func (e *textAreaEditor) ReloadFile() error {
 }
 
 func (e *textAreaEditor) edited(newContents func() string) {
-	err := ioutil.WriteFile(e.filePath, []byte(newContents()), 0600)
+	err := os.WriteFile(e.filePath, []byte(newContents()), 0600)
 	if err != nil {
 		log.Errorf("Failed to write %s: %s", e.filePath, err.Error())
 		return
