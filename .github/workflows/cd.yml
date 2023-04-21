@@ -10,16 +10,16 @@ jobs:
     steps:
     - uses: actions/checkout@v3
     - name: Build
-      run: make docker
+      run: make build
     - name: Publish
       run: |
+        out="$(mktemp -d)/out"
+        mv ./out "$out"
         git config --global user.email ""
         git config --global user.name "GitHub Pages Deploy"
         git checkout --orphan gh-pages
         git rm -rf .
-        out=$(mktemp -d)
-        docker cp $(docker create --rm hackpad):/usr/share/nginx/html "$out"
-        find "$out/html" -mindepth 1 -maxdepth 1 -exec cp -r {} ./ \;  # Glob doesn't always pick up hidden files by default
+        mv "$out"/* ./
         echo hackpad.org > CNAME
         git add .
         git commit -am "Deploy to GitHub Pages"

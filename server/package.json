@@ -20,7 +20,7 @@
   },
   "scripts": {
     "start": "react-scripts start",
-    "start-go": "cd .. && nodemon --signal SIGINT -e go -d 2 -x 'make static || exit 1'",
+    "start-go": "cd .. && nodemon --signal SIGINT -e go -d 2 -x 'make go-static || exit 1'",
     "build": "react-scripts build",
     "test": "react-scripts test",
     "eject": "react-scripts eject"

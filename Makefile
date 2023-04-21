@@ -41,8 +41,8 @@ test-js: go
 .PHONY: test
 test: test-native #test-js  # TODO restore when this is resolved: https://travis-ci.community/t/goos-js-goarch-wasm-go-run-fails-panic-newosproc-not-implemented/1651
 
-.PHONY: static
-static: server/public/wasm/go.tar.gz commands
+.PHONY: go-static
+go-static: server/public/wasm/go.tar.gz commands
 
 server/public/wasm:
 	mkdir -p server/public/wasm
@@ -99,6 +99,11 @@ server/public/wasm/main.wasm: server/public/wasm go
 server/public/wasm/wasm_exec.js: go
 	cp cache/go/misc/wasm/wasm_exec.js server/public/wasm/wasm_exec.js
 
+.PHONY: node-static
+node-static:
+	npm --prefix=server ci
+	npm --prefix=server run build
+
 .PHONY: watch
 watch:
 	@if [[ ! -d server/node_modules ]]; then \
@@ -108,18 +113,16 @@ watch:
 	npm --prefix=server start
 
 .PHONY: build
-build: static
-	npm --prefix=server ci
-	npm --prefix=server run build
-	mkdir -p out
-	cp -r server/build/* out/
+build: build-docker
+	rm -rf ./out
+	docker cp $$(docker create --rm hackpad):/usr/share/nginx/html ./out
 
-.PHONY: docker
-docker:
+.PHONY: build-docker
+build-docker:
 	docker build -t hackpad .
 
-.PHONY: docker-run
-docker-run: docker
+.PHONY: run-docker
+run-docker: build-docker
 	docker run -it --rm \
 		--name hackpad \
 		-p 8080:80 \
