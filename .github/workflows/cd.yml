@@ -10,7 +10,7 @@ jobs:
     steps:
     - uses: actions/checkout@v3
     - name: Build
-      run: docker build -t hackpad .
+      run: make docker
     - name: Publish
       run: |
         git config --global user.email ""
