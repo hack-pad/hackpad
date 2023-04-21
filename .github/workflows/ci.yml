@@ -16,6 +16,13 @@ jobs:
     - name: Lint
       run: make lint
 
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - name: Build image
+      run: make docker
+
   test:
     runs-on: ubuntu-latest
     steps:
